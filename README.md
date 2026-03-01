@@ -4,7 +4,7 @@ A simple event ticketing website where attendees **register**, receive an **emai
 
 ## What it does
 
-1. **Visitor** opens the site and sees a list of **events** (like [TicketsMarche](https://www.ticketsmarche.com/)).
+1. **Visitor** opens the site and sees a list of **events** .
 2. They **select an event** and click "Register & Get Ticket".
 3. On the registration page they enter **name** and **email**; the system creates a unique ticket ID, saves the attendee (with the event name) to a Google Sheet, generates a unique QR code, and sends an email with the QR and a link to the ticket page.
 4. **At the event**, staff (or the attendee) scans the QR code. The QR opens a check-in URL that marks that ticket as **Attended** in the sheet and shows “Checked in!”.
