@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event – BLOCK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <script>
+    (function() {
+      var isFile = location.protocol === 'file:';
+      var isWrongPort = location.hostname === 'localhost' && location.port !== '3001' && location.port !== '';
+      if (isFile || isWrongPort) {
+        var base = document.createElement('base');
+        base.href = 'http://localhost:3001/';
+        document.head.appendChild(base);
+      }
+    })();
+  </script>
+  <style>
+    :root {
+      --bg: #0a0a0c;
+      --card: #141418;
+      --border: #25252d;
+      --text: #e8e8ed;
+      --muted: #8888a0;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --bar-bg: #ffffff;
+      --bar-text: #1a1a1a;
+      --bar-muted: #5a5a5a;
+      --search-bg: #f0f0f0;
+      --detail-panel: #ffffff;
+      --detail-bg: #f5f0e8;
+      --gold: #c9a227;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { overflow-x: hidden; width: 100%; }
+    body {
+      font-family: 'Outfit', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      padding-bottom: 3rem;
+      background-image: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(99, 102, 241, 0.12), transparent);
+    }
+    .top-bar-wrap { width: 100%; padding: 1rem clamp(0.75rem, 3vw, 1.25rem) 0; margin-bottom: 1.5rem; }
+    .top-bar {
+      width: 100%;
+      max-width: min(1400px, 96vw);
+      margin: 0 auto;
+      background: var(--bar-bg);
+      border-radius: 16px;
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    .top-bar .logo { width: 110px; height: auto; flex-shrink: 0; }
+    .search-wrap { flex: 1; min-width: 180px; max-width: 360px; position: relative; }
+    .search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--bar-muted); }
+    .search-wrap input {
+      width: 100%;
+      padding: 10px 12px 10px 40px;
+      font: inherit;
+      font-size: 0.95rem;
+      color: var(--bar-text);
+      background: var(--search-bg);
+      border: none;
+      border-radius: 12px;
+    }
+    .search-wrap input::placeholder { color: var(--bar-muted); }
+    .search-wrap input:focus { outline: none; }
+    .top-bar-nav { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-left: auto; }
+    .top-bar-nav a { color: var(--bar-text); text-decoration: none; font-size: 0.95rem; font-weight: 500; }
+    .top-bar-nav a:hover { color: var(--accent); }
+    .top-bar-icons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+    }
+    .top-bar-icons a, .top-bar-icons button {
+      display: flex; align-items: center; justify-content: center;
+      width: clamp(36px, 9vw, 40px); height: clamp(36px, 9vw, 40px);
+      min-width: 36px; min-height: 36px;
+      border: none; background: transparent;
+      color: var(--bar-text); cursor: pointer; border-radius: 10px; text-decoration: none;
+    }
+    .top-bar-icons a:hover, .top-bar-icons button:hover { background: var(--search-bg); color: var(--accent); }
+    .top-bar-icons svg { width: clamp(18px, 4.5vw, 20px); height: clamp(18px, 4.5vw, 20px); }
+
+    .event-detail-wrap { width: 100%; max-width: min(1400px, 96vw); margin: 0 auto; padding: 0 clamp(0.75rem, 3vw, 1.25rem); }
+    .event-detail-card {
+      background: var(--detail-bg);
+      border-radius: 20px;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: 380px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    }
+    @media (max-width: 600px) {
+      .top-bar { padding: 0.6rem 1rem; gap: 0.6rem; }
+      .top-bar .logo { width: 90px; }
+      .search-wrap { flex: 1 1 100%; min-width: 100%; max-width: 100%; order: 1; }
+      .top-bar-nav { order: 2; flex: 1 1 100%; margin-left: 0; gap: 0.75rem; font-size: 0.85rem; }
+      .top-bar-nav a { font-size: 0.85rem; white-space: nowrap; }
+      .top-bar-icons { order: 0; margin-left: auto; }
+    }
+    @media (max-width: 768px) { .event-detail-card { grid-template-columns: 1fr; } }
+    .event-detail-panel {
+      background: var(--detail-panel);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-radius: 20px 0 0 20px;
+    }
+    @media (max-width: 768px) { .event-detail-panel { border-radius: 20px 20px 0 0; } }
+    .event-detail-panel h1 { font-size: 1.75rem; font-weight: 700; color: #1a1a1a; margin-bottom: 0.5rem; line-height: 1.25; }
+    .event-detail-panel .meta { color: var(--bar-muted); font-size: 1rem; margin-bottom: 0.25rem; }
+    .event-detail-panel .venue { color: var(--bar-muted); font-size: 0.95rem; margin-bottom: 1rem; }
+    .event-detail-panel .organizer { color: var(--bar-muted); font-size: 0.85rem; margin-bottom: 1.5rem; }
+    .event-detail-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .btn-book {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 24px;
+      font: inherit; font-size: 1rem; font-weight: 600;
+      color: #1a1a1a;
+      background: var(--gold);
+      border: none; border-radius: 12px;
+      cursor: pointer; text-decoration: none;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .btn-book:hover { background: #d4af37; transform: translateY(-1px); }
+    .btn-book svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .event-detail-image {
+      width: 100%; height: 100%; min-height: 360px;
+      object-fit: cover;
+      border-radius: 0 20px 20px 0;
+    }
+    @media (max-width: 768px) {
+      .event-detail-image { border-radius: 0; min-height: 260px; }
+      .event-detail-panel { padding: 1.5rem; }
+      .event-detail-panel h1 { font-size: 1.4rem; }
+      .event-detail-actions { gap: 0.75rem; }
+      .btn-book { padding: 12px 20px; font-size: 0.95rem; }
+    }
+    @media (max-width: 480px) {
+      .event-detail-panel { padding: 1.25rem; }
+      .event-detail-panel h1 { font-size: 1.25rem; }
+      .event-detail-actions { flex-direction: column; align-items: flex-start; }
+      .btn-book { width: 100%; justify-content: center; }
+    }
+
+    .about-section { width: 100%; max-width: min(1400px, 96vw); margin: 2rem auto 0; padding: 0 clamp(0.75rem, 3vw, 1.25rem); }
+    .about-section h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--text); }
+    .about-section p { color: var(--muted); font-size: 1rem; line-height: 1.6; margin-bottom: 1rem; }
+    .btn-layout {
+      display: inline-block;
+      padding: 10px 20px;
+      font: inherit; font-size: 0.95rem; font-weight: 600;
+      color: #1a1a1a;
+      background: var(--gold);
+      border: none; border-radius: 10px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+    .btn-layout:hover { background: #d4af37; }
+
+    .upcoming-section { width: 100%; max-width: min(1400px, 96vw); margin: 2.5rem auto 0; padding: 0 clamp(0.75rem, 3vw, 1.25rem); }
+    .upcoming-section h2 { font-size: 1.35rem; font-weight: 700; margin-bottom: 1.25rem; color: var(--text); }
+    .events-carousel {
+      display: flex; gap: 1.25rem;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding-bottom: 0.5rem;
+      -webkit-overflow-scrolling: touch;
+    }
+    .events-carousel::-webkit-scrollbar { height: 8px; }
+    .events-carousel::-webkit-scrollbar-track { background: var(--card); border-radius: 4px; }
+    .events-carousel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .event-card-link {
+      flex: 0 0 280px; scroll-snap-align: start;
+      text-decoration: none; color: inherit; display: block;
+    }
+    .event-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+      display: flex; flex-direction: column; height: 100%;
+    }
+    .event-card-link:hover .event-card { border-color: var(--accent); transform: translateY(-2px); }
+    .event-card-image { width: 100%; aspect-ratio: 16/10; object-fit: cover; background: var(--border); }
+    .event-card-body { padding: 1.25rem; flex: 1; display: flex; flex-direction: column; }
+    .event-card-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; line-height: 1.3; }
+    .event-card-meta { color: var(--muted); font-size: 0.875rem; margin-bottom: 0.5rem; }
+    .event-card-venue { color: var(--muted); font-size: 0.85rem; }
+
+    .loading, .error { text-align: center; color: var(--muted); padding: 3rem 1.25rem; }
+    .error { color: #ef4444; }
+    .site-footer { margin-top: 3rem; padding: 2.5rem 1.25rem; border-top: 1px solid var(--border); background: linear-gradient(180deg, rgba(20,20,24,0.6), var(--card)); }
+    .site-footer-inner { width: 100%; max-width: min(1400px, 96vw); margin: 0 auto; padding: 0 clamp(0.75rem, 3vw, 1.25rem); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.75rem; }
+    .site-footer-links { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem; }
+    .site-footer-links a { color: var(--muted); text-decoration: none; font-size: 0.95rem; font-weight: 500; transition: color 0.2s; }
+    .site-footer-links a:hover { color: var(--accent); }
+    .site-footer-social { display: flex; align-items: center; gap: 1rem; }
+    .site-footer-instagram { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--muted); text-decoration: none; font-size: 0.95rem; font-weight: 500; padding: 0.4rem 0.75rem; border-radius: 10px; transition: color 0.2s, background 0.2s; }
+    .site-footer-instagram:hover { color: var(--accent); background: rgba(99,102,241,0.08); }
+    .site-footer-instagram svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .site-footer-copy { color: var(--muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <div class="top-bar-wrap">
+    <header class="top-bar">
+      <a href="/" aria-label="BLOCK Home"><img src="/block-logo.png" alt="BLOCK" class="logo"></a>
+      <div class="search-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input type="search" id="searchInput" placeholder="Search for events..." aria-label="Search events">
+      </div>
+      <nav class="top-bar-nav">
+        <a href="/events">Events</a>
+        <a href="/about-us">About Us</a>
+        <a href="/contact">Contact & Support</a>
+      </nav>
+      <div class="top-bar-icons">
+        <a href="/my-tickets" aria-label="My tickets / Profile" title="My tickets">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </a>
+      </div>
+    </header>
+  </div>
+
+  <div id="eventDetailWrap" class="event-detail-wrap" style="display: none;">
+    <div class="event-detail-card">
+      <div class="event-detail-panel">
+        <h1 id="eventTitle">Event name</h1>
+        <p class="meta" id="eventMeta">Date | Time</p>
+        <p class="venue" id="eventVenue">Venue</p>
+        <p class="organizer">Organized by <strong>BLOCK</strong></p>
+        <div class="event-detail-actions">
+          <a id="bookNowBtn" href="/register" class="btn-book">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+            </svg>
+            Register Now
+          </a>
+        </div>
+      </div>
+      <div class="event-detail-image-wrap">
+        <img id="eventImage" class="event-detail-image" src="" alt="">
+      </div>
+    </div>
+  </div>
+
+  <div id="aboutWrap" class="about-section" style="display: none;">
+    <h2>About Event</h2>
+    <p id="eventDescription"></p>
+    <button type="button" class="btn-layout" id="layoutBtn">Layout</button>
+  </div>
+
+  <div id="upcomingWrap" class="upcoming-section" style="display: none;">
+    <h2>Upcoming Events</h2>
+    <div id="upcomingCarousel" class="events-carousel"></div>
+  </div>
+
+  <div id="loadingEl" class="loading">Loading event…</div>
+  <div id="errorEl" class="error" style="display: none;"></div>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <nav class="site-footer-links" id="footerLinksNav">
+        <a href="/my-tickets">My tickets</a>
+        <a href="/events">Events</a>
+        <a href="/about-us">About Us</a>
+        <a href="/contact">Contact & Support</a>
+      </nav>
+      <div class="site-footer-social">
+        <a id="footerInstagramLink" href="https://www.instagram.com/blockagency.eg" target="_blank" rel="noopener" class="site-footer-instagram" aria-label="Instagram">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          <span id="footerInstagramLabel">Instagram</span>
+        </a>
+        <span class="site-footer-copy" id="footerCopyright">© BLOCK</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const eventId = params.get('id');
+    const eventDetailWrap = document.getElementById('eventDetailWrap');
+    const eventTitle = document.getElementById('eventTitle');
+    const eventMeta = document.getElementById('eventMeta');
+    const eventVenue = document.getElementById('eventVenue');
+    const bookNowBtn = document.getElementById('bookNowBtn');
+    const eventImage = document.getElementById('eventImage');
+    const aboutWrap = document.getElementById('aboutWrap');
+    const eventDescription = document.getElementById('eventDescription');
+    const upcomingWrap = document.getElementById('upcomingWrap');
+    const upcomingCarousel = document.getElementById('upcomingCarousel');
+    const loadingEl = document.getElementById('loadingEl');
+    const errorEl = document.getElementById('errorEl');
+
+    function showError(msg) {
+      loadingEl.style.display = 'none';
+      eventDetailWrap.style.display = 'none';
+      aboutWrap.style.display = 'none';
+      upcomingWrap.style.display = 'none';
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+    }
+
+    var fallbackEvents = [
+      { id: 'ramadan-palace', name: 'Laylina Tent at Mohamed Ali Palace', date: 'Ramadan 2026', time: '', venue: 'Mohamed Ali Palace', image: '/block-logo.png', description: 'An unforgettable Ramadan experience at Mohamed Ali Palace.' },
+      { id: 'comedy-show', name: 'Konafa ADHD Interactive Comedy Show', date: 'Feb 27', time: '09:00 PM', venue: 'El Rihany Theater', image: '/block-logo.png', description: 'Interactive comedy night at El Rihany Theater.' },
+      { id: 'zed-park', name: 'ZED PARK', date: 'Feb 19 to Mar 19', time: '08:00 PM', venue: 'Zed Park, Elsheikh Zayed', image: '/block-logo.png', description: 'Live events at Zed Park throughout the season.' }
+    ];
+    function showEvent(event, others) {
+      loadingEl.style.display = 'none';
+      errorEl.style.display = 'none';
+      eventDetailWrap.style.display = 'block';
+      document.title = event.name + ' – BLOCK';
+      eventTitle.textContent = event.name;
+      eventMeta.textContent = [event.date, event.time].filter(Boolean).join(' | ');
+      eventVenue.textContent = event.venue;
+      bookNowBtn.href = '/register?eventId=' + encodeURIComponent(event.id);
+      eventImage.src = event.image || '/block-logo.png';
+      eventImage.alt = event.name;
+      if (event.description) {
+        aboutWrap.style.display = 'block';
+        eventDescription.textContent = event.description;
+      }
+      if (others && others.length > 0) {
+        upcomingWrap.style.display = 'block';
+        upcomingCarousel.innerHTML = others.map(function (e) {
+          return '<a href="/event?id=' + encodeURIComponent(e.id) + '" class="event-card-link">' +
+            '<article class="event-card">' +
+            '<img class="event-card-image" src="' + (e.image || '/block-logo.png') + '" alt="' + e.name.replace(/"/g, '&quot;') + '">' +
+            '<div class="event-card-body">' +
+            '<h3 class="event-card-title">' + e.name + '</h3>' +
+            '<div class="event-card-meta">' + (e.date + (e.time ? ' | ' + e.time : '')) + '</div>' +
+            '<div class="event-card-venue">' + (e.venue || '') + '</div>' +
+            '</div></article></a>';
+        }).join('');
+      }
+    }
+    async function loadEvent() {
+      if (!eventId) {
+        showError('No event selected.');
+        return;
+      }
+      var events = null;
+      try {
+        var res = await fetch('/api/events');
+        var data = await res.json();
+        if (res.ok && Array.isArray(data)) events = data;
+      } catch (e) {}
+      if (!events || events.length === 0) {
+        try {
+          var res2 = await fetch('events.json');
+          var data2 = await res2.json();
+          if (Array.isArray(data2)) events = data2;
+        } catch (e2) {}
+      }
+      if (!events || events.length === 0) events = fallbackEvents;
+      var event = events.find(function (e) { return e.id === eventId; });
+      if (!event) {
+        showError('Event not found.');
+        return;
+      }
+      var others = events.filter(function (e) { return e.id !== eventId; });
+      showEvent(event, others);
+    }
+
+    document.getElementById('layoutBtn').addEventListener('click', function () {
+      alert('Venue layout view can be added here.');
+    });
+    loadEvent();
+
+    (function loadFooterConfig() {
+      fetch('/api/site-config').then(function(r){ return r.json(); }).then(function(cfg){
+        var copy = document.getElementById('footerCopyright');
+        var igLink = document.getElementById('footerInstagramLink');
+        var igLabel = document.getElementById('footerInstagramLabel');
+        var nav = document.getElementById('footerLinksNav');
+        if (copy) copy.textContent = cfg.copyright || '© BLOCK';
+        if (igLink) igLink.href = cfg.instagramUrl || 'https://www.instagram.com/blockagency.eg';
+        if (igLabel) igLabel.textContent = cfg.instagramLabel || 'Instagram';
+        if (nav && Array.isArray(cfg.links) && cfg.links.length) {
+          nav.innerHTML = cfg.links.map(function(l){ return '<a href="' + (l.url||'#') + '">' + (l.label||'') + '</a>'; }).join('');
+        }
+      }).catch(function(){});
+    })();
+  </script>
+</body>
+</html>

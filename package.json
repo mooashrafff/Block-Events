@@ -1,0 +1,19 @@
+{
+  "name": "event-ticketing-system",
+  "version": "1.0.0",
+  "description": "Event ticketing with registration, unique QR tickets, email delivery, and Google Sheet check-in",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.97.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "googleapis": "^128.0.0",
+    "nodemailer": "^6.9.7",
+    "qrcode": "^1.5.3",
+    "uuid": "^9.0.0"
+  }
+}

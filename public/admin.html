@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin – BLOCK Events</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    (function() {
+      var isFile = location.protocol === 'file:';
+      var isWrongPort = location.hostname === 'localhost' && location.port !== '3001' && location.port !== '';
+      if (isFile || isWrongPort) {
+        var base = document.createElement('base');
+        base.href = 'http://localhost:3001/';
+        document.head.appendChild(base);
+      }
+    })();
+  </script>
+  <style>
+    :root {
+      --bg: #050509;
+      --card: #141418;
+      --border: #25252d;
+      --text: #e8e8ed;
+      --muted: #8888a0;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --danger: #ef4444;
+      --gold: #c9a227;
+      --bar-bg: #ffffff;
+      --bar-text: #1a1a1a;
+      --bar-muted: #5a5a5a;
+      --search-bg: #f0f0f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { overflow-x: hidden; width: 100%; }
+    body {
+      font-family: 'Outfit', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      display: flex;
+    }
+    .dashboard-layout {
+      display: flex;
+      width: 100%;
+      min-height: 100vh;
+    }
+    .sidebar {
+      width: 240px;
+      min-width: 240px;
+      background: linear-gradient(180deg, rgba(20,20,24,0.98), rgba(10,10,14,0.98));
+      border-right: 1px solid rgba(255,255,255,0.06);
+      padding: 1.25rem 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-logo {
+      padding: 0 1.25rem 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      margin-bottom: 1rem;
+    }
+    .sidebar-logo img { width: 100px; height: auto; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.65rem 1.25rem;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: color 0.2s, background 0.2s;
+    }
+    .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+    .nav-item.active {
+      color: var(--accent);
+      background: rgba(99,102,241,0.12);
+      border-left-color: var(--accent);
+    }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .main-content {
+      flex: 1;
+      padding: 1.5rem 1.75rem 2rem;
+      overflow-x: hidden;
+      background: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(99,102,241,.08), transparent);
+    }
+    .main-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .main-header h1 { font-size: 1.5rem; font-weight: 700; }
+    .main-header .subtitle { color: var(--muted); font-size: 0.9rem; margin-top: 0.2rem; }
+    .view { display: none; }
+    .view.active { display: block; }
+    @media (max-width: 768px) {
+      .sidebar { width: 72px; min-width: 72px; padding: 0.75rem 0; }
+      .sidebar-logo { padding: 0 0.5rem; }
+      .sidebar-logo span, .nav-item span { display: none; }
+      .nav-item { padding: 0.75rem; justify-content: center; }
+      .nav-item svg { margin: 0; }
+    }
+    .page-main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 1.75rem;
+    }
+    @media (max-width: 900px) {
+      .page-main { grid-template-columns: minmax(0, 1fr); }
+    }
+    h1 {
+      font-size: 1.45rem;
+      margin-bottom: 0.75rem;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.5rem;
+    }
+    .column {
+      background: rgba(10,10,16,0.7);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.03);
+      padding: 1.25rem;
+    }
+    .column + .column {
+      background: var(--card);
+    }
+    .column-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .chip {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+    }
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+    }
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+    }
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+      color: #fee2e2;
+    }
+
+    /* Events grid (user-style cards) */
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.25rem;
+      min-height: 120px;
+    }
+    .event-card {
+      background: var(--card);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.2s;
+    }
+    .event-card:hover { border-color: var(--accent); }
+    .event-card img {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      background: var(--border);
+    }
+    .event-card-body {
+      padding: 1rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .event-card-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.35rem; }
+    .event-card-meta { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.35rem; }
+    .event-card-desc { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.75rem; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .event-card-actions { margin-top: auto; }
+    .event-card-actions .btn { width: 100%; padding: 8px 12px; border-radius: 8px; }
+    .event-card-add {
+      background: var(--card);
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      color: var(--muted);
+    }
+    .event-card-add:hover { border-color: var(--accent); background: rgba(99,102,241,0.06); color: var(--accent); }
+    .event-card-add .add-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+    /* Form */
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .field label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 0.25rem;
+    }
+    .field input,
+    .field textarea {
+      width: 100%;
+      padding: 9px 11px;
+      font: inherit;
+      font-size: 0.92rem;
+      color: var(--text);
+      background: #05050a;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+    .field input:focus,
+    .field textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .field textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+    .field input[type="file"] {
+      padding: 6px 4px;
+      background: transparent;
+      border: none;
+    }
+    .image-preview {
+      margin-top: 0.35rem;
+      max-width: 100%;
+      max-height: 140px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.06);
+      object-fit: cover;
+      display: none;
+    }
+    .form-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .form-actions-right {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    /* Summary cards */
+    .summary-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    @media (max-width: 900px) {
+      .summary-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 640px) {
+      .summary-row {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+    .summary-card {
+      background: linear-gradient(135deg, rgba(99,102,241,0.18), rgba(15,23,42,0.9));
+      border-radius: 14px;
+      padding: 0.9rem 1rem;
+      border: 1px solid rgba(99,102,241,0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .summary-card:nth-child(2) {
+      background: linear-gradient(135deg, rgba(251,191,36,0.16), rgba(15,23,42,0.9));
+      border-color: rgba(251,191,36,0.45);
+    }
+    .summary-card:nth-child(3) {
+      background: linear-gradient(135deg, rgba(34,197,94,0.18), rgba(15,23,42,0.9));
+      border-color: rgba(34,197,94,0.5);
+    }
+    .summary-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .summary-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+    .summary-sub {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .message {
+      margin-top: 0.75rem;
+      font-size: 0.85rem;
+      padding: 8px 10px;
+      border-radius: 10px;
+      display: none;
+    }
+    .message.show { display: block; }
+    .message.error { background: rgba(239, 68, 68, 0.15); color: #fecaca; }
+    .message.success { background: rgba(34, 197, 94, 0.15); color: #bbf7d0; }
+
+    /* Stats */
+    .stats-section {
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .stats-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+    }
+    .stats-title {
+      font-size: 0.98rem;
+      font-weight: 600;
+    }
+    .stats-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin-top: 0.25rem;
+    }
+    .stats-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .stats-row-name {
+      max-width: 58%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text);
+    }
+    .stats-row-metrics {
+      display: flex;
+      gap: 0.75rem;
+      align-items: baseline;
+      font-size: 0.8rem;
+    }
+    .stats-pill {
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.7);
+      font-size: 0.75rem;
+    }
+    .stats-pill span {
+      color: #a5b4fc;
+      font-weight: 600;
+    }
+    .stats-rate {
+      color: #4ade80;
+      font-weight: 600;
+    }
+
+    /* Attendees table */
+    .attendees-section {
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .attendees-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .attendees-controls {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .attendees-controls select {
+      padding: 6px 10px;
+      font: inherit;
+      font-size: 0.85rem;
+      color: var(--text);
+      background: #05050a;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+    .attendees-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+    .attendees-table th,
+    .attendees-table td {
+      padding: 6px 4px;
+      text-align: left;
+      border-bottom: 1px solid rgba(31,41,55,0.8);
+    }
+    .attendees-table th {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .attendees-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    .att-status {
+      font-size: 0.78rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .att-status-ok {
+      background: rgba(34,197,94,0.18);
+      color: #4ade80;
+    }
+    .att-status-pending {
+      background: rgba(148,163,184,0.18);
+      color: #cbd5f5;
+    }
+    .btn-resend-attendee {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--accent);
+      background: transparent;
+      color: var(--accent);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-resend-attendee:hover {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-resend-attendee:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .chart-card {
+      background: var(--card);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .chart-card h3 { font-size: 1rem; margin-bottom: 0.5rem; }
+    .chart-wrap { position: relative; height: 220px; }
+
+    /* Admin key modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+    }
+    .modal {
+      background: #05050b;
+      border-radius: 16px;
+      padding: 1.5rem 1.75rem;
+      width: 100%;
+      max-width: 380px;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+    }
+    .modal h2 {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+    .modal p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .modal input {
+      width: 100%;
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 0.95rem;
+      color: var(--text);
+      background: #05050a;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+    .modal input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-layout" id="dashboardLayout" style="display:none;">
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <a href="/"><img src="/block-logo.png" alt="BLOCK"></a>
+      </div>
+      <nav>
+        <div class="nav-item active" data-view="dashboard">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+          <span>Dashboard</span>
+        </div>
+        <div class="nav-item" data-view="events">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          <span>Events</span>
+        </div>
+        <div class="nav-item" data-view="attendees">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+          <span>Attendees</span>
+        </div>
+        <div class="nav-item" data-view="scanner">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>
+          <span>Scanner</span>
+        </div>
+        <div class="nav-item" data-view="footer">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" /></svg>
+          <span>Footer</span>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="main-content">
+      <!-- Dashboard view -->
+      <div class="view active" id="view-dashboard">
+        <div class="main-header">
+          <div>
+            <h1>Dashboard</h1>
+            <p class="subtitle">Overview of events and registrations</p>
+          </div>
+        </div>
+        <div class="summary-row" id="summaryRow" style="display:none;">
+          <div class="summary-card">
+            <div class="summary-label">Events</div>
+            <div class="summary-value" id="summaryEvents">0</div>
+            <div class="summary-sub">Total active events</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Registrations</div>
+            <div class="summary-value" id="summaryRegistrations">0</div>
+            <div class="summary-sub">All events combined</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Attendance rate</div>
+            <div class="summary-value" id="summaryRate">0%</div>
+            <div class="summary-sub">Attended / registered</div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3>Registrations by event</h3>
+          <div class="chart-wrap">
+            <canvas id="attendanceChart"></canvas>
+          </div>
+        </div>
+        <section class="stats-section" id="statsSection" style="display:none;">
+          <div class="stats-header">
+            <div class="stats-title">Per-event breakdown</div>
+          </div>
+          <div id="statsList" class="stats-list"></div>
+        </section>
+      </div>
+
+      <!-- Events view -->
+      <div class="view" id="view-events">
+        <div class="main-header">
+          <div>
+            <h1>Events</h1>
+            <p class="subtitle">Manage events shown on the website. Click a card to edit, or + to create.</p>
+          </div>
+        </div>
+        <div class="page-main">
+    <section class="column">
+      <div class="column-header">
+        <div>
+          <h2 style="font-size:1.1rem; margin-bottom:0.25rem;">Your events</h2>
+          <p class="subtitle" style="margin-bottom:0;">Same layout as user view. Edit any event or add a new one.</p>
+        </div>
+      </div>
+      <div id="eventsList" class="events-grid"></div>
+    </section>
+
+    <section class="column">
+      <div class="column-header">
+        <div>
+          <h1 id="formTitle">Create event</h1>
+          <p class="subtitle" id="formSubtitle">Fill in the details then hit Save.</p>
+        </div>
+      </div>
+      <form id="eventForm" class="form">
+        <input type="hidden" id="eventId">
+        <div class="field">
+          <label for="eventName">Name *</label>
+          <input type="text" id="eventName" required placeholder="Laylina Tent at Mohamed Ali Palace">
+        </div>
+        <div class="field">
+          <label for="eventSlug">Slug (URL id – optional)</label>
+          <input type="text" id="eventSlug" placeholder="ramadan-palace">
+        </div>
+        <div class="field">
+          <label for="eventDate">Date</label>
+          <input type="date" id="eventDate">
+        </div>
+        <div class="field">
+          <label for="eventTime">Time</label>
+          <input type="time" id="eventTime">
+        </div>
+        <div class="field">
+          <label for="eventVenue">Venue</label>
+          <input type="text" id="eventVenue" placeholder="Mohamed Ali Palace">
+        </div>
+        <div class="field">
+          <label for="eventCategory">Category</label>
+          <input type="text" id="eventCategory" placeholder="Ramadan, Comedy, Concert…">
+        </div>
+        <div class="field">
+          <label for="eventImage">Image URL</label>
+          <input type="text" id="eventImage" placeholder="/images/my-event.jpg">
+        </div>
+        <div class="field">
+          <label for="eventImageFile">Upload image from device</label>
+          <input type="file" id="eventImageFile" accept="image/*">
+          <img id="imagePreview" class="image-preview" alt="Event image preview">
+        </div>
+        <div class="field">
+          <label for="eventDescription">Description</label>
+          <textarea id="eventDescription" placeholder="Short description shown on event card and details page."></textarea>
+        </div>
+        <div class="field">
+          <label for="eventAvailableTickets">Available tickets (admin only, not shown to users)</label>
+          <input type="number" id="eventAvailableTickets" min="0" placeholder="Leave empty for unlimited">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" id="btnCancelEdit" style="display:none;">Cancel edit</button>
+          <div class="form-actions-right">
+            <button type="button" class="btn btn-danger" id="btnDelete" style="display:none;">Delete</button>
+            <button type="submit" class="btn btn-primary" id="btnSave">Save</button>
+          </div>
+        </div>
+        <div id="formMessage" class="message"></div>
+      </form>
+    </section>
+  </div>
+</div>
+
+      <!-- Attendees view -->
+      <div class="view" id="view-attendees">
+        <div class="main-header">
+          <div>
+            <h1>Attendees</h1>
+            <p class="subtitle">People who registered for events. Filter by event to see who signed up.</p>
+          </div>
+          <div class="attendees-controls">
+            <select id="attendeesEventFilter">
+              <option value="">All events</option>
+            </select>
+          </div>
+        </div>
+        <section class="attendees-section" id="attendeesSection" style="display:none;">
+        <div class="column" style="margin-top:0;">
+          <div style="max-height: 400px; overflow:auto; border-radius: 12px; border: 1px solid rgba(31,41,55,0.9);">
+            <table class="attendees-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Event</th>
+                  <th>Registered</th>
+                  <th>Status</th>
+                  <th>Scanned at</th>
+                  <th>Resend</th>
+                </tr>
+              </thead>
+              <tbody id="attendeesBody">
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top: 1rem;">
+            <button type="button" class="btn btn-primary" id="btnDownloadAttendeesExcel">Download attendees as Excel (CSV)</button>
+          </div>
+        </div>
+        </section>
+      </div>
+
+      <!-- Footer view -->
+      <div class="view" id="view-footer">
+        <div class="main-header">
+          <div>
+            <h1>Footer & social</h1>
+            <p class="subtitle">Edit footer text, Instagram link, and copyright. Changes apply to all pages.</p>
+          </div>
+        </div>
+        <div class="column" style="max-width: 560px;">
+          <form id="footerForm" class="form">
+            <div class="field">
+              <label for="footerCopyright">Copyright text</label>
+              <input type="text" id="footerCopyright" placeholder="© BLOCK">
+            </div>
+            <div class="field">
+              <label for="footerInstagramUrl">Instagram URL</label>
+              <input type="url" id="footerInstagramUrl" placeholder="https://www.instagram.com/blockagency.eg">
+            </div>
+            <div class="field">
+              <label for="footerInstagramLabel">Instagram label (text next to icon)</label>
+              <input type="text" id="footerInstagramLabel" placeholder="Instagram">
+            </div>
+            <div class="form-actions">
+              <span></span>
+              <button type="submit" class="btn btn-primary" id="btnSaveFooter">Save footer</button>
+            </div>
+            <div id="footerFormMessage" class="message"></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Scanner view -->
+      <div class="view" id="view-scanner">
+        <div class="main-header">
+          <div>
+            <h1>Ticket Scanner</h1>
+            <p class="subtitle">Share the scanner link with your team. They can only scan tickets—no access to admin or events.</p>
+          </div>
+          <a href="/scan" target="_blank" rel="noopener" class="btn btn-primary">Open scanner</a>
+        </div>
+        <div class="scanner-share card" style="max-width: 560px;">
+          <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Team scanner link</h3>
+          <p class="subtitle" style="margin-bottom: 0.75rem;">Anyone with this link can check in attendees by scanning their QR code. They cannot see events, attendees list, or settings.</p>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+            <input type="text" id="scannerLinkInput" readonly style="flex: 1; min-width: 200px; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 0.9rem;">
+            <button type="button" class="btn btn-primary" id="btnCopyScannerLink">Copy link</button>
+          </div>
+          <p id="scannerLinkCopied" class="message success" style="display: none; margin-top: 0.5rem;">Link copied to clipboard.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="adminKeyModal" class="modal-backdrop">
+    <div class="modal">
+      <h2>Enter admin key</h2>
+      <p>Set <code>ADMIN_API_KEY</code> in your <code>.env</code> file on the server, then paste the same key here to manage events.</p>
+      <p style="margin-top:0.5rem;font-size:0.85rem;color:var(--muted);">Make sure you open this page from <strong>http://localhost:3001/admin</strong> (not by opening the file directly).</p>
+      <input type="password" id="adminKeyInput" placeholder="Admin key">
+      <button class="btn btn-primary" id="btnUseKey">Continue</button>
+      <div id="adminKeyError" class="message error" style="margin-top:0.75rem;"></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var events = [];
+      var draggedId = null;
+      var adminKey = '';
+
+      var listEl = document.getElementById('eventsList');
+      var btnNew = document.getElementById('btnNew');
+      var form = document.getElementById('eventForm');
+      var formTitle = document.getElementById('formTitle');
+      var formSubtitle = document.getElementById('formSubtitle');
+      var btnSave = document.getElementById('btnSave');
+      var btnDelete = document.getElementById('btnDelete');
+      var btnCancelEdit = document.getElementById('btnCancelEdit');
+      var formMessage = document.getElementById('formMessage');
+      var summaryRow = document.getElementById('summaryRow');
+      var summaryEvents = document.getElementById('summaryEvents');
+      var summaryRegistrations = document.getElementById('summaryRegistrations');
+      var summaryRate = document.getElementById('summaryRate');
+      var statsSection = document.getElementById('statsSection');
+      var statsList = document.getElementById('statsList');
+      var attendeesSection = document.getElementById('attendeesSection');
+      var attendeesBody = document.getElementById('attendeesBody');
+      var attendeesEventFilter = document.getElementById('attendeesEventFilter');
+
+      var fId = document.getElementById('eventId');
+      var fName = document.getElementById('eventName');
+      var fSlug = document.getElementById('eventSlug');
+      var fDate = document.getElementById('eventDate');
+      var fTime = document.getElementById('eventTime');
+      var fVenue = document.getElementById('eventVenue');
+      var fCategory = document.getElementById('eventCategory');
+      var fImage = document.getElementById('eventImage');
+      var fDescription = document.getElementById('eventDescription');
+      var fAvailableTickets = document.getElementById('eventAvailableTickets');
+      var fImageFile = document.getElementById('eventImageFile');
+      var imagePreview = document.getElementById('imagePreview');
+      var latestStats = [];
+      var attendees = [];
+
+      var modal = document.getElementById('adminKeyModal');
+      var adminKeyInput = document.getElementById('adminKeyInput');
+      var btnUseKey = document.getElementById('btnUseKey');
+      var adminKeyError = document.getElementById('adminKeyError');
+      var dashboardLayout = document.getElementById('dashboardLayout');
+      var attendanceChart = null;
+
+      function switchView(name) {
+        ['dashboard', 'events', 'attendees', 'scanner', 'footer'].forEach(function (v) {
+          var vEl = document.getElementById('view-' + v);
+          var nEl = document.querySelector('.nav-item[data-view="' + v + '"]');
+          if (vEl) vEl.classList.toggle('active', v === name);
+          if (nEl) nEl.classList.toggle('active', v === name);
+        });
+        if (name === 'scanner') {
+          var input = document.getElementById('scannerLinkInput');
+          if (input) input.value = (window.location.origin || 'http://localhost:3001') + '/scan';
+        }
+        if (name === 'attendees') {
+          loadAttendees();
+        }
+        if (name === 'events') {
+          reloadFromServer();
+        }
+        if (name === 'footer') {
+          loadFooterConfig();
+        }
+      }
+
+      function api(path, options) {
+        options = options || {};
+        var base = window.location.origin || 'http://localhost:3001';
+        var headers = options.headers || {};
+        headers['Content-Type'] = 'application/json';
+        if (adminKey) headers['X-Admin-Key'] = adminKey;
+        return fetch(base + path, Object.assign({}, options, { headers: headers }));
+      }
+
+      function showFormMessage(text, type) {
+        formMessage.textContent = text || '';
+        formMessage.className = 'message ' + (text ? 'show ' + (type || '') : '');
+      }
+
+      function renderStats(stats) {
+        if (!statsSection || !statsList) return;
+        if (!Array.isArray(stats) || !stats.length) {
+          statsSection.style.display = 'none';
+          statsList.innerHTML = '';
+          return;
+        }
+        statsSection.style.display = 'block';
+        statsList.innerHTML = stats.map(function (s) {
+          var rate = s.attendanceRate ? Math.round(s.attendanceRate * 100) : 0;
+          return '<div class="stats-row">' +
+            '<div class="stats-row-name">' + (s.eventName || 'Event') + '</div>' +
+            '<div class="stats-row-metrics">' +
+              '<div class="stats-pill">Total: <span>' + (s.total || 0) + '</span></div>' +
+              '<div class="stats-pill">Attended: <span>' + (s.attended || 0) + '</span></div>' +
+              '<span class="stats-rate">' + rate + '%</span>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      }
+
+      function buildAttendeeFilterOptions() {
+        if (!attendeesEventFilter) return;
+        var seen = {};
+        events.forEach(function (e) {
+          if (!e.name) return;
+          if (seen[e.name]) return;
+          seen[e.name] = true;
+        });
+        latestStats.forEach(function (s) {
+          if (!s.eventName) return;
+          if (seen[s.eventName]) return;
+          seen[s.eventName] = true;
+        });
+        var current = attendeesEventFilter.value;
+        attendeesEventFilter.innerHTML = '<option value="">All events</option>';
+        Object.keys(seen).sort().forEach(function (name) {
+          var opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = name;
+          if (name === current) opt.selected = true;
+          attendeesEventFilter.appendChild(opt);
+        });
+      }
+
+      function renderAttendees() {
+        if (!attendeesSection || !attendeesBody) return;
+        attendeesSection.style.display = 'block';
+        if (!Array.isArray(attendees) || !attendees.length) {
+          attendeesBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--muted);">No attendees found</td></tr>';
+          return;
+        }
+        attendeesBody.innerHTML = attendees.map(function (row) {
+          var d = row.created_at ? new Date(row.created_at) : null;
+          var dateStr = d ? d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+          var scanD = row.checkin_time ? new Date(row.checkin_time) : null;
+          var scanStr = scanD ? scanD.toLocaleDateString() + ' ' + scanD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+          var attended = row.attended === true;
+          var statusClass = attended ? 'att-status att-status-ok' : 'att-status att-status-pending';
+          var statusText = attended ? 'Attended' : 'Not yet';
+          var em = (row.email || '').replace(/"/g, '&quot;');
+          var tid = (row.ticket_id || '').replace(/"/g, '&quot;');
+          return '<tr>' +
+            '<td>' + escapeHtml(row.name || '') + '</td>' +
+            '<td>' + escapeHtml(row.email || '') + '</td>' +
+            '<td>' + escapeHtml(row.phone || '') + '</td>' +
+            '<td>' + escapeHtml(row.event_name || '') + '</td>' +
+            '<td>' + dateStr + '</td>' +
+            '<td><span class="' + statusClass + '">' + statusText + '</span></td>' +
+            '<td>' + scanStr + '</td>' +
+            '<td><button type="button" class="btn-resend-attendee" data-email="' + em + '" data-ticket-id="' + tid + '" title="Resend ticket email">Resend</button></td>' +
+          '</tr>';
+        }).join('');
+        attachResendHandlers();
+      }
+
+      function escapeHtml(s) {
+        if (s == null) return '';
+        var div = document.createElement('div');
+        div.textContent = s;
+        return div.innerHTML;
+      }
+
+      var resendHandlersAttached = false;
+      function attachResendHandlers() {
+        if (!attendeesBody || resendHandlersAttached) return;
+        resendHandlersAttached = true;
+        attendeesBody.addEventListener('click', function (e) {
+          var btn = e.target && e.target.closest && e.target.closest('.btn-resend-attendee');
+          if (!btn || btn.disabled) return;
+          var email = btn.getAttribute('data-email') || '';
+          var ticketId = btn.getAttribute('data-ticket-id') || '';
+          if (!email || !ticketId) return;
+          btn.disabled = true;
+          btn.textContent = 'Sending…';
+          var base = window.location.origin || 'http://localhost:3001';
+          fetch(base + '/api/resend-ticket', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, ticketId: ticketId })
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              if (data.error) throw new Error(data.error);
+              btn.textContent = 'Sent';
+              setTimeout(function () {
+                btn.disabled = false;
+                btn.textContent = 'Resend';
+              }, 2000);
+            })
+            .catch(function (err) {
+              btn.textContent = 'Error';
+              btn.disabled = false;
+              setTimeout(function () { btn.textContent = 'Resend'; }, 2000);
+              alert(err.message || 'Failed to resend ticket.');
+            });
+        });
+      }
+
+      function downloadAttendeesExcel() {
+        var headers = ['Name', 'Email', 'Phone', 'Event', 'Registered', 'Ticket status', 'Scanned at', 'Ticket ID'];
+        var rows = [headers];
+        (attendees || []).forEach(function (row) {
+          var reg = row.created_at ? new Date(row.created_at).toLocaleString() : '';
+          var scan = row.checkin_time ? new Date(row.checkin_time).toLocaleString() : '';
+          var status = row.attended === true ? 'Attended' : 'Not yet';
+          rows.push([
+            row.name || '',
+            row.email || '',
+            row.phone || '',
+            row.event_name || '',
+            reg,
+            status,
+            scan,
+            row.ticket_id || ''
+          ]);
+        });
+        var csv = rows.map(function (r) {
+          return r.map(function (cell) {
+            var s = String(cell).replace(/"/g, '""');
+            if (/[",\n\r]/.test(s)) return '"' + s + '"';
+            return s;
+          }).join(',');
+        }).join('\r\n');
+        var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'attendees-' + (attendeesEventFilter && attendeesEventFilter.value ? attendeesEventFilter.value.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 30) : 'all') + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
+
+      function renderSummary() {
+        if (!summaryRow || !summaryEvents || !summaryRegistrations || !summaryRate) return;
+        var totalEvents = events.length;
+        var totalRegistrations = 0;
+        var totalAttended = 0;
+        latestStats.forEach(function (s) {
+          totalRegistrations += s.total || 0;
+          totalAttended += s.attended || 0;
+        });
+        var rate = totalRegistrations ? Math.round((totalAttended / totalRegistrations) * 100) : 0;
+        summaryEvents.textContent = String(totalEvents);
+        summaryRegistrations.textContent = String(totalRegistrations);
+        summaryRate.textContent = rate + '%';
+        summaryRow.style.display = 'grid';
+        updateChart();
+      }
+
+      function updateChart() {
+        var canvas = document.getElementById('attendanceChart');
+        if (!canvas || typeof Chart === 'undefined') return;
+        var labels = latestStats.map(function (s) { return (s.eventName || 'Event').substring(0, 20); });
+        var data = latestStats.map(function (s) { return s.total || 0; });
+        var attendedData = latestStats.map(function (s) { return s.attended || 0; });
+        if (attendanceChart) attendanceChart.destroy();
+        attendanceChart = new Chart(canvas, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [
+              { label: 'Registered', data: data, backgroundColor: 'rgba(99,102,241,0.6)', borderRadius: 6 },
+              { label: 'Attended', data: attendedData, backgroundColor: 'rgba(34,197,94,0.6)', borderRadius: 6 }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#e8e8ed' } } },
+            scales: {
+              x: { ticks: { color: '#8888a0' } },
+              y: { ticks: { color: '#8888a0' } }
+            }
+          }
+        });
+      }
+
+      function setEditing(event) {
+        if (!event) {
+          fId.value = '';
+          fName.value = '';
+          fSlug.value = '';
+          fDate.value = '';
+          fTime.value = '';
+          fVenue.value = '';
+          fCategory.value = '';
+          fImage.value = '';
+          fDescription.value = '';
+          if (fAvailableTickets) fAvailableTickets.value = '';
+          if (imagePreview) {
+            imagePreview.style.display = 'none';
+            imagePreview.src = '';
+          }
+          btnDelete.style.display = 'none';
+          btnCancelEdit.style.display = 'none';
+          formTitle.textContent = 'Create event';
+          formSubtitle.textContent = 'Fill in the details then hit Save.';
+        } else {
+          fId.value = event.id || '';
+          fName.value = event.name || '';
+          fSlug.value = event.slug || '';
+          fDate.value = event.date || '';
+          fTime.value = event.time || '';
+          fVenue.value = event.venue || '';
+          fCategory.value = event.category || '';
+          fImage.value = event.image || '';
+          fDescription.value = event.description || '';
+          if (fAvailableTickets) fAvailableTickets.value = event.available_tickets != null ? String(event.available_tickets) : '';
+          if (imagePreview && event.image) {
+            imagePreview.src = event.image;
+            imagePreview.style.display = 'block';
+          } else if (imagePreview) {
+            imagePreview.style.display = 'none';
+            imagePreview.src = '';
+          }
+          btnDelete.style.display = 'inline-flex';
+          btnCancelEdit.style.display = 'inline-flex';
+          formTitle.textContent = 'Edit event';
+          formSubtitle.textContent = 'Update the details and hit Save.';
+        }
+        showFormMessage('');
+        var formSection = form && form.closest('.column');
+        if (formSection) formSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      function escapeAttrib(s) {
+        if (s == null) return '';
+        return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+
+      function renderList() {
+        var cards = events.map(function (e) {
+          var meta = [e.date || '', e.time || ''].filter(Boolean).join(' | ');
+          if (e.venue) meta = meta ? meta + ' · ' + e.venue : e.venue;
+          var desc = (e.description || '').substring(0, 80);
+          if ((e.description || '').length > 80) desc += '…';
+          return '<article class="event-card" data-id="' + escapeAttrib(e.id) + '">' +
+            '<img src="' + escapeAttrib(e.image || '/block-logo.png') + '" alt="">' +
+            '<div class="event-card-body">' +
+              '<h3 class="event-card-title">' + escapeAttrib(e.name || '') + '</h3>' +
+              '<div class="event-card-meta">' + escapeAttrib(meta || 'No date set') + '</div>' +
+              (desc ? '<div class="event-card-desc">' + escapeAttrib(desc) + '</div>' : '') +
+              '<div class="event-card-actions">' +
+                '<button type="button" class="btn btn-primary btn-edit" data-id="' + escapeAttrib(e.id) + '">Edit</button>' +
+              '</div>' +
+            '</div>' +
+          '</article>';
+        });
+        cards.push('<div class="event-card-add" id="eventCardAdd"><div class="add-icon">+</div><div>New event</div></div>');
+        listEl.innerHTML = cards.join('');
+
+        listEl.querySelectorAll('.event-card .btn-edit').forEach(function (btn) {
+          btn.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            var id = btn.getAttribute('data-id');
+            var evt = events.find(function (e) { return e.id === id; });
+            setEditing(evt || null);
+          });
+        });
+        listEl.querySelectorAll('.event-card').forEach(function (card) {
+          card.addEventListener('click', function (ev) {
+            if (ev.target.closest('.btn-edit')) return;
+            var id = card.getAttribute('data-id');
+            var evt = events.find(function (e) { return e.id === id; });
+            setEditing(evt || null);
+          });
+        });
+        var addEl = document.getElementById('eventCardAdd');
+        if (addEl) addEl.addEventListener('click', function () { setEditing(null); });
+      }
+
+      function reloadFromServer() {
+        api('/api/admin/events')
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data && data.error) {
+              showFormMessage(data.error, 'error');
+              return;
+            }
+            events = Array.isArray(data) ? data : [];
+            renderList();
+            if (!fId.value && events.length) {
+              setEditing(events[0]);
+            }
+            // Also refresh stats whenever we reload events
+            loadStats();
+          })
+          .catch(function () {
+            showFormMessage('Could not load events.', 'error');
+          });
+      }
+
+      function loadStats() {
+        api('/api/admin/event-stats')
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data && data.error) {
+              // do not show in form message, keep stats area quiet on error
+              return;
+            }
+            latestStats = Array.isArray(data) ? data : [];
+            renderStats(latestStats);
+            renderSummary();
+            buildAttendeeFilterOptions();
+            loadAttendees(); // default: all events
+          })
+          .catch(function () {
+            // ignore stats errors silently; admin can still manage events
+          });
+      }
+
+      function loadAttendees() {
+        var params = '';
+        if (attendeesEventFilter && attendeesEventFilter.value) {
+          params = '?eventName=' + encodeURIComponent(attendeesEventFilter.value);
+        }
+        api('/api/admin/attendees' + params)
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data && data.error) {
+              return;
+            }
+            attendees = Array.isArray(data) ? data : [];
+            renderAttendees();
+          })
+          .catch(function () {
+            // ignore error in attendees list; admin can still use rest
+          });
+      }
+
+      if (btnNew) btnNew.addEventListener('click', function () { setEditing(null); });
+
+      btnCancelEdit.addEventListener('click', function () {
+        setEditing(null);
+      });
+
+      form.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var name = fName.value.trim();
+        if (!name) {
+          showFormMessage('Name is required.', 'error');
+          fName.focus();
+          return;
+        }
+        var id = fId.value;
+        var body = {
+          name: name,
+          slug: fSlug.value.trim() || null,
+          date: fDate.value.trim() || null,
+          time: fTime.value.trim() || null,
+          venue: fVenue.value.trim() || null,
+          category: fCategory.value.trim() || null,
+          image: fImage.value.trim() || null,
+          description: fDescription.value.trim() || null,
+          available_tickets: fAvailableTickets && fAvailableTickets.value.trim() ? fAvailableTickets.value.trim() : null
+        };
+        btnSave.disabled = true;
+        showFormMessage('');
+        var method = id ? 'PUT' : 'POST';
+        var path = id ? '/api/admin/events/' + encodeURIComponent(id) : '/api/admin/events';
+        api(path, {
+          method: method,
+          body: JSON.stringify(body)
+        }).then(function (r) { return r.json(); }).then(function (data) {
+          if (data && data.error) {
+            showFormMessage(data.error, 'error');
+          } else {
+            showFormMessage('Saved.', 'success');
+            reloadFromServer();
+          }
+        }).catch(function () {
+          showFormMessage('Could not save event.', 'error');
+        }).finally(function () {
+          btnSave.disabled = false;
+        });
+      });
+
+      btnDelete.addEventListener('click', function () {
+        var id = fId.value;
+        if (!id) return;
+        if (!confirm('Delete this event?')) return;
+        btnDelete.disabled = true;
+        showFormMessage('');
+        api('/api/admin/events/' + encodeURIComponent(id), {
+          method: 'DELETE'
+        }).then(function (r) { return r.json(); }).then(function (data) {
+          if (data && data.error) {
+            showFormMessage(data.error, 'error');
+          } else {
+            showFormMessage('Deleted.', 'success');
+            setEditing(null);
+            reloadFromServer();
+          }
+        }).catch(function () {
+          showFormMessage('Could not delete event.', 'error');
+        }).finally(function () {
+          btnDelete.disabled = false;
+        });
+      });
+
+      if (fImageFile) {
+        fImageFile.addEventListener('change', function () {
+          var file = fImageFile.files && fImageFile.files[0];
+          if (!file) return;
+          if (!/^image\//.test(file.type)) {
+            showFormMessage('Please choose an image file (jpg, png, etc.).', 'error');
+            fImageFile.value = '';
+            return;
+          }
+          var reader = new FileReader();
+          reader.onload = function (ev) {
+            var dataUrl = ev.target && ev.target.result;
+            if (typeof dataUrl === 'string') {
+              fImage.value = dataUrl; // store as data URL so front-end can render directly
+              if (imagePreview) {
+                imagePreview.src = dataUrl;
+                imagePreview.style.display = 'block';
+              }
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      if (attendeesEventFilter) {
+        attendeesEventFilter.addEventListener('change', function () {
+          loadAttendees();
+        });
+      }
+      var btnDownloadAttendeesExcel = document.getElementById('btnDownloadAttendeesExcel');
+      if (btnDownloadAttendeesExcel) {
+        btnDownloadAttendeesExcel.addEventListener('click', function () {
+          downloadAttendeesExcel();
+        });
+      }
+
+      // Persist new order when leaving the page (simple approach)
+      window.addEventListener('beforeunload', function () {
+        if (!events.length) return;
+        var order = events.map(function (e) { return e.id; });
+        api('/api/admin/events/reorder', {
+          method: 'POST',
+          body: JSON.stringify({ order: order })
+        });
+      });
+
+      btnUseKey.addEventListener('click', function () {
+        var key = adminKeyInput.value.trim();
+        if (!key) {
+          adminKeyError.textContent = 'Admin key is required.';
+          adminKeyError.className = 'message error show';
+          return;
+        }
+        adminKey = key;
+        adminKeyError.textContent = '';
+        adminKeyError.className = 'message error';
+        // Quick auth check by loading events (and stats)
+        api('/api/admin/events')
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data && data.error) {
+              adminKeyError.textContent = data.error;
+              adminKeyError.className = 'message error show';
+              adminKey = '';
+            } else {
+              events = Array.isArray(data) ? data : [];
+              renderList();
+              if (events.length) setEditing(events[0]);
+              loadStats();
+              if (modal) modal.style.display = 'none';
+              if (dashboardLayout) dashboardLayout.style.display = 'flex';
+            }
+          })
+          .catch(function () {
+            adminKeyError.textContent = 'Could not verify key. Check server logs.';
+            adminKeyError.className = 'message error show';
+            adminKey = '';
+          });
+      });
+
+      adminKeyInput.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          btnUseKey.click();
+        }
+      });
+
+      document.querySelectorAll('.nav-item[data-view]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          switchView(el.getAttribute('data-view'));
+        });
+      });
+
+      function loadFooterConfig() {
+        var base = window.location.origin || 'http://localhost:3001';
+        fetch(base + '/api/site-config')
+          .then(function (r) { return r.json(); })
+          .then(function (cfg) {
+            var copyright = document.getElementById('footerCopyright');
+            var instagramUrl = document.getElementById('footerInstagramUrl');
+            var instagramLabel = document.getElementById('footerInstagramLabel');
+            if (copyright) copyright.value = cfg.copyright || '© BLOCK';
+            if (instagramUrl) instagramUrl.value = cfg.instagramUrl || '';
+            if (instagramLabel) instagramLabel.value = cfg.instagramLabel || 'Instagram';
+          })
+          .catch(function () {});
+      }
+
+      var footerForm = document.getElementById('footerForm');
+      if (footerForm) {
+        footerForm.addEventListener('submit', function (ev) {
+          ev.preventDefault();
+          var copyright = document.getElementById('footerCopyright');
+          var instagramUrl = document.getElementById('footerInstagramUrl');
+          var instagramLabel = document.getElementById('footerInstagramLabel');
+          var msg = document.getElementById('footerFormMessage');
+          var btn = document.getElementById('btnSaveFooter');
+          var body = {
+            copyright: copyright && copyright.value.trim() || '© BLOCK',
+            instagramUrl: instagramUrl && instagramUrl.value.trim() || '',
+            instagramLabel: instagramLabel && instagramLabel.value.trim() || 'Instagram'
+          };
+          btn.disabled = true;
+          if (msg) msg.textContent = '';
+          api('/api/admin/site-config', {
+            method: 'PUT',
+            body: JSON.stringify(body)
+          }).then(function (r) { return r.json(); }).then(function (data) {
+            if (data && data.error) {
+              if (msg) { msg.textContent = data.error; msg.className = 'message show error'; }
+            } else {
+              if (msg) { msg.textContent = 'Footer saved.'; msg.className = 'message show success'; }
+            }
+          }).catch(function () {
+            if (msg) { msg.textContent = 'Could not save.'; msg.className = 'message show error'; }
+          }).finally(function () {
+            btn.disabled = false;
+          });
+        });
+      }
+
+      document.getElementById('btnCopyScannerLink').addEventListener('click', function () {
+        var input = document.getElementById('scannerLinkInput');
+        var msg = document.getElementById('scannerLinkCopied');
+        if (!input || !msg) return;
+        input.select();
+        input.setSelectionRange(0, 99999);
+        try {
+          navigator.clipboard.writeText(input.value);
+          msg.style.display = 'block';
+          setTimeout(function () { msg.style.display = 'none'; }, 2500);
+        } catch (e) {
+          msg.textContent = 'Copy failed. Select and copy the link manually.';
+          msg.style.display = 'block';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
+
