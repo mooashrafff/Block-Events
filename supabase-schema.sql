@@ -42,6 +42,16 @@ create table if not exists public.events (
 
 create index if not exists events_sort_order_idx on public.events (sort_order nulls last, created_at desc);
 
+-- Blocked users (email/phone) – prevents registration in any event
+create table if not exists public.blocked_users (
+  id uuid primary key default gen_random_uuid(),
+  email text,
+  phone text,
+  created_at timestamptz not null default now()
+);
+create index if not exists blocked_users_email_idx on public.blocked_users (lower(email));
+create index if not exists blocked_users_phone_idx on public.blocked_users (phone);
+
 -- Optional: trigger stub to call a Supabase Edge Function when a new attendee is created.
 -- This lets Supabase itself send the QR email (instead of Node).
 -- 1) Deploy an Edge Function called \"send-ticket-email\" that accepts the attendee record.
