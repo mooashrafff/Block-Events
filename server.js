@@ -389,52 +389,82 @@ async function generateQR(ticketId) {
 }
 
 function buildTicketEmailHtml({ name, eventName, ticketId, dataUrl, checkInUrl }) {
-  const safe = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const logo = getLogoDataUrl();
-  const logoImg = logo ? '<img src="' + logo + '" alt="BLOCK" width="110" height="auto" style="display:block;height:auto;max-width:110px;" />' : '<span style="font-size:24px;font-weight:700;color:#1a1a1a;">BLOCK</span>';
+  const safe = (s) =>
+    String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+
   const safeName = safe(name || 'there');
-  const safeEvent = safe(eventName);
+  const safeEvent = safe(eventName || 'your event');
   const safeTicketId = safe(ticketId);
+  const safeCheckInUrl = safe(checkInUrl || `${BASE_URL}/checkin/${ticketId}`);
+  const logoUrl = `${BASE_URL}/block-logo.png`;
+  const safeLogoUrl = safe(logoUrl);
+
   return `
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f5f5f5;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
-        <tr>
-          <td style="padding:32px 28px 24px;background:linear-gradient(180deg,#f8f7f4 0%,#ffffff 100%);border-bottom:1px solid #eee;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr><td>${logoImg}</td></tr>
-              <tr><td style="padding-top:24px;">
-                <h1 style="margin:0;font-size:1.5rem;font-weight:700;color:#1a1a1a;">You're registered for ${safeEvent}</h1>
-              </td></tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:28px;">
-            <p style="margin:0 0 16px;font-size:1rem;color:#4a4a4a;line-height:1.6;">Hi ${safeName},</p>
-            <p style="margin:0 0 24px;font-size:1rem;color:#4a4a4a;line-height:1.6;">Your unique ticket is below. Show this QR code at the entrance to check in.</p>
-            <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
-              <tr><td align="center" style="padding:20px;background:#f8f8f8;border-radius:12px;">
-                <img src="${dataUrl}" alt="QR Code" width="240" height="240" style="display:block;width:240px;height:240px;" />
-              </td></tr>
-            </table>
-            <p style="margin:0 0 8px;font-size:0.9rem;color:#888;">Ticket ID: <strong style="color:#1a1a1a;">${safeTicketId}</strong></p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:20px 28px 32px;background:#f8f7f4;border-top:1px solid #eee;">
-            <p style="margin:0;font-size:0.95rem;font-weight:600;color:#1a1a1a;">See you there!</p>
-            <p style="margin:8px 0 0;font-size:0.8rem;color:#888;">— BLOCK Events</p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+  </head>
+  <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#f5f5f5;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 18px rgba(15,23,42,0.18);">
+            <tr>
+              <td style="padding:20px 24px 12px;border-bottom:1px solid #e5e7eb;background:#f9fafb;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td align="left">
+                      <img src="${safeLogoUrl}" alt="BLOCK" width="110" style="display:block;height:auto;max-width:110px;" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding-top:18px;">
+                      <h1 style="margin:0;font-size:20px;line-height:1.3;color:#111827;">Your ticket for ${safeEvent}</h1>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:22px 24px 8px;">
+                <p style="margin:0 0 10px;font-size:15px;line-height:1.6;color:#4b5563;">Hi ${safeName},</p>
+                <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#4b5563;">
+                  Here is your ticket. Show this QR code at the entrance to check in.
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 18px;">
+                  <tr>
+                    <td align="center" style="padding:16px 18px;background:#f3f4f6;border-radius:14px;">
+                      <img src="${dataUrl}" alt="Ticket QR code" width="220" height="220" style="display:block;width:220px;height:220px;" />
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#6b7280;">
+                  Or open this link on the day of the event:<br />
+                  <a href="${safeCheckInUrl}" style="color:#4f46e5;text-decoration:underline;word-break:break-all;">${safeCheckInUrl}</a>
+                </p>
+                <p style="margin:10px 0 0;font-size:13px;line-height:1.6;color:#6b7280;">
+                  Ticket ID:
+                  <strong style="color:#111827;">${safeTicketId}</strong>
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 24px 20px;background:#f9fafb;border-top:1px solid #e5e7eb;">
+                <p style="margin:0;font-size:14px;line-height:1.5;color:#111827;font-weight:600;">See you there,</p>
+                <p style="margin:4px 0 0;font-size:12px;line-height:1.5;color:#9ca3af;">BLOCK Events</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>`;
 }
 
