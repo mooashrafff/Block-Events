@@ -58,6 +58,31 @@ async function saveAttendeeToSupabase({ name, email, phone, ticketId, eventId, e
   }
 }
 
+async function isUserBlocked(email, phone) {
+  if (!supabase) return false;
+  const e = (email || '').trim().toLowerCase();
+  const p = (phone || '').trim().replace(/\D/g, '');
+  if (e) {
+    const { data } = await supabase.from('blocked_users').select('id').eq('email', e).limit(1);
+    if (data && data.length) return true;
+  }
+  if (p) {
+    const { data } = await supabase.from('blocked_users').select('id').eq('phone', p).limit(1);
+    if (data && data.length) return true;
+  }
+  return false;
+}
+
+async function blockUser(email, phone) {
+  if (!supabase) return { error: 'Supabase not configured.' };
+  const e = (email || '').trim().toLowerCase() || null;
+  const p = (phone || '').trim().replace(/\D/g, '') || null;
+  if (!e && !p) return { error: 'Email or phone required to block.' };
+  const { error } = await supabase.from('blocked_users').insert({ email: e || null, phone: p || null });
+  if (error) return { error: error.message };
+  return {};
+}
+
 async function findExistingRegistration(email, phone, eventId, eventName) {
   if (!supabase) return null;
   const e = (email || '').trim().toLowerCase();
@@ -399,7 +424,8 @@ function buildTicketEmailHtml({ name, eventName, ticketId, dataUrl, checkInUrl }
   const safeName = safe(name || 'there');
   const safeEvent = safe(eventName || 'your event');
   const safeTicketId = safe(ticketId);
-  const safeCheckInUrl = safe(checkInUrl || `${BASE_URL}/checkin/${ticketId}`);
+  const rawTicketUrl = `${BASE_URL}/ticket/${ticketId}`;
+  const safeTicketUrl = safe(rawTicketUrl);
   const logoUrl = `${BASE_URL}/block-logo.png`;
   const safeLogoUrl = safe(logoUrl);
 
@@ -434,19 +460,24 @@ function buildTicketEmailHtml({ name, eventName, ticketId, dataUrl, checkInUrl }
             <tr>
               <td style="padding:22px 24px 8px;">
                 <p style="margin:0 0 10px;font-size:15px;line-height:1.6;color:#4b5563;">Hi ${safeName},</p>
-                <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#4b5563;">
+                <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#4b5563;">
                   Here is your ticket. Show this QR code at the entrance to check in.
+                </p>
+                <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#6b7280;">
+                  Find the attached ticket below:
                 </p>
                 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 18px;">
                   <tr>
                     <td align="center" style="padding:16px 18px;background:#f3f4f6;border-radius:14px;">
-                      <img src="${dataUrl}" alt="Ticket QR code" width="220" height="220" style="display:block;width:220px;height:220px;" />
+                      <img src="cid:ticket-qr" alt="Ticket QR code" width="220" height="220" style="display:block;width:220px;height:220px;" />
                     </td>
                   </tr>
                 </table>
                 <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#6b7280;">
-                  Or open this link on the day of the event:<br />
-                  <a href="${safeCheckInUrl}" style="color:#4f46e5;text-decoration:underline;word-break:break-all;">${safeCheckInUrl}</a>
+                  Or open your ticket online:
+                  <a href="${safeTicketUrl}" style="display:inline-block;margin-top:8px;padding:10px 18px;border-radius:999px;background:#4f46e5;color:#ffffff;font-weight:600;font-size:14px;text-decoration:none;">
+                    View my ticket
+                  </a>
                 </p>
                 <p style="margin:10px 0 0;font-size:13px;line-height:1.6;color:#6b7280;">
                   Ticket ID:
@@ -499,6 +530,10 @@ app.post('/api/register', async (req, res) => {
   }
   const event = eventId ? await getEventById(eventId) : null;
   const eventName = event ? event.name : (process.env.EVENT_NAME || 'Event');
+  const blocked = await isUserBlocked(email.trim(), (phone || '').trim());
+  if (blocked) {
+    return res.status(403).json({ error: 'This email or phone is blocked from registering.' });
+  }
   const existing = await findExistingRegistration(email.trim(), (phone || '').trim(), eventId || null, eventName);
   if (existing) {
     if (existing.type === 'email') {
@@ -549,7 +584,9 @@ app.post('/api/register', async (req, res) => {
           to: toEmail,
           subject: `Your ticket for ${eventName}`,
           html,
-          attachments: [{ filename: 'ticket-qr.png', content: buffer }],
+          attachments: [
+            { filename: 'ticket-qr.png', content: buffer, cid: 'ticket-qr' },
+          ],
         });
         emailSent = true;
         console.log(`Ticket email sent to ${toEmail} for ${eventName}`);
@@ -784,6 +821,45 @@ app.get('/api/admin/attendees', async (req, res) => {
     console.error('Admin attendees exception:', e.message);
     res.status(500).json({ error: 'Could not load attendees.' });
   }
+});
+
+// Delete attendee – removes from DB as if they never registered
+app.delete('/api/admin/attendees/:id', async (req, res) => {
+  const authError = await requireAdmin(req, res);
+  if (authError) return;
+  if (!supabase) {
+    return res.status(503).json({ error: 'Supabase not configured.' });
+  }
+  const { id } = req.params;
+  const { error } = await supabase.from('attendees').delete().eq('id', id);
+  if (error) {
+    console.error('Delete attendee error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+  res.json({ ok: true });
+});
+
+// Block user – prevents them from registering in any event
+app.post('/api/admin/attendees/:id/block', async (req, res) => {
+  const authError = await requireAdmin(req, res);
+  if (authError) return;
+  if (!supabase) {
+    return res.status(503).json({ error: 'Supabase not configured.' });
+  }
+  const { id } = req.params;
+  const { data: attendee, error: fetchError } = await supabase
+    .from('attendees')
+    .select('email, phone')
+    .eq('id', id)
+    .maybeSingle();
+  if (fetchError || !attendee) {
+    return res.status(404).json({ error: 'Attendee not found.' });
+  }
+  const result = await blockUser(attendee.email || '', attendee.phone || '');
+  if (result.error) {
+    return res.status(500).json({ error: result.error });
+  }
+  res.json({ ok: true });
 });
 
 app.get('/api/ticket-status/:ticketId', async (req, res) => {
