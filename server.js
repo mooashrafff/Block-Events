@@ -39,6 +39,8 @@ const JWT_SECRET = process.env.JWT_SECRET || '';
 if (!JWT_SECRET) {
   console.warn('JWT_SECRET not set – auth will be insecure in production. Set JWT_SECRET in .env.');
 }
+// Scanner profile auth (separate env var optional; defaults to JWT_SECRET).
+const SCANNER_JWT_SECRET = process.env.SCANNER_JWT_SECRET || JWT_SECRET || '';
 
 // ----- Supabase (for saving attendees) -----
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -157,6 +159,11 @@ function signSessionToken(user) {
   return jwt.sign(payload, JWT_SECRET || 'dev-insecure-secret', { expiresIn: '30d' });
 }
 
+function signScannerSessionToken({ scannerId, deviceId }) {
+  const payload = { sub: scannerId, did: deviceId };
+  return jwt.sign(payload, SCANNER_JWT_SECRET || 'dev-insecure-secret', { expiresIn: '8h' });
+}
+
 function setSessionCookie(res, token) {
   res.cookie('session', token, {
     httpOnly: true,
@@ -169,6 +176,53 @@ function setSessionCookie(res, token) {
 
 function clearSessionCookie(res) {
   res.clearCookie('session', { path: '/' });
+}
+
+function setScannerCookie(res, token) {
+  res.cookie('scanner_session', token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: String(process.env.NODE_ENV || '').toLowerCase() === 'production',
+    maxAge: 8 * 60 * 60 * 1000,
+    path: '/',
+  });
+}
+
+function clearScannerCookie(res) {
+  res.clearCookie('scanner_session', { path: '/' });
+}
+
+async function getScannerFromRequest(req) {
+  const token = req.cookies?.scanner_session;
+  if (!token) return null;
+  try {
+    const decoded = jwt.verify(token, SCANNER_JWT_SECRET || 'dev-insecure-secret');
+    const scannerId = decoded?.sub;
+    const deviceId = decoded?.did;
+    if (!scannerId || !deviceId || !supabase) return null;
+    const { data: scanner, error } = await supabase
+      .from('scanners')
+      .select('id, name, active')
+      .eq('id', scannerId)
+      .maybeSingle();
+    if (error || !scanner || !scanner.active) return null;
+    return { scannerId, deviceId, scanner };
+  } catch {
+    return null;
+  }
+}
+
+async function requireScannerSession(req, res) {
+  if (!supabase) {
+    res.status(503).json({ error: 'Supabase not configured.' });
+    return null;
+  }
+  const session = await getScannerFromRequest(req);
+  if (!session) {
+    res.status(401).json({ error: 'Unauthorized.' });
+    return null;
+  }
+  return session;
 }
 
 async function getAuthUserFromRequest(req) {
@@ -261,6 +315,10 @@ app.get('/scan', (req, res) => {
       }
     }
   });
+});
+
+app.get('/scan/:scannerId', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'scan.html'));
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -2032,6 +2090,10 @@ app.get('/admin-rules', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin-booking-event-rules.html'));
 });
 
+app.get('/admin-scanners', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin-scanners.html'));
+});
+
 // TicketsMarche-style routes
 app.get('/event/checkout', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
@@ -2670,6 +2732,332 @@ app.get('/api/checkin/:ticketId', async (req, res) => {
   }
   const result = await markAttended(ticketId, scannerName, scannerPhone);
   res.json({ ...result, alreadyScanned: false });
+});
+
+// ----- Scanner profile auth + server-side history -----
+app.post('/api/scanner/login', async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+  const scannerId = String(req.body?.scannerId || '').trim();
+  const password = String(req.body?.password || '');
+  const deviceId = String(req.body?.deviceId || '').trim();
+
+  if (!scannerId || !password) return res.status(400).json({ error: 'scannerId and password are required.' });
+  if (!deviceId) return res.status(400).json({ error: 'deviceId is required.' });
+
+  // Allow either UUID id or scanner "name" as scannerId.
+  const { data: byId, error: byIdErr } = await supabase
+    .from('scanners')
+    .select('id, name, password_hash, active')
+    .eq('id', scannerId)
+    .maybeSingle();
+
+  let scanner = byId;
+  if (!scanner) {
+    const { data: byName } = await supabase
+      .from('scanners')
+      .select('id, name, password_hash, active')
+      .eq('name', scannerId)
+      .maybeSingle();
+    scanner = byName;
+  }
+
+  if (!scanner || !scanner.active) return res.status(401).json({ error: 'Unauthorized.' });
+
+  const ok = await bcrypt.compare(password, scanner.password_hash);
+  if (!ok) return res.status(401).json({ error: 'Unauthorized.' });
+
+  const token = signScannerSessionToken({ scannerId: scanner.id, deviceId });
+  setScannerCookie(res, token);
+
+  // Upsert device "online" signal.
+  const { error: devErr } = await supabase.from('scanner_devices').upsert(
+    { scanner_id: scanner.id, device_id: deviceId, last_seen: new Date().toISOString() },
+    { onConflict: 'scanner_id,device_id' }
+  );
+  if (devErr) {
+    // non-fatal
+  }
+
+  res.json({ ok: true, scanner: { id: scanner.id, name: scanner.name } });
+});
+
+app.post('/api/scanner/ping', async (req, res) => {
+  const session = await requireScannerSession(req, res);
+  if (!session) return;
+  const { scannerId, deviceId } = session;
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+
+  const { error } = await supabase.from('scanner_devices').upsert(
+    { scanner_id: scannerId, device_id: deviceId, last_seen: new Date().toISOString() },
+    { onConflict: 'scanner_id,device_id' }
+  );
+  if (error) return res.status(500).json({ error: 'Ping failed.' });
+  res.json({ ok: true });
+});
+
+app.get('/api/scanner/me', async (req, res) => {
+  const session = await requireScannerSession(req, res);
+  if (!session) return;
+  res.json({ ok: true, scanner: { id: session.scannerId, name: session.scanner?.name } });
+});
+
+app.get('/api/scanner/history', async (req, res) => {
+  const session = await requireScannerSession(req, res);
+  if (!session) return;
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+
+  const limit = Math.max(1, Math.min(100, parseInt(String(req.query.limit || 25), 10) || 25));
+  const deviceId = String(req.query.deviceId || session.deviceId || '').trim() || session.deviceId;
+
+  const { data, error } = await supabase
+    .from('scanner_scan_logs')
+    .select('created_at, status, ticket_id, event_name, user_name, user_email, ticket_category, ticket_number, event_id, checkin_time')
+    .eq('scanner_id', session.scannerId)
+    .eq('device_id', deviceId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) return res.status(500).json({ error: 'Could not load history.' });
+
+  res.json({ ok: true, logs: (data || []).map((row) => ({ at: row.created_at, status: row.status, ticketId: row.ticket_id, eventName: row.event_name, userName: row.user_name, userEmail: row.user_email, ticketCategory: row.ticket_category, ticketNumber: row.ticket_number })) });
+});
+
+app.post('/api/scanner/scan-ticket', async (req, res) => {
+  const session = await requireScannerSession(req, res);
+  if (!session) return;
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+
+  const { scannerId, deviceId } = session;
+
+  const ticketId = String(req.body?.ticket_id || req.body?.ticketId || '').trim();
+  if (!ticketId) return res.status(400).json({ status: 'invalid', message: 'Ticket not found' });
+
+  const usedAt = new Date().toISOString();
+  let updatedRow = null;
+  try {
+    const { data, error } = await supabase
+      .from('attendees')
+      .update({ attended: true, checkin_time: usedAt })
+      .eq('ticket_id', ticketId)
+      .eq('attended', false)
+      .select('id, name, email, ticket_id, event_id, event_name, ticket_category, ticket_number, attended, checkin_time')
+      .maybeSingle();
+    if (!error && data) updatedRow = data;
+  } catch (e) {}
+
+  const insertLog = async (payload) => {
+    try {
+      await supabase.from('scanner_scan_logs').insert({
+        scanner_id: payload.scannerId,
+        device_id: payload.deviceId,
+        ticket_id: payload.ticketId,
+        status: payload.status,
+        user_name: payload.userName || null,
+        user_email: payload.userEmail || null,
+        event_id: payload.eventId || null,
+        event_name: payload.eventName || null,
+        ticket_category: payload.ticketCategory || null,
+        ticket_number: payload.ticketNumber || null,
+        checkin_time: payload.checkinTime || null,
+      });
+    } catch (e) {}
+  };
+
+  if (updatedRow) {
+    await insertLog({
+      scannerId,
+      deviceId,
+      ticketId,
+      status: 'success',
+      userName: updatedRow.name,
+      userEmail: updatedRow.email,
+      eventId: updatedRow.event_id,
+      eventName: updatedRow.event_name,
+      ticketCategory: updatedRow.ticket_category,
+      ticketNumber: updatedRow.ticket_number,
+      checkinTime: updatedRow.checkin_time,
+    });
+
+    return res.json({
+      status: 'success',
+      message: 'Scan successful',
+      ticket: {
+        ticket_id: updatedRow.ticket_id,
+        userName: updatedRow.name,
+        userEmail: updatedRow.email,
+        eventName: updatedRow.event_name,
+        eventId: updatedRow.event_id,
+        ticketCategory: updatedRow.ticket_category,
+        ticketNumber: updatedRow.ticket_number,
+        isUsed: true,
+        usedAt: updatedRow.checkin_time,
+      },
+    });
+  }
+
+  const { data: existing } = await supabase
+    .from('attendees')
+    .select('id, name, email, ticket_id, event_id, event_name, ticket_category, ticket_number, attended, checkin_time')
+    .eq('ticket_id', ticketId)
+    .maybeSingle();
+
+  if (!existing) {
+    await insertLog({ scannerId, deviceId, ticketId, status: 'invalid' });
+    return res.json({ status: 'invalid', message: 'Ticket not found' });
+  }
+
+  if (existing.attended) {
+    await insertLog({
+      scannerId,
+      deviceId,
+      ticketId,
+      status: 'already_used',
+      userName: existing.name,
+      userEmail: existing.email,
+      eventId: existing.event_id,
+      eventName: existing.event_name,
+      ticketCategory: existing.ticket_category,
+      ticketNumber: existing.ticket_number,
+      checkinTime: existing.checkin_time,
+    });
+
+    return res.json({
+      status: 'already_used',
+      message: 'Ticket already scanned',
+      ticket: {
+        ticket_id: existing.ticket_id,
+        userName: existing.name,
+        userEmail: existing.email,
+        eventName: existing.event_name,
+        eventId: existing.event_id,
+        ticketCategory: existing.ticket_category,
+        ticketNumber: existing.ticket_number,
+        isUsed: true,
+        usedAt: existing.checkin_time,
+      },
+    });
+  }
+
+  // Edge case: update failed for some other reason.
+  await insertLog({ scannerId, deviceId, ticketId, status: 'invalid' });
+  return res.status(500).json({ status: 'invalid', message: 'Invalid ticket' });
+});
+
+// ----- Admin: scanner profiles + history -----
+app.get('/api/admin/scanners', async (req, res) => {
+  const authError = await requireAdmin(req, res);
+  if (authError) return;
+  if (!supabase) return res.json([]);
+
+  const { data: scanners, error: scErr } = await supabase.from('scanners').select('id, name, active, created_at');
+  if (scErr) return res.status(500).json({ error: 'Could not load scanners.' });
+
+  const { data: devices, error: devErr } = await supabase
+    .from('scanner_devices')
+    .select('scanner_id, device_id, last_seen')
+    .order('last_seen', { ascending: false });
+  if (devErr) return res.status(500).json({ error: 'Could not load scanner devices.' });
+
+  const now = Date.now();
+  const ONLINE_WINDOW_MS = 60 * 1000;
+
+  const devicesByScanner = {};
+  (devices || []).forEach((d) => {
+    const sid = d.scanner_id;
+    devicesByScanner[sid] = devicesByScanner[sid] || [];
+    devicesByScanner[sid].push({
+      deviceId: d.device_id,
+      lastSeen: d.last_seen,
+      online: d.last_seen ? now - new Date(d.last_seen).getTime() <= ONLINE_WINDOW_MS : false,
+    });
+  });
+
+  // Load recent scan logs to show last scan.
+  const { data: recentLogs } = await supabase
+    .from('scanner_scan_logs')
+    .select('scanner_id, device_id, created_at, status')
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  const lastLogByScanner = {};
+  (recentLogs || []).forEach((l) => {
+    if (!lastLogByScanner[l.scanner_id]) lastLogByScanner[l.scanner_id] = l;
+  });
+
+  res.json(
+    (scanners || []).map((s) => {
+      const dList = devicesByScanner[s.id] || [];
+      const anyOnline = dList.some((d) => d.online);
+      const last = lastLogByScanner[s.id] || null;
+      return {
+        id: s.id,
+        name: s.name,
+        active: s.active,
+        online: anyOnline,
+        devices: dList,
+        lastScan: last ? { at: last.created_at, status: last.status, deviceId: last.device_id } : null,
+      };
+    })
+  );
+});
+
+app.post('/api/admin/scanners', async (req, res) => {
+  const authError = await requireAdmin(req, res);
+  if (authError) return;
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+
+  const name = String(req.body?.name || '').trim();
+  const password = String(req.body?.password || '');
+  const active = req.body?.active == null ? true : Boolean(req.body.active);
+  if (!name || !password) return res.status(400).json({ error: 'name and password are required.' });
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const { data, error } = await supabase
+    .from('scanners')
+    .insert({ name, password_hash: passwordHash, active })
+    .select('id, name, active')
+    .single();
+
+  if (error) return res.status(400).json({ error: error.message || 'Could not create scanner.' });
+  res.json({ ok: true, scanner: data });
+});
+
+app.get('/api/admin/scanner-history', async (req, res) => {
+  const authError = await requireAdmin(req, res);
+  if (authError) return;
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+
+  const scannerId = String(req.query.scannerId || '').trim();
+  const deviceId = String(req.query.deviceId || '').trim();
+  const limit = Math.max(1, Math.min(200, parseInt(String(req.query.limit || 25), 10) || 25));
+  if (!scannerId) return res.status(400).json({ error: 'scannerId is required.' });
+
+  let q = supabase
+    .from('scanner_scan_logs')
+    .select('created_at, status, ticket_id, event_name, user_name, user_email, ticket_category, ticket_number, device_id')
+    .eq('scanner_id', scannerId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (deviceId) q = q.eq('device_id', deviceId);
+
+  const { data, error } = await q;
+  if (error) return res.status(500).json({ error: 'Could not load history.' });
+
+  res.json({
+    ok: true,
+    logs: (data || []).map((row) => ({
+      at: row.created_at,
+      status: row.status,
+      ticketId: row.ticket_id,
+      eventName: row.event_name,
+      userName: row.user_name,
+      userEmail: row.user_email,
+      ticketCategory: row.ticket_category,
+      ticketNumber: row.ticket_number,
+      deviceId: row.device_id,
+    })),
+  });
 });
 
 // New scanning API (staff-only)

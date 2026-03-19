@@ -809,19 +809,65 @@
       <div class="view" id="view-scanner">
         <div class="main-header">
           <div>
-            <h1>Ticket Scanner</h1>
-            <p class="subtitle">Share the scanner link with your team. They can only scan tickets—no access to admin or events.</p>
+            <h1>Scanner Profiles</h1>
+            <p class="subtitle">Create scanner accounts, send each scanner its link, and view online status + server-side scan history.</p>
           </div>
-          <a href="/scan" target="_blank" rel="noopener" class="btn btn-primary">Open scanner</a>
         </div>
-        <div class="scanner-share card" style="max-width: 560px;">
-          <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Team scanner link</h3>
-          <p class="subtitle" style="margin-bottom: 0.75rem;">Anyone with this link can check in attendees by scanning their QR code. They cannot see events, attendees list, or settings.</p>
-          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
-            <input type="text" id="scannerLinkInput" readonly style="flex: 1; min-width: 200px; padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 0.9rem;">
-            <button type="button" class="btn btn-primary" id="btnCopyScannerLink">Copy link</button>
+
+        <div class="column" style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
+          <section class="card" style="flex:1; min-width:320px; max-width: 560px;">
+            <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Create scanner</h3>
+            <p class="subtitle" style="margin-bottom: 0.75rem;">Admin creates scanner accounts. Scanners login once and history is stored on the server (can’t be cleared).</p>
+
+            <div class="field">
+              <label for="scannerNameInput">Scanner name *</label>
+              <input type="text" id="scannerNameInput" placeholder="Scanner 1" />
+            </div>
+            <div class="field">
+              <label for="scannerPasswordInput">Scanner password *</label>
+              <input type="password" id="scannerPasswordInput" placeholder="Set a strong password" />
+            </div>
+            <div class="field" style="display:flex; align-items:center; gap:0.5rem;">
+              <input type="checkbox" id="scannerActiveInput" checked />
+              <label for="scannerActiveInput" style="margin:0;">Active</label>
+            </div>
+
+            <div class="form-actions">
+              <span></span>
+              <button type="button" class="btn btn-primary" id="btnCreateScanner">Create</button>
+            </div>
+            <div id="scannerCreateMessage" class="message show" style="display:none;"></div>
+          </section>
+
+          <section class="card" style="flex:2; min-width:360px;">
+            <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Scanners</h3>
+            <p class="subtitle" style="margin-bottom: 0.75rem;">Online status updates when the scanner pings the server.</p>
+            <div id="scannersList" class="events-grid"></div>
+          </section>
+        </div>
+      </div>
+
+      <!-- Scanner history modal -->
+      <div id="scannerHistoryModal" class="modal-backdrop" style="display:none;">
+        <div class="modal" style="max-width: 720px; width: 100%;">
+          <h2>Scanner history</h2>
+          <p class="subtitle" style="margin-top:-0.2rem; margin-bottom: 0.9rem;">Server-side immutable logs. This is for the selected scanner profile.</p>
+
+          <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
+            <div style="flex:1; min-width:260px;">
+              <label style="font-weight:800; color:var(--muted); font-size:0.9rem;" for="scannerHistoryDeviceSelect">Device filter</label>
+              <select id="scannerHistoryDeviceSelect" style="width:100%;">
+                <option value="">All devices</option>
+              </select>
+            </div>
+            <div style="display:flex; gap:0.75rem; margin-left:auto;">
+              <button type="button" class="btn btn-primary" id="btnLoadScannerHistory">Load</button>
+              <button type="button" class="btn btn-secondary" id="btnCloseScannerHistory" style="background:transparent; border:1px solid var(--border); color:var(--text);">Close</button>
+            </div>
           </div>
-          <p id="scannerLinkCopied" class="message success" style="display: none; margin-top: 0.5rem;">Link copied to clipboard.</p>
+
+          <div id="scannerHistoryMessage" class="message error" style="display:none; margin-top:0.75rem;"></div>
+          <div id="scannerHistoryBody" style="margin-top:1rem; max-height: 420px; overflow:auto; padding-right: 0.25rem;"></div>
         </div>
       </div>
     </main>
@@ -894,8 +940,7 @@
           if (nEl) nEl.classList.toggle('active', v === name);
         });
         if (name === 'scanner') {
-          var input = document.getElementById('scannerLinkInput');
-          if (input) input.value = (window.location.origin || 'http://localhost:3001') + '/scan';
+          loadScanners();
         }
         if (name === 'attendees') {
           loadAttendees();
@@ -1565,21 +1610,188 @@
         });
       }
 
-      document.getElementById('btnCopyScannerLink').addEventListener('click', function () {
-        var input = document.getElementById('scannerLinkInput');
-        var msg = document.getElementById('scannerLinkCopied');
-        if (!input || !msg) return;
-        input.select();
-        input.setSelectionRange(0, 99999);
-        try {
-          navigator.clipboard.writeText(input.value);
-          msg.style.display = 'block';
-          setTimeout(function () { msg.style.display = 'none'; }, 2500);
-        } catch (e) {
-          msg.textContent = 'Copy failed. Select and copy the link manually.';
-          msg.style.display = 'block';
-        }
-      });
+      // ----- Scanner profiles (create + list + history) -----
+      function loadScanners() {
+        var listEl = document.getElementById('scannersList');
+        if (!listEl) return;
+        listEl.innerHTML = '<div class="small" style="color:var(--muted); padding:1rem;">Loading…</div>';
+
+        api('/api/admin/scanners')
+          .then(function (r) { return r.json(); })
+          .then(function (scanners) {
+            if (!Array.isArray(scanners) || !scanners.length) {
+              listEl.innerHTML = '<div class="small" style="color:var(--muted); padding:1rem;">No scanners yet.</div>';
+              return;
+            }
+
+            listEl.innerHTML = scanners.map(function (s) {
+              var onlineTxt = s.online ? 'Online' : 'Offline';
+              var onlineColor = s.online ? '#22c55e' : '#8888a0';
+              var last = s.lastScan ? ('Last: ' + new Date(s.lastScan.at).toLocaleTimeString() + ' (' + (s.lastScan.status || '') + ')') : 'No scans yet';
+              var openUrl = (window.location.origin || 'http://localhost:3001') + '/scan/' + encodeURIComponent(s.id);
+
+              return '<div style="border:1px solid var(--border); border-radius:14px; padding:0.9rem; background:#0f0f12; margin-bottom:0.75rem;">' +
+                '<div style="display:flex; justify-content:space-between; gap:0.75rem; align-items:flex-start;">' +
+                  '<div>' +
+                    '<div style="font-weight:1000; font-size:1.02rem;">' + escapeHtml(s.name || '') + '</div>' +
+                    '<div class="small" style="margin-top:0.2rem; color:var(--muted);">ID: ' + escapeHtml(s.id || '') + '</div>' +
+                  '</div>' +
+                  '<div style="text-align:right;">' +
+                    '<div style="font-weight:1000; color:' + onlineColor + ';">' + onlineTxt + '</div>' +
+                    '<div class="small" style="color:var(--muted); margin-top:0.2rem;">' + escapeHtml(last) + '</div>' +
+                  '</div>' +
+                '</div>' +
+                '<div style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center; margin-top:0.75rem;">' +
+                  '<a class="btn btn-secondary" target="_blank" rel="noopener" href="' + escapeHtml(openUrl) + '" style="text-decoration:none; display:inline-flex; align-items:center;">Open scanner</a>' +
+                  '<button type="button" class="btn btn-primary" data-scanner-history="' + escapeHtml(s.id) + '" style="padding:10px 12px;">History</button>' +
+                '</div>' +
+              '</div>';
+            }).join('');
+
+            listEl.querySelectorAll('button[data-scanner-history]').forEach(function (btn) {
+              btn.addEventListener('click', function () {
+                openScannerHistory(btn.getAttribute('data-scanner-history') || '');
+              });
+            });
+          })
+          .catch(function () {
+            listEl.innerHTML = '<div class="small" style="color:#fecaca; padding:1rem;">Failed to load scanners.</div>';
+          });
+      }
+
+      var activeScannerForHistory = null;
+      var activeDevicesForHistory = [];
+
+      function openScannerHistory(scannerId) {
+        activeScannerForHistory = scannerId;
+        var deviceSel = document.getElementById('scannerHistoryDeviceSelect');
+        var modal = document.getElementById('scannerHistoryModal');
+        var body = document.getElementById('scannerHistoryBody');
+        var msg = document.getElementById('scannerHistoryMessage');
+        if (!modal || !deviceSel || !body) return;
+
+        if (msg) { msg.style.display = 'none'; msg.textContent = ''; }
+        body.innerHTML = 'Loading…';
+
+        // Load scanners list again to get device list.
+        api('/api/admin/scanners')
+          .then(function (r) { return r.json(); })
+          .then(function (scanners) {
+            var s = Array.isArray(scanners) ? scanners.find(function (x) { return x && x.id === scannerId; }) : null;
+            activeDevicesForHistory = (s && Array.isArray(s.devices)) ? s.devices : [];
+
+            deviceSel.innerHTML = '<option value="">All devices</option>' +
+              (activeDevicesForHistory || []).map(function (d) {
+                return '<option value="' + escapeHtml(d.deviceId || '') + '">' + escapeHtml(d.deviceId || '') + '</option>';
+              }).join('');
+
+            modal.style.display = 'flex';
+            loadScannerHistory();
+          })
+          .catch(function () {
+            body.innerHTML = 'Could not load devices.';
+            modal.style.display = 'flex';
+          });
+      }
+
+      function loadScannerHistory() {
+        var modal = document.getElementById('scannerHistoryModal');
+        var body = document.getElementById('scannerHistoryBody');
+        var msg = document.getElementById('scannerHistoryMessage');
+        if (!modal || !body || !activeScannerForHistory) return;
+
+        var deviceSel = document.getElementById('scannerHistoryDeviceSelect');
+        var deviceId = deviceSel ? deviceSel.value : '';
+
+        body.innerHTML = 'Loading…';
+        if (msg) { msg.style.display = 'none'; msg.textContent = ''; }
+
+        var url = '/api/admin/scanner-history?scannerId=' + encodeURIComponent(activeScannerForHistory) + (deviceId ? ('&deviceId=' + encodeURIComponent(deviceId)) : '') + '&limit=120';
+        api(url)
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var logs = Array.isArray(data && data.logs) ? data.logs : [];
+            if (!logs.length) {
+              body.innerHTML = '<div class="small" style="color:var(--muted); padding:1rem;">No history yet.</div>';
+              return;
+            }
+
+            body.innerHTML = logs.map(function (l) {
+              var at = l.at ? new Date(l.at).toLocaleString() : '';
+              var status = l.status || '';
+              var color = status === 'success' ? '#22c55e' : status === 'already_used' ? '#eab308' : '#ef4444';
+              return '<div style="border:1px solid var(--border); border-radius:12px; padding:0.75rem; background:#141418; margin-bottom:0.6rem;">' +
+                '<div style="display:flex; justify-content:space-between; gap:0.75rem; align-items:flex-start;">' +
+                  '<div style="font-weight:1000; color:' + color + ';">' + escapeHtml(status.toUpperCase()) + '</div>' +
+                  '<div class="small" style="color:var(--muted); text-align:right;">' + escapeHtml(at) + '</div>' +
+                '</div>' +
+                '<div class="small" style="color:var(--muted); margin-top:0.35rem;">Event: ' + escapeHtml(l.eventName || '') + '</div>' +
+                '<div class="small" style="color:var(--muted); margin-top:0.15rem;">User: ' + escapeHtml(l.userName || '') + ' ' + (l.userEmail ? ('(' + l.userEmail + ')') : '') + '</div>' +
+                '<div class="small" style="color:var(--muted); margin-top:0.15rem;">Ticket: ' + (l.ticketNumber != null ? ('#' + escapeHtml(l.ticketNumber) + ' ') : '') + escapeHtml(l.ticketId || '') + '</div>' +
+                '<div class="small" style="color:var(--muted); margin-top:0.15rem;">Device: ' + escapeHtml(l.deviceId || '') + '</div>' +
+              '</div>';
+            }).join('');
+          })
+          .catch(function () {
+            body.innerHTML = 'Could not load history.';
+          });
+      }
+
+      var btnCloseHistory = document.getElementById('btnCloseScannerHistory');
+      if (btnCloseHistory) {
+        btnCloseHistory.addEventListener('click', function () {
+          var modal = document.getElementById('scannerHistoryModal');
+          if (modal) modal.style.display = 'none';
+        });
+      }
+
+      var btnLoadHistory = document.getElementById('btnLoadScannerHistory');
+      var deviceSelEl = document.getElementById('scannerHistoryDeviceSelect');
+      if (btnLoadHistory && deviceSelEl) {
+        btnLoadHistory.addEventListener('click', function () {
+          loadScannerHistory();
+        });
+      }
+
+      var btnCreateScanner = document.getElementById('btnCreateScanner');
+      if (btnCreateScanner) {
+        btnCreateScanner.addEventListener('click', function () {
+          var name = document.getElementById('scannerNameInput') ? document.getElementById('scannerNameInput').value.trim() : '';
+          var password = document.getElementById('scannerPasswordInput') ? document.getElementById('scannerPasswordInput').value : '';
+          var active = document.getElementById('scannerActiveInput') ? document.getElementById('scannerActiveInput').checked : true;
+          var msg = document.getElementById('scannerCreateMessage');
+
+          if (!name || !password) {
+            if (msg) { msg.textContent = 'Name and password are required.'; msg.style.display = 'block'; msg.className = 'message show error'; }
+            return;
+          }
+
+          btnCreateScanner.disabled = true;
+          btnCreateScanner.textContent = 'Creating…';
+          if (msg) { msg.textContent = ''; msg.style.display = 'none'; }
+
+          api('/api/admin/scanners', {
+            method: 'POST',
+            body: JSON.stringify({ name: name, password: password, active: active })
+          })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+            .then(function (resp) {
+              if (!resp.ok) {
+                if (msg) { msg.textContent = (resp.data && resp.data.error) ? resp.data.error : 'Could not create scanner.'; msg.style.display = 'block'; msg.className = 'message show error'; }
+                return;
+              }
+              if (msg) { msg.textContent = 'Scanner created.'; msg.style.display = 'block'; msg.className = 'message show success'; }
+              loadScanners();
+            })
+            .catch(function () {
+              if (msg) { msg.textContent = 'Request failed.'; msg.style.display = 'block'; msg.className = 'message show error'; }
+            })
+            .finally(function () {
+              btnCreateScanner.disabled = false;
+              btnCreateScanner.textContent = 'Create';
+            });
+        });
+      }
     })();
   </script>
 </body>

@@ -96,6 +96,9 @@
     }
     .btn-camera:hover { background: #818cf8; }
     .btn-camera:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    /* Server-side history is blur-hidden; eye reveals it for 10 seconds. */
+    #history.blurred { filter: blur(7px); opacity: 0.35; }
   </style>
 </head>
 <body>
@@ -133,9 +136,9 @@
   <div style="width:100%; max-width:320px; margin-top:1rem; text-align:left;">
     <div style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem;">
       <div style="font-weight:700;">Scan history</div>
-      <button id="btnClearHistory" type="button" style="background:transparent;border:1px solid #25252d;color:#e8e8ed;border-radius:10px;padding:8px 10px;cursor:pointer;">Clear</button>
+        <button id="btnRevealHistory" type="button" style="background:transparent;border:1px solid #25252d;color:#e8e8ed;border-radius:10px;padding:8px 10px;cursor:pointer; display:none;">👁</button>
     </div>
-    <div id="history" style="margin-top:0.6rem; display:flex; flex-direction:column; gap:0.5rem;"></div>
+    <div id="history" style="margin-top:0.6rem; display:flex; flex-direction:column; gap:0.5rem;" class="blurred"></div>
   </div>
 
   <script>
@@ -217,28 +220,36 @@
       t.textContent = parts.join(' ');
     }
 
-    function pushHistory(entry) {
+    var historyEl = document.getElementById('history');
+    var btnRevealHistory = document.getElementById('btnRevealHistory');
+    var historyTimer = null;
+    var pingTimer = null;
+
+    function ensureScannerPing() {
+      if (pingTimer) return;
+      // Keep the scanner "online" status updated every 15 seconds.
       try {
-        var key = 'scan_history_v1';
-        var arr = JSON.parse(localStorage.getItem(key) || '[]');
-        arr.unshift(entry);
-        arr = arr.slice(0, 25);
-        localStorage.setItem(key, JSON.stringify(arr));
-        renderHistory();
+        pingTimer = setInterval(function () {
+          fetch('/api/scanner/ping', { method: 'POST' }).catch(function () {});
+        }, 15000);
+        fetch('/api/scanner/ping', { method: 'POST' }).catch(function () {});
       } catch (e) {}
     }
 
-    function renderHistory() {
-      var el = document.getElementById('history');
-      if (!el) return;
-      var key = 'scan_history_v1';
-      var arr = [];
-      try { arr = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) {}
-      if (!arr.length) {
-        el.innerHTML = '<div style="color:#8888a0; font-size:0.9rem;">No scans yet.</div>';
+    function setHistoryBlurred(blurred) {
+      if (!historyEl) return;
+      if (blurred) historyEl.classList.add('blurred');
+      else historyEl.classList.remove('blurred');
+      if (btnRevealHistory) btnRevealHistory.style.display = blurred ? 'block' : 'none';
+    }
+
+    function renderHistoryFromLogs(logs) {
+      if (!historyEl) return;
+      if (!Array.isArray(logs) || !logs.length) {
+        historyEl.innerHTML = '<div style="color:#8888a0; font-size:0.9rem;">No scans yet.</div>';
         return;
       }
-      el.innerHTML = arr.map(function (x) {
+      historyEl.innerHTML = logs.map(function (x) {
         var color = x.status === 'success' ? '#22c55e' : x.status === 'already_used' ? '#ef4444' : '#ef4444';
         return '<div style="border:1px solid #25252d; border-radius:12px; padding:10px 12px; background:#141418;">' +
           '<div style="display:flex; justify-content:space-between; gap:0.75rem; align-items:center;">' +
@@ -251,40 +262,115 @@
       }).join('');
     }
 
-    document.getElementById('btnClearHistory').addEventListener('click', function () {
-      try { localStorage.removeItem('scan_history_v1'); } catch (e) {}
-      renderHistory();
-    });
+    function getScannerIdFromLocation() {
+      try {
+        var parts = (location.pathname || '').split('/').filter(Boolean);
+        if (parts[0] === 'scan' && parts[1]) return decodeURIComponent(parts[1]);
+        var params = new URLSearchParams(location.search || '');
+        return params.get('scannerId') || '';
+      } catch (e) {}
+      return '';
+    }
 
-    function doScan(ticketId, fromScan) {
-      var scannerKey = '';
-      try { scannerKey = localStorage.getItem('scanner_key') || ''; } catch (e) {}
-      fetch('/api/scan-ticket', {
-        method: 'POST',
-        headers: Object.assign(
-          { 'Content-Type': 'application/json' },
-          scannerKey ? { 'X-Scanner-Key': scannerKey } : {}
-        ),
-        body: JSON.stringify({ ticket_id: ticketId })
-      })
-        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, statusCode: r.status, data: d }; }); })
-        .then(function (resp) {
-          var data = resp.data || {};
-          if (resp.statusCode === 401) {
+    function getDeviceId() {
+      var key = 'scanner_device_id_v1';
+      try {
+        var id = localStorage.getItem(key);
+        if (id) return id;
+      } catch (e) {}
+      var newId = null;
+      try {
+        if (window.crypto && window.crypto.randomUUID) newId = window.crypto.randomUUID();
+      } catch (e) {}
+      if (!newId) newId = 'device_' + Math.random().toString(16).slice(2);
+      try { localStorage.setItem(key, newId); } catch (e) {}
+      return newId;
+    }
+
+    async function loadHistoryFromServer() {
+      var limit = 25;
+      var r = await fetch('/api/scanner/history?limit=' + encodeURIComponent(limit)).catch(() => null);
+      if (!r) throw new Error('Could not load scanner history.');
+      if (r.status === 401) throw new Error('Unauthorized');
+      var d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Could not load history.');
+      return Array.isArray(d.logs) ? d.logs : [];
+    }
+
+    async function revealHistoryForTenSeconds() {
+      // Always show history for 10 seconds after the latest scan.
+      ensureScannerPing();
+      setHistoryBlurred(false);
+      try {
+        var logs = await loadHistoryFromServer();
+        // Convert response shape to what renderHistoryFromLogs expects.
+        var normalized = logs.map(function (x) {
+          return {
+            at: x.at,
+            status: x.status,
+            ticketId: x.ticketId,
+            eventName: x.eventName,
+            userName: x.userName,
+            ticketNumber: x.ticketNumber,
+          };
+        });
+        renderHistoryFromLogs(normalized);
+      } catch (e) {
+        var txt = String(e.message || 'History error');
+        historyEl.innerHTML = '<div style="color:#fecaca; font-size:0.9rem;">' + txt + '</div>';
+      }
+
+      if (historyTimer) clearTimeout(historyTimer);
+      historyTimer = setTimeout(function () {
+        setHistoryBlurred(true);
+      }, 10000);
+    }
+
+    // Temporary fallback mode: if scannerId is missing, keep old behavior with SCANNER_API_KEY + localStorage history.
+    var LOCAL_HISTORY_KEY = 'scan_history_v1';
+    function pushLocalHistory(entry) {
+      try {
+        var arr = JSON.parse(localStorage.getItem(LOCAL_HISTORY_KEY) || '[]');
+        arr.unshift(entry);
+        arr = arr.slice(0, 25);
+        localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(arr));
+        renderHistoryFromLogs(arr);
+      } catch (e) {}
+    }
+
+    async function doScan(ticketId, fromScan) {
+      try {
+        var scannerId = getScannerIdFromLocation();
+        if (!scannerId) {
+          // Backward compatible mode: old single SCANNER_API_KEY protection.
+          var scannerKey = '';
+          try { scannerKey = localStorage.getItem('scanner_key') || ''; } catch (e) {}
+
+          var r0 = await fetch('/api/scan-ticket', {
+            method: 'POST',
+            headers: Object.assign(
+              { 'Content-Type': 'application/json' },
+              scannerKey ? { 'X-Scanner-Key': scannerKey } : {}
+            ),
+            body: JSON.stringify({ ticket_id: ticketId })
+          });
+
+          var data0 = await r0.json().catch(() => ({}));
+
+          if (r0.status === 401) {
             var k = prompt('Scanner key required (staff only). Enter SCANNER_API_KEY:');
             if (k) {
               try { localStorage.setItem('scanner_key', k.trim()); } catch (e) {}
               return doScan(ticketId, fromScan);
             }
             setResult('Unauthorized', 'error');
-            renderTicketState({ status: 'invalid', message: 'Unauthorized' });
             return;
           }
 
-          if (data.status === 'success') {
+          if (data0.status === 'success') {
             setResult('Scan Successful', 'success');
             beep(true); haptic(true);
-          } else if (data.status === 'already_used') {
+          } else if (data0.status === 'already_used') {
             setResult('Ticket already scanned', 'error');
             beep(false); haptic(false);
           } else {
@@ -292,25 +378,79 @@
             beep(false); haptic(false);
           }
 
-          renderTicketState(data);
-          pushHistory({
+          renderTicketState(data0);
+
+          // Local history (fallback mode only)
+          setHistoryBlurred(false);
+          pushLocalHistory({
             at: Date.now(),
-            status: data.status || 'invalid',
-            ticketId: (data.ticket && data.ticket.ticket_id) || ticketId,
-            ticketNumber: data.ticket && data.ticket.ticketNumber,
-            eventName: data.ticket && data.ticket.eventName,
-            userName: data.ticket && data.ticket.userName
+            status: data0.status || 'invalid',
+            ticketId: (data0.ticket && data0.ticket.ticket_id) || ticketId,
+            ticketNumber: data0.ticket && data0.ticket.ticketNumber,
+            eventName: data0.ticket && data0.ticket.eventName,
+            userName: data0.ticket && data0.ticket.userName
           });
+          if (historyTimer) clearTimeout(historyTimer);
+          historyTimer = setTimeout(function () { setHistoryBlurred(true); }, 10000);
 
           if (fromScan && window.html5QrCode) {
             setTimeout(function () { setResult(''); window.html5QrCode.resume(); }, 1800);
           }
-        })
-        .catch(function () {
-          setResult('Network error', 'error');
-          beep(false); haptic(false);
-          if (fromScan && window.html5QrCode) window.html5QrCode.resume();
+          return;
+        }
+
+        var deviceId = getDeviceId();
+
+        var r = await fetch('/api/scanner/scan-ticket', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ticket_id: ticketId })
         });
+
+        var data = await r.json().catch(() => ({}));
+
+        if (r.status === 401) {
+          var password = prompt('Scanner password required (enter it once).');
+          if (!password) {
+            setResult('Unauthorized', 'error');
+            return;
+          }
+
+          var loginRes = await fetch('/api/scanner/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scannerId: scannerId, password: password, deviceId: deviceId })
+          }).catch(() => null);
+
+          if (!loginRes || !loginRes.ok) {
+            setResult('Login failed', 'error');
+            return;
+          }
+          return doScan(ticketId, fromScan);
+        }
+
+        if (data.status === 'success') {
+          setResult('Scan Successful', 'success');
+          beep(true); haptic(true);
+        } else if (data.status === 'already_used') {
+          setResult('Ticket already scanned', 'error');
+          beep(false); haptic(false);
+        } else {
+          setResult('Invalid ticket', 'error');
+          beep(false); haptic(false);
+        }
+
+        renderTicketState(data);
+        await revealHistoryForTenSeconds();
+
+        if (fromScan && window.html5QrCode) {
+          setTimeout(function () { setResult(''); window.html5QrCode.resume(); }, 1800);
+        }
+      } catch (e) {
+        setResult('Network error', 'error');
+        beep(false); haptic(false);
+        if (fromScan && window.html5QrCode) window.html5QrCode.resume();
+      }
     }
 
     var html5QrCode = null;
@@ -380,7 +520,22 @@
       if (e.key === 'Enter') document.getElementById('btnCheckIn').click();
     });
 
-    renderHistory();
+    if (btnRevealHistory) {
+      btnRevealHistory.addEventListener('click', function () {
+        revealHistoryForTenSeconds();
+      });
+    }
+    setHistoryBlurred(true);
+
+    // If scanner is already logged in (session cookie exists), mark them online immediately.
+    (async function initScannerOnline() {
+      try {
+        var r = await fetch('/api/scanner/me', { method: 'GET' }).catch(function () { return null; });
+        if (r && r.ok) {
+          ensureScannerPing();
+        }
+      } catch (e) {}
+    })();
   </script>
 </body>
 </html>

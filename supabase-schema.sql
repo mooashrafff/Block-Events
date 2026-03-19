@@ -117,6 +117,52 @@ create table if not exists public.blocked_users (
 create index if not exists blocked_users_email_idx on public.blocked_users (lower(email));
 create index if not exists blocked_users_phone_idx on public.blocked_users (phone);
 
+-- ---------------------------------------------------------------------------
+-- Scanner profiles (multiple scanners + server-side immutable scan history)
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.scanners (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  password_hash text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists scanners_active_idx on public.scanners (active);
+
+-- One scanner profile can work from multiple devices (each device has its own device_id).
+create table if not exists public.scanner_devices (
+  id uuid primary key default gen_random_uuid(),
+  scanner_id uuid not null references public.scanners(id) on delete cascade,
+  device_id text not null,
+  last_seen timestamptz,
+  created_at timestamptz not null default now(),
+  unique(scanner_id, device_id)
+);
+
+create index if not exists scanner_devices_scanner_id_idx on public.scanner_devices (scanner_id);
+
+-- Server-side scan logs (so scanners can’t clear history locally).
+create table if not exists public.scanner_scan_logs (
+  id uuid primary key default gen_random_uuid(),
+  scanner_id uuid references public.scanners(id) on delete set null,
+  device_id text,
+  ticket_id text not null,
+  status text not null, -- success | already_used | invalid
+  user_name text,
+  user_email text,
+  event_id uuid,
+  event_name text,
+  ticket_category text,
+  ticket_number text,
+  checkin_time timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists scanner_scan_logs_scanner_id_created_idx on public.scanner_scan_logs (scanner_id, created_at desc);
+create index if not exists scanner_scan_logs_device_id_created_idx on public.scanner_scan_logs (device_id, created_at desc);
+
 -- Optional: trigger stub to call a Supabase Edge Function when a new attendee is created.
 -- This lets Supabase itself send the QR email (instead of Node).
 -- 1) Deploy an Edge Function called \"send-ticket-email\" that accepts the attendee record.
