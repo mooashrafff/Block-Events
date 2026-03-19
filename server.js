@@ -1496,9 +1496,26 @@ app.post('/api/cart/add-ticket', async (req, res) => {
     .eq('event_id', eventRow.id)
     .maybeSingle();
 
-  if (fetchError) return res.status(500).json({ error: 'Could not load cart selections.' });
+  // When the cart was just cleared, there might be no existing row.
+  // In that case, treat it as empty selections and proceed with upsert.
+  let existingSelections = [];
+  if (fetchError) {
+    const msg = String(fetchError.message || '').toLowerCase();
+    const code = String(fetchError.code || '');
+    const looksLikeNoRow =
+      code === 'PGRST116' ||
+      msg.includes('no rows') ||
+      msg.includes('0 rows') ||
+      msg.includes('results contain 0') ||
+      msg.includes('no record');
+    if (!looksLikeNoRow) {
+      return res.status(500).json({
+        error: 'Could not load cart selections.',
+      });
+    }
+  }
 
-  const existingSelections = Array.isArray(existing?.ticket_selections) ? existing.ticket_selections : [];
+  if (existing && Array.isArray(existing.ticket_selections)) existingSelections = existing.ticket_selections;
   const updated = [...existingSelections];
 
   const idx = updated.findIndex((s) => String(s.ticketId ?? s.id ?? '') === ticketId);

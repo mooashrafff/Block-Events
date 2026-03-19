@@ -45,9 +45,10 @@ create table if not exists public.events (
   created_at timestamptz not null default now()
 );
 
--- Add column if upgrading existing DB (run separately if needed):
--- alter table public.events add column if not exists available_tickets integer;
--- alter table public.events add column if not exists price numeric not null default 0;
+-- Add columns if upgrading an existing DB (so older projects still work):
+alter table public.events add column if not exists available_tickets integer;
+alter table public.events add column if not exists price numeric not null default 0;
+alter table public.events add column if not exists sort_order integer;
 
 create index if not exists events_sort_order_idx on public.events (sort_order nulls last, created_at desc);
 
