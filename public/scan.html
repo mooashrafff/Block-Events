@@ -108,12 +108,34 @@
   </div>
   <div id="qr-reader" style="width: 100%; max-width: 320px; display: none;"></div>
   <div id="result"></div>
+  <div id="ticketInfo" style="display:none; width:100%; max-width:320px; margin-top:0.75rem; border:1px solid #25252d; border-radius:12px; background:#141418; padding:0.85rem 1rem; text-align:left;">
+    <div id="ticketHeader" style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.6rem;">
+      <div id="statusIcon" style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;"></div>
+      <div>
+        <div id="statusTitle" style="font-weight:800;">—</div>
+        <div id="statusSub" style="color:#8888a0;font-size:0.85rem;">—</div>
+      </div>
+    </div>
+    <div style="color:#8888a0;font-size:0.85rem;margin-bottom:0.2rem;">Event</div>
+    <div id="infoEvent" style="font-weight:700;margin-bottom:0.6rem;">—</div>
+    <div style="color:#8888a0;font-size:0.85rem;margin-bottom:0.2rem;">User</div>
+    <div id="infoUser" style="font-weight:700;margin-bottom:0.6rem;">—</div>
+    <div style="color:#8888a0;font-size:0.85rem;margin-bottom:0.2rem;">Ticket</div>
+    <div id="infoTicket" style="font-weight:900;letter-spacing:0.04em;">—</div>
+  </div>
   <div class="manual">
     <label for="ticketIdInput">Or enter ticket ID manually</label>
     <div class="manual-row">
       <input type="text" id="ticketIdInput" placeholder="Ticket ID" autocomplete="off">
       <button type="button" id="btnCheckIn">Check in</button>
     </div>
+  </div>
+  <div style="width:100%; max-width:320px; margin-top:1rem; text-align:left;">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem;">
+      <div style="font-weight:700;">Scan history</div>
+      <button id="btnClearHistory" type="button" style="background:transparent;border:1px solid #25252d;color:#e8e8ed;border-radius:10px;padding:8px 10px;cursor:pointer;">Clear</button>
+    </div>
+    <div id="history" style="margin-top:0.6rem; display:flex; flex-direction:column; gap:0.5rem;"></div>
   </div>
 
   <script>
@@ -131,19 +153,162 @@
       if (el) { el.textContent = msg; el.className = type || ''; }
     }
 
-    function doCheckIn(ticketId, fromScan) {
-      fetch('/api/checkin/' + encodeURIComponent(ticketId))
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.ok && data.alreadyScanned) setResult('Already checked in', 'already');
-          else if (data.ok) setResult('Checked in!', 'success');
-          else setResult('Invalid ticket', 'error');
+    function beep(ok) {
+      try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var o = ctx.createOscillator();
+        var g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = ok ? 880 : 220;
+        g.gain.value = 0.05;
+        o.connect(g);
+        g.connect(ctx.destination);
+        o.start();
+        setTimeout(function(){ o.stop(); ctx.close(); }, ok ? 120 : 220);
+      } catch (e) {}
+    }
+
+    function haptic(ok) {
+      try {
+        if (navigator.vibrate) navigator.vibrate(ok ? [40] : [120, 60, 120]);
+      } catch (e) {}
+    }
+
+    function renderTicketState(payload) {
+      var wrap = document.getElementById('ticketInfo');
+      var icon = document.getElementById('statusIcon');
+      var title = document.getElementById('statusTitle');
+      var sub = document.getElementById('statusSub');
+      var e = document.getElementById('infoEvent');
+      var u = document.getElementById('infoUser');
+      var t = document.getElementById('infoTicket');
+      if (!wrap || !icon || !title || !sub || !e || !u || !t) return;
+
+      var status = payload.status;
+      var ticket = payload.ticket || {};
+      wrap.style.display = 'block';
+
+      if (status === 'success') {
+        icon.textContent = '✓';
+        icon.style.background = 'rgba(34,197,94,0.2)';
+        icon.style.color = '#22c55e';
+        title.textContent = 'Scan Successful';
+        sub.textContent = ticket.usedAt ? ('Used at ' + new Date(ticket.usedAt).toLocaleString()) : '';
+      } else if (status === 'already_used') {
+        icon.textContent = '✕';
+        icon.style.background = 'rgba(239,68,68,0.18)';
+        icon.style.color = '#ef4444';
+        title.textContent = 'Ticket already scanned';
+        sub.textContent = ticket.usedAt ? ('Used at ' + new Date(ticket.usedAt).toLocaleString()) : '';
+      } else {
+        icon.textContent = '!';
+        icon.style.background = 'rgba(239,68,68,0.18)';
+        icon.style.color = '#ef4444';
+        title.textContent = 'Invalid ticket';
+        sub.textContent = payload.message || '';
+      }
+
+      e.textContent = ticket.eventName || '—';
+      u.textContent = (ticket.userName || '—') + (ticket.userEmail ? (' • ' + ticket.userEmail) : '');
+      var parts = [];
+      if (ticket.ticketNumber != null && ticket.ticketNumber !== '') parts.push('Ticket #' + ticket.ticketNumber);
+      if (ticket.ticket_id) parts.push(ticket.ticket_id);
+      if (ticket.ticketCategory) parts.push('(' + ticket.ticketCategory + ')');
+      t.textContent = parts.join(' ');
+    }
+
+    function pushHistory(entry) {
+      try {
+        var key = 'scan_history_v1';
+        var arr = JSON.parse(localStorage.getItem(key) || '[]');
+        arr.unshift(entry);
+        arr = arr.slice(0, 25);
+        localStorage.setItem(key, JSON.stringify(arr));
+        renderHistory();
+      } catch (e) {}
+    }
+
+    function renderHistory() {
+      var el = document.getElementById('history');
+      if (!el) return;
+      var key = 'scan_history_v1';
+      var arr = [];
+      try { arr = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) {}
+      if (!arr.length) {
+        el.innerHTML = '<div style="color:#8888a0; font-size:0.9rem;">No scans yet.</div>';
+        return;
+      }
+      el.innerHTML = arr.map(function (x) {
+        var color = x.status === 'success' ? '#22c55e' : x.status === 'already_used' ? '#ef4444' : '#ef4444';
+        return '<div style="border:1px solid #25252d; border-radius:12px; padding:10px 12px; background:#141418;">' +
+          '<div style="display:flex; justify-content:space-between; gap:0.75rem; align-items:center;">' +
+            '<div style="font-weight:800; color:' + color + ';">' + x.status.toUpperCase().replace('_',' ') + '</div>' +
+            '<div style="color:#8888a0; font-size:0.85rem;">' + new Date(x.at).toLocaleTimeString() + '</div>' +
+          '</div>' +
+          '<div style="margin-top:0.25rem; font-weight:700;">' + (x.eventName || '—') + '</div>' +
+          '<div style="color:#8888a0; font-size:0.85rem; margin-top:0.15rem;">' + (x.userName || '—') + ' • ' + (x.ticketNumber != null ? ('#' + x.ticketNumber + ' ') : '') + (x.ticketId || '') + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    document.getElementById('btnClearHistory').addEventListener('click', function () {
+      try { localStorage.removeItem('scan_history_v1'); } catch (e) {}
+      renderHistory();
+    });
+
+    function doScan(ticketId, fromScan) {
+      var scannerKey = '';
+      try { scannerKey = localStorage.getItem('scanner_key') || ''; } catch (e) {}
+      fetch('/api/scan-ticket', {
+        method: 'POST',
+        headers: Object.assign(
+          { 'Content-Type': 'application/json' },
+          scannerKey ? { 'X-Scanner-Key': scannerKey } : {}
+        ),
+        body: JSON.stringify({ ticket_id: ticketId })
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, statusCode: r.status, data: d }; }); })
+        .then(function (resp) {
+          var data = resp.data || {};
+          if (resp.statusCode === 401) {
+            var k = prompt('Scanner key required (staff only). Enter SCANNER_API_KEY:');
+            if (k) {
+              try { localStorage.setItem('scanner_key', k.trim()); } catch (e) {}
+              return doScan(ticketId, fromScan);
+            }
+            setResult('Unauthorized', 'error');
+            renderTicketState({ status: 'invalid', message: 'Unauthorized' });
+            return;
+          }
+
+          if (data.status === 'success') {
+            setResult('Scan Successful', 'success');
+            beep(true); haptic(true);
+          } else if (data.status === 'already_used') {
+            setResult('Ticket already scanned', 'error');
+            beep(false); haptic(false);
+          } else {
+            setResult('Invalid ticket', 'error');
+            beep(false); haptic(false);
+          }
+
+          renderTicketState(data);
+          pushHistory({
+            at: Date.now(),
+            status: data.status || 'invalid',
+            ticketId: (data.ticket && data.ticket.ticket_id) || ticketId,
+            ticketNumber: data.ticket && data.ticket.ticketNumber,
+            eventName: data.ticket && data.ticket.eventName,
+            userName: data.ticket && data.ticket.userName
+          });
+
           if (fromScan && window.html5QrCode) {
-            setTimeout(function() { setResult(''); window.html5QrCode.resume(); }, 2200);
+            setTimeout(function () { setResult(''); window.html5QrCode.resume(); }, 1800);
           }
         })
-        .catch(function() {
+        .catch(function () {
           setResult('Network error', 'error');
+          beep(false); haptic(false);
           if (fromScan && window.html5QrCode) window.html5QrCode.resume();
         });
     }
@@ -186,7 +351,7 @@
             var ticketId = getTicketIdFromDecoded(decodedText);
             if (!ticketId) return;
             html5QrCode.pause();
-            doCheckIn(ticketId, true);
+            doScan(ticketId, true);
           }, function() {});
         }).then(function() {
           btn.style.display = 'none';
@@ -209,11 +374,13 @@
       var input = document.getElementById('ticketIdInput');
       var ticketId = (input && input.value || '').trim();
       if (!ticketId) { setResult('Enter a ticket ID', 'error'); return; }
-      doCheckIn(ticketId, false);
+      doScan(ticketId, false);
     });
     document.getElementById('ticketIdInput').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') document.getElementById('btnCheckIn').click();
     });
+
+    renderHistory();
   </script>
 </body>
 </html>

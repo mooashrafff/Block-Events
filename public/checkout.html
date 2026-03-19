@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout – BLOCK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0a0c; --card:#141418; --border:#25252d;
+      --text:#e8e8ed; --muted:#8888a0;
+      --accent:#6366f1; --accent-hover:#818cf8;
+      --danger:#ef4444; --ok:#22c55e;
+      --bar-bg:#ffffff; --bar-text:#1a1a1a;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Outfit',system-ui,sans-serif;
+      background:var(--bg); color:var(--text);
+      min-height:100vh; display:flex; flex-direction:column;
+      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent);
+    }
+    .top-bar-wrap{width:100%; padding:1rem clamp(0.75rem,3vw,1.25rem) 0; margin-bottom:1rem;}
+    .top-bar{
+      width:100%; max-width:min(1400px,96vw); margin:0 auto;
+      background:var(--bar-bg); border-radius:16px; padding:0.75rem 1.25rem;
+      display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+      box-shadow:0 4px 20px rgba(0,0,0,0.08);
+    }
+    .logo{width:110px; height:auto;}
+    .nav{margin-left:auto; display:flex; gap:1rem; flex-wrap:wrap;}
+    .nav a{color:var(--bar-text); text-decoration:none; font-weight:600; font-size:0.95rem;}
+    .nav a:hover{color:var(--accent);}
+    .main{flex:1; width:100%; max-width:980px; margin:0 auto; padding:1.25rem;}
+    h1{font-size:1.5rem; margin-bottom:0.25rem;}
+    .sub{color:var(--muted); margin-bottom:1rem;}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.25rem;}
+    .meta{color:var(--muted); font-size:0.92rem;}
+    .row{display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; justify-content:space-between;}
+    .btn{
+      padding:12px 14px; border-radius:12px;
+      border:none; background:var(--accent); color:white;
+      font:inherit; font-weight:900; cursor:pointer;
+    }
+    .btn:hover{background:var(--accent-hover);}
+    .btn.secondary{background:transparent; border:1px solid var(--border); color:var(--text); font-weight:800;}
+    .btn.secondary:hover{background:rgba(255,255,255,0.04);}
+    .btn:disabled{opacity:.7; cursor:not-allowed;}
+    .msg{margin-top:0.9rem; padding:10px 12px; border-radius:12px; display:none; font-size:0.92rem;}
+    .msg.show{display:block;}
+    .msg.error{border:1px solid rgba(239,68,68,0.35); background:rgba(239,68,68,0.12); color:#fecaca;}
+    .msg.success{border:1px solid rgba(34,197,94,0.35); background:rgba(34,197,94,0.12); color:#bbf7d0;}
+    .list{margin-top:0.75rem; display:flex; flex-direction:column; gap:0.5rem;}
+    .line{display:flex; justify-content:space-between; gap:0.75rem; border:1px solid var(--border); border-radius:12px; padding:10px 12px; background:#0f0f12;}
+    .total{font-size:1.3rem; font-weight:1000;}
+    .methods{margin-top:1rem; display:flex; flex-direction:column; gap:0.65rem;}
+    .methodCard{
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:12px 12px;
+      background:#0f0f12;
+      display:flex;
+      gap:0.75rem;
+      align-items:flex-start;
+      cursor:pointer;
+      user-select:none;
+    }
+    .methodCard input{margin-top:3px;}
+    .methodTitle{font-weight:1000;}
+    .modal-overlay{
+      position:fixed; inset:0; background:rgba(0,0,0,0.62);
+      display:flex; align-items:center; justify-content:center;
+      padding:18px; z-index:50;
+    }
+    .modal-card{
+      width:100%; max-width:820px;
+      background:var(--card); border:1px solid var(--border);
+      border-radius:16px; padding:18px 18px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.35);
+    }
+    .modal-title{font-size:1.15rem; font-weight:1000; margin-bottom:0.5rem;}
+    .ruleGrid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;}
+    .ruleBox{border:1px solid var(--border); border-radius:12px; padding:12px;}
+    .ruleBox .meta{font-size:0.92rem;}
+    @media (max-width: 720px){ .ruleGrid{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+  <div class="top-bar-wrap">
+    <header class="top-bar">
+      <a href="/"><img src="/block-logo.png" class="logo" alt="BLOCK"></a>
+      <nav class="nav">
+        <a href="/events">Events</a>
+        <a href="/cart">Cart</a>
+        <a href="/profile">Profile</a>
+      </nav>
+    </header>
+  </div>
+
+  <main class="main">
+    <h1>Checkout</h1>
+    <p class="sub">If your total is FREE, booking will be confirmed instantly.</p>
+
+    <section class="card">
+      <div class="row">
+        <div>
+          <div style="font-weight:900; font-size:1.05rem;">Order summary</div>
+          <div class="meta">Review your events before confirming.</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="meta">Total</div>
+          <div class="total" id="total">—</div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:0.9rem;">
+        <div>
+          <div class="meta">Booking for</div>
+          <div style="font-weight:1000;" id="userInfo">—</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="meta">Confirmation</div>
+          <div class="meta" id="confirmNote">—</div>
+        </div>
+      </div>
+
+      <div id="lines" class="list"></div>
+      <p id="empty" class="meta" style="display:none; margin-top:0.75rem;">Your cart is empty.</p>
+
+      <div id="methods" class="methods" style="display:none;">
+        <div style="font-weight:1000; margin-top:0.25rem;">Payment method</div>
+
+        <label class="methodCard">
+          <input type="radio" name="payMethod" value="applepay" checked />
+          <div>
+            <div class="methodTitle">Apple Pay (mocked)</div>
+            <div class="meta">Instant success flow.</div>
+          </div>
+        </label>
+
+        <label class="methodCard">
+          <input type="radio" name="payMethod" value="card" />
+          <div>
+            <div class="methodTitle">Credit/Debit Card (mocked)</div>
+            <div class="meta">Instant success flow.</div>
+          </div>
+        </label>
+
+        <label class="methodCard">
+          <input type="radio" name="payMethod" value="instapay" />
+          <div>
+            <div class="methodTitle">InstaPay</div>
+            <div class="meta">Manual approval with QR.</div>
+          </div>
+        </label>
+      </div>
+
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1rem;">
+        <button class="btn" id="btnConfirm" type="button">Proceed to Payment</button>
+        <a class="btn secondary" href="/cart" style="text-decoration:none; display:inline-flex; align-items:center;">Back to cart</a>
+      </div>
+
+      <div id="msg" class="msg"></div>
+    </section>
+  </main>
+
+  <div id="rulesOverlay" class="modal-overlay" style="display:none;">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Ticket rules">
+      <div class="row" style="margin-bottom:0.5rem;">
+        <div class="modal-title">Ticket Rules & Terms</div>
+      </div>
+      <div id="rulesContent" class="meta" style="white-space:pre-wrap;">Loading…</div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:1rem; justify-content:flex-end;">
+        <button class="btn secondary" id="btnDeclineRules" type="button">Close</button>
+        <button class="btn" id="btnAcceptRules" type="button">Accept</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const totalEl = document.getElementById('total');
+    const linesEl = document.getElementById('lines');
+    const emptyEl = document.getElementById('empty');
+    const btnConfirm = document.getElementById('btnConfirm');
+    const msg = document.getElementById('msg');
+    const methodsEl = document.getElementById('methods');
+    const userInfoEl = document.getElementById('userInfo');
+    const confirmNoteEl = document.getElementById('confirmNote');
+    let cartTotal = 0;
+    let rulesAccepted = false;
+
+    const rulesOverlayEl = document.getElementById('rulesOverlay');
+    const rulesContentEl = document.getElementById('rulesContent');
+    const btnAcceptRules = document.getElementById('btnAcceptRules');
+    const btnDeclineRules = document.getElementById('btnDeclineRules');
+
+    function escapeHtml(s){
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function moneyLine(n){
+      const v = Number(n || 0);
+      if (!isFinite(v) || v <= 0) return 'FREE';
+      return v.toFixed(2) + ' EGP';
+    }
+
+    function getSelectedMethod(){
+      const r = document.querySelector('input[name="payMethod"]:checked');
+      return r ? r.value : 'applepay';
+    }
+
+    function show(type, text){
+      msg.textContent = text || '';
+      msg.className = 'msg show ' + (type || '');
+      if (!text) msg.className = 'msg';
+    }
+    function money(n){
+      const v = Number(n || 0);
+      if (!isFinite(v) || v <= 0) return 'FREE';
+      return v.toFixed(2) + ' EGP';
+    }
+
+    async function requireAuth(){
+      const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+      if (!me || !me.user) {
+        location.href = '/auth?next=' + encodeURIComponent(location.pathname + location.search);
+        return false;
+      }
+      return true;
+    }
+
+    async function loadCart(){
+      const r = await fetch('/api/cart');
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Could not load cart.');
+      return d;
+    }
+
+    function render(cart){
+      const items = Array.isArray(cart.items) ? cart.items : [];
+      cartTotal = Number(cart.total || 0);
+      totalEl.textContent = money(cartTotal);
+      if (!items.length) {
+        emptyEl.style.display = 'block';
+        linesEl.innerHTML = '';
+        btnConfirm.disabled = true;
+        methodsEl.style.display = 'none';
+        return;
+      }
+      emptyEl.style.display = 'none';
+      btnConfirm.disabled = !rulesAccepted;
+      linesEl.innerHTML = items.map(i => {
+        const e = i.event || {};
+        const selections = Array.isArray(i.ticketSelections) ? i.ticketSelections : [];
+        const subtotal = Number(i.selectionsTotal ?? i.price ?? e.price ?? 0);
+        const selectionsHtml = selections.length
+          ? selections.map(s => {
+              const name = s.ticketName || s.ticketCategory || 'Ticket';
+              const qty = Number(s.quantity || 0);
+              const unit = Number(s.unitPrice || 0);
+              return '<div class="meta" style="margin-top:0.2rem;">' + escapeHtml(name) + ' x ' + escapeHtml(qty) + ' (' + money(unit) + ' each)</div>';
+            }).join('')
+          : '';
+
+        return '<div class="line">' +
+          '<div style="min-width:0;">' +
+            '<div style="font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + (e.name || 'Event') + '</div>' +
+            '<div class="meta">' + [e.date, e.time, e.venue].filter(Boolean).join(' · ') + '</div>' +
+            (selectionsHtml ? selectionsHtml : '') +
+          '</div>' +
+          '<div style="font-weight:1000;">' + money(subtotal) + '</div>' +
+        '</div>';
+      }).join('');
+
+      if (cartTotal <= 0) {
+        methodsEl.style.display = 'none';
+        confirmNoteEl.textContent = 'Free booking. Tickets will be sent via email.';
+      } else {
+        methodsEl.style.display = 'flex';
+        confirmNoteEl.textContent = 'Tickets will be sent via email after payment is confirmed.';
+      }
+    }
+
+    btnConfirm.addEventListener('click', async () => {
+      show('', '');
+      btnConfirm.disabled = true;
+      btnConfirm.textContent = 'Processing…';
+      try{
+        const method = cartTotal <= 0 ? 'free' : getSelectedMethod();
+
+        const r = await fetch('/api/checkout/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method })
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || 'Checkout failed.');
+
+        if (d.status === 'paid') {
+          show('success', 'Booking confirmed. Redirecting to profile…');
+          setTimeout(() => (location.href = '/profile'), 900);
+          return;
+        }
+        if (d.status === 'pending_payment') {
+          const ids = Array.isArray(d.bookingIds) ? d.bookingIds : [];
+          if (!ids.length) throw new Error('No InstaPay booking IDs returned.');
+          const qp = encodeURIComponent(ids.join(','));
+          show('success', 'InstaPay pending approval. Showing QR…');
+          setTimeout(() => (location.href = '/instapay-success?bookingIds=' + qp), 900);
+          return;
+        }
+
+        throw new Error('Unexpected checkout response.');
+      } catch (e){
+        show('error', e.message || 'Checkout failed.');
+      } finally {
+        btnConfirm.disabled = false;
+        btnConfirm.textContent = 'Proceed to Payment';
+      }
+    });
+
+    (async function init(){
+      if (!await requireAuth()) return;
+      try{
+        const cart = await loadCart();
+        render(cart);
+
+        // Auto-show rules modal (gates the Confirm booking button)
+        if (Array.isArray(cart.items) && cart.items.length) {
+          const eventId = cart.items[0].eventId;
+          try {
+            const evRes = await fetch('/api/booking-event/' + encodeURIComponent(eventId));
+            const ev = await evRes.json().catch(() => ({}));
+            const rules = ev.rules || {};
+
+            const accompaniedAge = rules.accompaniedByAdultUnderAge ?? 15;
+            rulesContentEl.innerHTML =
+              'Start time: <strong>' + escapeHtml(rules.startTime || '7:00 PM') + '</strong><br/>' +
+              'Doors open time: <strong>' + escapeHtml(rules.doorsOpenTime || '4:00 PM') + '</strong><br/>' +
+              'Doors close: <strong>' + escapeHtml(rules.doorsCloseTime || '7:00 PM') + '</strong><br/>' +
+              'Minimum Age is <strong>' + escapeHtml(rules.minAge ?? 12) + '</strong>, below <strong>' + escapeHtml(accompaniedAge) + '</strong> must be accompanied by an adult.<br/><br/>' +
+              '<span class="meta" style="color:var(--text); white-space:pre-wrap;">' + escapeHtml(rules.termsText || '') + '</span>';
+
+            rulesOverlayEl.style.display = 'flex';
+            rulesAccepted = false;
+            btnConfirm.disabled = true;
+          } catch (e) {
+            // If rules can't load, block confirmation rather than allowing bypass.
+            rulesOverlayEl.style.display = 'flex';
+            rulesContentEl.textContent = 'Could not load ticket rules. Please try again.';
+            rulesAccepted = false;
+            btnConfirm.disabled = true;
+          }
+        }
+
+        // Load user info (name + email)
+        const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => ({}));
+        if (me && me.user) {
+          const u = me.user;
+          userInfoEl.textContent = (u.name || 'Customer') + ' • ' + (u.email || '');
+        }
+      } catch (e){
+        show('error', e.message || 'Could not load cart.');
+      }
+    })();
+
+    btnAcceptRules.addEventListener('click', () => {
+      rulesAccepted = true;
+      rulesOverlayEl.style.display = 'none';
+      btnConfirm.disabled = false;
+    });
+
+    btnDeclineRules.addEventListener('click', () => {
+      rulesOverlayEl.style.display = 'none';
+    });
+  </script>
+</body>
+</html>

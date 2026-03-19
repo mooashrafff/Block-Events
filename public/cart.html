@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cart – BLOCK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0a0c; --card:#141418; --border:#25252d;
+      --text:#e8e8ed; --muted:#8888a0;
+      --accent:#6366f1; --accent-hover:#818cf8;
+      --danger:#ef4444; --ok:#22c55e;
+      --bar-bg:#ffffff; --bar-text:#1a1a1a;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Outfit',system-ui,sans-serif;
+      background:var(--bg); color:var(--text);
+      min-height:100vh; display:flex; flex-direction:column;
+      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent);
+    }
+    .top-bar-wrap{width:100%; padding:1rem clamp(0.75rem,3vw,1.25rem) 0; margin-bottom:1rem;}
+    .top-bar{
+      width:100%; max-width:min(1400px,96vw); margin:0 auto;
+      background:var(--bar-bg); border-radius:16px; padding:0.75rem 1.25rem;
+      display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+      box-shadow:0 4px 20px rgba(0,0,0,0.08);
+    }
+    .logo{width:110px; height:auto;}
+    .nav{margin-left:auto; display:flex; gap:1rem; flex-wrap:wrap;}
+    .nav a{color:var(--bar-text); text-decoration:none; font-weight:600; font-size:0.95rem;}
+    .nav a:hover{color:var(--accent);}
+    .main{flex:1; width:100%; max-width:1100px; margin:0 auto; padding:1.25rem;}
+    h1{font-size:1.5rem; margin-bottom:0.25rem;}
+    .sub{color:var(--muted); margin-bottom:1rem;}
+    .grid{display:grid; grid-template-columns: 1.1fr 0.9fr; gap:1rem; align-items:start;}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.25rem;}
+    .items{display:flex; flex-direction:column; gap:0.75rem;}
+    .item{
+      border:1px solid var(--border); border-radius:14px;
+      padding:1rem; background:#0f0f12;
+      display:flex; gap:0.9rem; align-items:center;
+    }
+    .item img{width:92px; height:72px; border-radius:12px; object-fit:cover; border:1px solid var(--border); background:#111;}
+    .meta{color:var(--muted); font-size:0.9rem;}
+    .title{font-weight:900; font-size:1.05rem; margin-bottom:0.15rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .btn{
+      padding:10px 14px; border-radius:12px;
+      border:none; background:var(--accent); color:white;
+      font:inherit; font-weight:900; cursor:pointer;
+    }
+    .btn:hover{background:var(--accent-hover);}
+    .btn:disabled{opacity:.7; cursor:not-allowed;}
+    .btn.secondary{background:transparent; border:1px solid var(--border); color:var(--text); font-weight:800;}
+    .btn.secondary:hover{background:rgba(255,255,255,0.04);}
+    .btn.danger{background:transparent; border:1px solid rgba(239,68,68,0.45); color:#fecaca; font-weight:800;}
+    .btn.danger:hover{background:rgba(239,68,68,0.08);}
+    .summaryRow{display:flex; justify-content:space-between; align-items:center; margin-top:0.75rem;}
+    .total{font-size:1.4rem; font-weight:1000;}
+    .msg{margin-top:0.9rem; padding:10px 12px; border-radius:12px; display:none; font-size:0.92rem;}
+    .msg.show{display:block;}
+    .msg.error{border:1px solid rgba(239,68,68,0.35); background:rgba(239,68,68,0.12); color:#fecaca;}
+    .msg.success{border:1px solid rgba(34,197,94,0.35); background:rgba(34,197,94,0.12); color:#bbf7d0;}
+    @media (max-width: 920px){ .grid{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+  <div class="top-bar-wrap">
+    <header class="top-bar">
+      <a href="/"><img src="/block-logo.png" class="logo" alt="BLOCK"></a>
+      <nav class="nav">
+        <a href="/events">Events</a>
+        <a href="/profile">Profile</a>
+      </nav>
+    </header>
+  </div>
+
+  <main class="main">
+    <h1>Your cart</h1>
+    <p class="sub">Add free or paid events, then checkout. Duplicate bookings are prevented.</p>
+
+    <div class="grid">
+      <section class="card">
+        <h2 style="font-size:1.1rem; margin-bottom:0.75rem;">Items</h2>
+        <div id="items" class="items"></div>
+        <p id="empty" class="meta" style="display:none; padding:0.75rem 0;">Your cart is empty. Add an event from the Events page.</p>
+      </section>
+
+      <section class="card">
+        <h2 style="font-size:1.1rem;">Summary</h2>
+        <div class="summaryRow">
+          <span class="meta">Total</span>
+          <span class="total" id="total">0</span>
+        </div>
+        <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1rem;">
+          <button class="btn" id="btnCheckout" type="button">Checkout</button>
+          <button class="btn secondary" id="btnClear" type="button">Clear cart</button>
+          <a class="btn secondary" href="/events" style="text-decoration:none; display:inline-flex; align-items:center;">Add more</a>
+        </div>
+        <div id="msg" class="msg"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const itemsEl = document.getElementById('items');
+    const emptyEl = document.getElementById('empty');
+    const totalEl = document.getElementById('total');
+    const msg = document.getElementById('msg');
+    const btnCheckout = document.getElementById('btnCheckout');
+    const btnClear = document.getElementById('btnClear');
+
+    function show(type, text){
+      msg.textContent = text || '';
+      msg.className = 'msg show ' + (type || '');
+      if (!text) msg.className = 'msg';
+    }
+    function escapeHtml(s){
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function money(n){
+      const v = Number(n || 0);
+      if (!isFinite(v) || v <= 0) return 'FREE';
+      return v.toFixed(2) + ' EGP';
+    }
+
+    async function requireAuth(){
+      const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+      if (!me || !me.user) {
+        location.href = '/auth?next=' + encodeURIComponent('/cart');
+        return false;
+      }
+      return true;
+    }
+
+    async function loadCart(){
+      const res = await fetch('/api/cart');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Could not load cart.');
+      return data;
+    }
+
+    function render(cart){
+      const items = Array.isArray(cart.items) ? cart.items : [];
+      totalEl.textContent = money(cart.total);
+      if (!items.length) {
+        itemsEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+        btnCheckout.disabled = true;
+        btnClear.disabled = true;
+        return;
+      }
+      emptyEl.style.display = 'none';
+      btnCheckout.disabled = false;
+      btnClear.disabled = false;
+      itemsEl.innerHTML = items.map(i => {
+        const e = i.event || {};
+        const selections = Array.isArray(i.ticketSelections) ? i.ticketSelections : [];
+        const selectionsText = selections.length
+          ? selections
+              .map(s => escapeHtml(s.ticketName || s.ticketCategory || 'Ticket') + ' x ' + escapeHtml(s.quantity))
+              .join('<br/>')
+          : '';
+        const subtotal = Number(i.selectionsTotal ?? i.price ?? e.price ?? 0);
+        return '<div class="item">' +
+          '<img alt="" src="' + (e.image || '/block-logo.png').replace(/"/g,'&quot;') + '">' +
+          '<div style="flex:1; min-width:0;">' +
+            '<div class="title">' + (e.name || 'Event') + '</div>' +
+            '<div class="meta">' + [e.date, e.time, e.venue].filter(Boolean).join(' · ') + '</div>' +
+            (selectionsText ? '<div class="meta" style="margin-top:0.35rem;">' + selectionsText + '</div>' : '') +
+            '<div style="margin-top:0.35rem; font-weight:1000;">' + money(subtotal) + '</div>' +
+          '</div>' +
+          '<button class="btn danger" data-remove="' + String(i.eventId).replace(/"/g,'&quot;') + '" type="button">Remove</button>' +
+        '</div>';
+      }).join('');
+      itemsEl.querySelectorAll('[data-remove]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-remove');
+          btn.disabled = true;
+          try {
+            const r = await fetch('/api/cart/remove', {
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ eventId: id })
+            });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(d.error || 'Remove failed.');
+            render(d);
+            show('success', 'Removed.');
+            setTimeout(() => show('', ''), 900);
+          } catch (e) {
+            show('error', e.message || 'Remove failed.');
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+
+    btnClear.addEventListener('click', async () => {
+      show('', '');
+      btnClear.disabled = true;
+      try {
+        const r = await fetch('/api/cart/clear', { method:'POST' });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || 'Could not clear cart.');
+        const c = await loadCart();
+        render(c);
+        show('success', 'Cart cleared.');
+        setTimeout(() => show('', ''), 900);
+      } catch (e) {
+        show('error', e.message || 'Could not clear cart.');
+      } finally {
+        btnClear.disabled = false;
+      }
+    });
+
+    btnCheckout.addEventListener('click', () => {
+      location.href = '/checkout';
+    });
+
+    (async function init(){
+      if (!await requireAuth()) return;
+      try{
+        const cart = await loadCart();
+        render(cart);
+      } catch (e) {
+        show('error', e.message || 'Could not load cart.');
+      }
+    })();
+  </script>
+</body>
+</html>

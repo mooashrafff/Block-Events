@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile – BLOCK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0a0c; --card:#141418; --border:#25252d;
+      --text:#e8e8ed; --muted:#8888a0;
+      --accent:#6366f1; --accent-hover:#818cf8;
+      --danger:#ef4444; --ok:#22c55e;
+      --bar-bg:#ffffff; --bar-text:#1a1a1a; --search-bg:#f0f0f0;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Outfit',system-ui,sans-serif;
+      background:var(--bg); color:var(--text);
+      min-height:100vh; display:flex; flex-direction:column;
+      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent);
+    }
+    .top-bar-wrap{width:100%; padding:1rem clamp(0.75rem,3vw,1.25rem) 0; margin-bottom:1rem;}
+    .top-bar{
+      width:100%; max-width:min(1400px,96vw); margin:0 auto;
+      background:var(--bar-bg); border-radius:16px; padding:0.75rem 1.25rem;
+      display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+      box-shadow:0 4px 20px rgba(0,0,0,0.08);
+    }
+    .logo{width:110px; height:auto;}
+    .nav{margin-left:auto; display:flex; gap:1rem; flex-wrap:wrap;}
+    .nav a,.nav button{
+      color:var(--bar-text); text-decoration:none; font-weight:600; font-size:0.95rem;
+      background:transparent; border:none; cursor:pointer;
+    }
+    .nav a:hover,.nav button:hover{color:var(--accent);}
+    .main{flex:1; width:100%; max-width:1100px; margin:0 auto; padding:1.25rem;}
+    .grid{display:grid; grid-template-columns: 0.95fr 1.05fr; gap:1rem; align-items:start;}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.25rem;}
+    h1{font-size:1.5rem; margin-bottom:0.25rem;}
+    .sub{color:var(--muted); margin-bottom:1rem;}
+    .row{display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;}
+    .avatar{
+      width:56px; height:56px; border-radius:16px;
+      background:#0f0f12; border:1px solid var(--border);
+      overflow:hidden; display:grid; place-items:center; flex-shrink:0;
+    }
+    .avatar img{width:100%; height:100%; object-fit:cover;}
+    .pill{
+      display:inline-flex; align-items:center;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted); font-weight:700; font-size:0.85rem;
+      background:#0f0f12;
+    }
+    .field{margin-top:0.9rem;}
+    label{display:block; color:var(--muted); font-weight:800; font-size:0.85rem; margin-bottom:0.35rem;}
+    input{
+      width:100%;
+      padding:12px 14px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#0f0f12;
+      color:var(--text);
+      font:inherit;
+    }
+    input:focus{outline:none; border-color:rgba(99,102,241,0.9);}
+    .btn{
+      padding:10px 14px; border-radius:12px;
+      border:none; background:var(--accent); color:white;
+      font:inherit; font-weight:900; cursor:pointer;
+    }
+    .btn:hover{background:var(--accent-hover);}
+    .btn.secondary{background:transparent; border:1px solid var(--border); color:var(--text); font-weight:800;}
+    .btn.secondary:hover{background:rgba(255,255,255,0.04);}
+    .msg{margin-top:0.75rem; padding:10px 12px; border-radius:12px; display:none; font-size:0.92rem;}
+    .msg.show{display:block;}
+    .msg.error{border:1px solid rgba(239,68,68,0.35); background:rgba(239,68,68,0.12); color:#fecaca;}
+    .msg.success{border:1px solid rgba(34,197,94,0.35); background:rgba(34,197,94,0.12); color:#bbf7d0;}
+    .bookings{display:flex; flex-direction:column; gap:0.75rem;}
+    .booking{
+      border:1px solid var(--border); border-radius:14px;
+      padding:1rem;
+      display:flex; gap:0.9rem;
+      background:#0f0f12;
+    }
+    .booking img{width:96px; height:72px; border-radius:12px; object-fit:cover; border:1px solid var(--border); background:#111;}
+    .booking h3{font-size:1.05rem; margin-bottom:0.15rem;}
+    .meta{color:var(--muted); font-size:0.9rem;}
+    .price{margin-top:0.4rem; font-weight:900;}
+    @media (max-width: 920px){ .grid{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+  <div class="top-bar-wrap">
+    <header class="top-bar">
+      <a href="/"><img src="/block-logo.png" class="logo" alt="BLOCK"></a>
+      <nav class="nav">
+        <a href="/events">Events</a>
+        <a href="/cart">Cart</a>
+        <button id="btnLogout" type="button">Logout</button>
+      </nav>
+    </header>
+  </div>
+
+  <main class="main">
+    <h1>Profile</h1>
+    <p class="sub" id="sub">Loading…</p>
+
+    <div class="grid">
+      <section class="card">
+        <div class="row">
+          <div class="avatar" id="avatar"><span style="color:var(--muted); font-weight:900;">U</span></div>
+          <div>
+            <div class="row" style="gap:0.5rem; margin-bottom:0.3rem;">
+              <span class="pill" id="pillEmail">—</span>
+              <span class="pill" id="pillSince">—</span>
+            </div>
+            <div style="font-size:1.15rem; font-weight:900;" id="nameText">—</div>
+          </div>
+        </div>
+
+        <form id="profileForm" style="margin-top:1rem;">
+          <div class="field">
+            <label for="name">Name</label>
+            <input id="name" type="text" placeholder="Your name">
+          </div>
+          <div class="field">
+            <label for="avatarUrl">Profile picture URL</label>
+            <input id="avatarUrl" type="url" placeholder="https://...">
+          </div>
+          <div class="row" style="margin-top:0.9rem;">
+            <button class="btn" id="btnSave" type="submit">Save profile</button>
+            <a class="btn secondary" href="/events" style="text-decoration:none; display:inline-flex; align-items:center;">Browse events</a>
+          </div>
+          <div id="msg" class="msg"></div>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="row" style="justify-content:space-between; margin-bottom:0.75rem;">
+          <h2 style="font-size:1.15rem;">Booked events</h2>
+          <span class="pill" id="countPill">0</span>
+        </div>
+        <div id="bookings" class="bookings"></div>
+        <p id="empty" class="meta" style="display:none; padding:0.75rem 0;">No bookings yet. Add an event to your cart and checkout.</p>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const msg = document.getElementById('msg');
+    function show(type, text){
+      msg.textContent = text || '';
+      msg.className = 'msg show ' + (type || '');
+      if (!text) msg.className = 'msg';
+    }
+    function money(n){
+      const v = Number(n || 0);
+      if (!isFinite(v) || v <= 0) return 'FREE';
+      return v.toFixed(2) + ' EGP';
+    }
+    function fmtDate(d){
+      if (!d) return '';
+      try { return new Date(d).toLocaleString(); } catch { return String(d); }
+    }
+
+    async function requireMe(){
+      const r = await fetch('/api/auth/me');
+      const data = await r.json().catch(() => ({}));
+      if (!data || !data.user) {
+        location.href = '/auth?next=' + encodeURIComponent('/profile');
+        return null;
+      }
+      return data;
+    }
+
+    function render(me){
+      const user = me.user;
+      document.getElementById('sub').textContent = 'Manage your info and bookings.';
+      document.getElementById('pillEmail').textContent = user.email;
+      document.getElementById('pillSince').textContent = 'Joined ' + fmtDate(user.created_at).split(',')[0];
+      document.getElementById('nameText').textContent = user.name || 'Your account';
+      document.getElementById('name').value = user.name || '';
+      document.getElementById('avatarUrl').value = user.profile_picture_url || '';
+
+      const av = document.getElementById('avatar');
+      if (user.profile_picture_url) {
+        av.innerHTML = '<img alt="Profile" src="' + user.profile_picture_url.replace(/"/g, '&quot;') + '">';
+      } else {
+        const letter = (user.email || 'U').slice(0,1).toUpperCase();
+        av.innerHTML = '<span style="color:var(--muted); font-weight:900;">' + letter + '</span>';
+      }
+
+      const list = Array.isArray(me.bookedEvents) ? me.bookedEvents : [];
+      document.getElementById('countPill').textContent = String(list.length);
+      const wrap = document.getElementById('bookings');
+      const empty = document.getElementById('empty');
+      if (!list.length) {
+        wrap.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      wrap.innerHTML = list.map(b => {
+        const e = b.event || {};
+        const paymentStatus = b.paymentStatus || 'Pending';
+        const pm = b.paymentMethod || (Number(e.price || 0) > 0 ? 'card' : 'free');
+        const priceTxt = money(e.price);
+        const paidTxt = money(b.pricePaid);
+        const isPaid = paymentStatus === 'Paid';
+        const ticketUrl = b.ticketId ? '/ticket/' + encodeURIComponent(b.ticketId) : null;
+        return '<div class="booking">' +
+          '<img alt="" src="' + (e.image || '/block-logo.png').replace(/"/g,'&quot;') + '">' +
+          '<div style="flex:1; min-width:0;">' +
+            '<h3 style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + (e.name || 'Event') + '</h3>' +
+            '<div class="meta">' + [e.date, e.time, e.venue].filter(Boolean).join(' · ') + '</div>' +
+            '<div class="meta" style="margin-top:0.25rem;">Booked ' + fmtDate(b.createdAt) + '</div>' +
+            '<div class="price">' + (priceTxt === 'FREE' ? 'FREE' : (isPaid ? ('Paid ' + paidTxt + ' via ' + String(pm).toUpperCase()) : (paymentStatus + ' via ' + String(pm).toUpperCase()))) + '</div>' +
+            (ticketUrl
+              ? '<div style="margin-top:0.6rem;"><a class="btn secondary" href="' + ticketUrl + '" style="display:inline-flex; text-decoration:none;">View ticket / QR</a></div>'
+              : '') +
+            (b.paymentQrDataUrl && !ticketUrl
+              ? '<div style="margin-top:0.6rem;"><div class="meta" style="margin-bottom:0.35rem;">InstaPay payment QR</div><img alt="InstaPay payment QR" src="' + b.paymentQrDataUrl.replace(/"/g,'&quot;') + '" style="width:180px; border-radius:12px; border:1px solid var(--border);"></div>'
+              : '') +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      show('', '');
+      const btn = document.getElementById('btnSave');
+      btn.disabled = true; btn.textContent = 'Saving…';
+      try{
+        const name = document.getElementById('name').value.trim();
+        const profilePictureUrl = document.getElementById('avatarUrl').value.trim();
+        const res = await fetch('/api/auth/profile', {
+          method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ name, profilePictureUrl })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not save.');
+        show('success', 'Profile updated.');
+        const me = await requireMe();
+        if (me) render(me);
+      } catch (err){
+        show('error', err.message || 'Save failed.');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Save profile';
+      }
+    });
+
+    document.getElementById('btnLogout').addEventListener('click', async () => {
+      await fetch('/api/auth/logout', { method:'POST' }).catch(() => {});
+      location.href = '/auth';
+    });
+
+    (async function init(){
+      const me = await requireMe();
+      if (me) render(me);
+    })();
+  </script>
+</body>
+</html>

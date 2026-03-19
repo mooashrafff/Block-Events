@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment – BLOCK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0a0c; --card:#141418; --border:#25252d;
+      --text:#e8e8ed; --muted:#8888a0;
+      --accent:#6366f1; --accent-hover:#818cf8;
+      --danger:#ef4444; --ok:#22c55e;
+      --bar-bg:#ffffff; --bar-text:#1a1a1a;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Outfit',system-ui,sans-serif;
+      background:var(--bg); color:var(--text);
+      min-height:100vh; display:flex; flex-direction:column;
+      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent);
+    }
+    .top-bar-wrap{width:100%; padding:1rem clamp(0.75rem,3vw,1.25rem) 0; margin-bottom:1rem;}
+    .top-bar{
+      width:100%; max-width:min(1400px,96vw); margin:0 auto;
+      background:var(--bar-bg); border-radius:16px; padding:0.75rem 1.25rem;
+      display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+      box-shadow:0 4px 20px rgba(0,0,0,0.08);
+    }
+    .logo{width:110px; height:auto;}
+    .nav{margin-left:auto; display:flex; gap:1rem; flex-wrap:wrap;}
+    .nav a{color:var(--bar-text); text-decoration:none; font-weight:600; font-size:0.95rem;}
+    .nav a:hover{color:var(--accent);}
+    .main{flex:1; width:100%; max-width:980px; margin:0 auto; padding:1.25rem;}
+    h1{font-size:1.5rem; margin-bottom:0.25rem;}
+    .sub{color:var(--muted); margin-bottom:1rem;}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.25rem;}
+    .row{display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; justify-content:space-between;}
+    .total{font-size:1.35rem; font-weight:1000;}
+    .meta{color:var(--muted); font-size:0.92rem;}
+    .methods{display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-top:1rem;}
+    .method{
+      border:1px solid var(--border); border-radius:14px;
+      padding:1rem; background:#0f0f12; cursor:pointer;
+      display:flex; gap:0.75rem; align-items:flex-start;
+      transition:border-color .15s, transform .15s;
+    }
+    .method:hover{border-color:rgba(99,102,241,0.9); transform:translateY(-1px);}
+    .method.active{border-color:rgba(99,102,241,0.9); background:rgba(99,102,241,0.10);}
+    .badge{width:38px; height:38px; border-radius:12px; border:1px solid var(--border); display:grid; place-items:center; font-weight:1000;}
+    .btn{
+      padding:12px 14px; border-radius:12px;
+      border:none; background:var(--accent); color:white;
+      font:inherit; font-weight:900; cursor:pointer;
+    }
+    .btn:hover{background:var(--accent-hover);}
+    .btn.secondary{background:transparent; border:1px solid var(--border); color:var(--text); font-weight:800;}
+    .btn.secondary:hover{background:rgba(255,255,255,0.04);}
+    .btn:disabled{opacity:.7; cursor:not-allowed;}
+    .msg{margin-top:0.9rem; padding:10px 12px; border-radius:12px; display:none; font-size:0.92rem;}
+    .msg.show{display:block;}
+    .msg.error{border:1px solid rgba(239,68,68,0.35); background:rgba(239,68,68,0.12); color:#fecaca;}
+    .msg.success{border:1px solid rgba(34,197,94,0.35); background:rgba(34,197,94,0.12); color:#bbf7d0;}
+    .list{margin-top:0.75rem; display:flex; flex-direction:column; gap:0.5rem;}
+    .line{display:flex; justify-content:space-between; gap:0.75rem; border:1px solid var(--border); border-radius:12px; padding:10px 12px; background:#0f0f12;}
+    @media (max-width: 760px){ .methods{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+  <div class="top-bar-wrap">
+    <header class="top-bar">
+      <a href="/"><img src="/block-logo.png" class="logo" alt="BLOCK"></a>
+      <nav class="nav">
+        <a href="/events">Events</a>
+        <a href="/cart">Cart</a>
+        <a href="/profile">Profile</a>
+      </nav>
+    </header>
+  </div>
+
+  <main class="main">
+    <h1>Payment</h1>
+    <p class="sub">Choose a method. This demo simulates a successful payment.</p>
+
+    <section class="card">
+      <div class="row">
+        <div>
+          <div style="font-weight:900; font-size:1.05rem;">Payment summary</div>
+          <div class="meta" id="sessionMeta">Loading session…</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="meta">Total</div>
+          <div class="total" id="total">—</div>
+        </div>
+      </div>
+
+      <div id="lines" class="list"></div>
+
+      <div class="methods" aria-label="Payment methods">
+        <div class="method active" id="mVisa" role="button" tabindex="0" aria-label="Pay with Visa">
+          <div class="badge">V</div>
+          <div>
+            <div style="font-weight:1000;">Visa</div>
+            <div class="meta">Mock card payment (success flow).</div>
+          </div>
+        </div>
+        <div class="method" id="mInsta" role="button" tabindex="0" aria-label="Pay with InstaPay">
+          <div class="badge">I</div>
+          <div>
+            <div style="font-weight:1000;">InstaPay</div>
+            <div class="meta">Simulate InstaPay success.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1rem;">
+        <button class="btn" id="btnPay" type="button">Pay now</button>
+        <a class="btn secondary" href="/cart" style="text-decoration:none; display:inline-flex; align-items:center;">Back to cart</a>
+      </div>
+
+      <div id="msg" class="msg"></div>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const sessionId = params.get('session') || '';
+    const sessionMeta = document.getElementById('sessionMeta');
+    const totalEl = document.getElementById('total');
+    const linesEl = document.getElementById('lines');
+    const msg = document.getElementById('msg');
+    const mVisa = document.getElementById('mVisa');
+    const mInsta = document.getElementById('mInsta');
+    const btnPay = document.getElementById('btnPay');
+    let method = 'visa';
+
+    function show(type, text){
+      msg.textContent = text || '';
+      msg.className = 'msg show ' + (type || '');
+      if (!text) msg.className = 'msg';
+    }
+    function money(n){
+      const v = Number(n || 0);
+      if (!isFinite(v) || v <= 0) return 'FREE';
+      return v.toFixed(2) + ' EGP';
+    }
+
+    async function requireAuth(){
+      const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+      if (!me || !me.user) {
+        location.href = '/auth?next=' + encodeURIComponent('/payment?session=' + encodeURIComponent(sessionId));
+        return false;
+      }
+      return true;
+    }
+
+    function setMethod(m){
+      method = m;
+      mVisa.classList.toggle('active', m === 'visa');
+      mInsta.classList.toggle('active', m === 'instapay');
+    }
+    mVisa.addEventListener('click', () => setMethod('visa'));
+    mInsta.addEventListener('click', () => setMethod('instapay'));
+
+    async function loadSession(){
+      if (!sessionId) throw new Error('Missing session.');
+      const r = await fetch('/api/checkout/session/' + encodeURIComponent(sessionId));
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Could not load session.');
+      return d;
+    }
+
+    function renderSession(s){
+      sessionMeta.textContent = s.status === 'pending' ? 'Ready to pay.' : ('Status: ' + s.status);
+      totalEl.textContent = money(s.amountTotal);
+      const items = Array.isArray(s.items) ? s.items : [];
+      linesEl.innerHTML = items.map(i => {
+        return '<div class="line">' +
+          '<div style="font-weight:900; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + (i.name || 'Event') + '</div>' +
+          '<div style="font-weight:1000;">' + money(i.price) + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    btnPay.addEventListener('click', async () => {
+      show('', '');
+      btnPay.disabled = true;
+      btnPay.textContent = 'Processing…';
+      try{
+        const r = await fetch('/api/payments/confirm', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ sessionId, method })
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || 'Payment failed.');
+        show('success', 'Payment successful. Booking confirmed. Redirecting…');
+        setTimeout(() => location.href = '/profile', 900);
+      } catch (e){
+        show('error', e.message || 'Payment failed.');
+      } finally {
+        btnPay.disabled = false;
+        btnPay.textContent = 'Pay now';
+      }
+    });
+
+    (async function init(){
+      if (!await requireAuth()) return;
+      try{
+        const s = await loadSession();
+        renderSession(s);
+        if (s.status !== 'pending') {
+          btnPay.disabled = true;
+          show('error', 'This payment session is not pending.');
+        }
+      } catch (e){
+        show('error', e.message || 'Could not load payment session.');
+        btnPay.disabled = true;
+      }
+    })();
+  </script>
+</body>
+</html>

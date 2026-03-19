@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Register – BLOCK</title>
+  <title>Book Now – BLOCK</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
@@ -285,7 +285,7 @@
         <a href="/contact">Contact & Support</a>
       </nav>
       <div class="top-bar-icons">
-        <a href="/my-tickets" aria-label="My tickets / Profile" title="My tickets">
+        <a href="/profile" aria-label="My tickets / Profile" title="My tickets">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
@@ -316,7 +316,7 @@
             <label for="phone">Phone number</label>
             <input type="tel" id="phone" name="phone" placeholder="+20 123 456 7890">
           </div>
-          <button type="submit" id="submitBtn" class="btn-register">Register Now</button>
+          <button type="submit" id="submitBtn" class="btn-register">Book Now</button>
         </form>
         <div id="message" class="message"></div>
         <p id="spamTip" class="spam-tip" style="display:none;">If you don't see the email in your inbox, check your spam or junk folder.</p>
@@ -348,7 +348,7 @@
   <footer class="site-footer">
     <div class="site-footer-inner">
       <nav class="site-footer-links" id="footerLinksNav">
-        <a href="/my-tickets">My tickets</a>
+        <a href="/profile">My tickets</a>
         <a href="/events">Events</a>
         <a href="/about-us">About Us</a>
         <a href="/contact">Contact & Support</a>
@@ -454,7 +454,7 @@
             showMessage(data.error || 'Registration failed. Try again.', 'error');
             return;
           }
-          showMessage(data.message || 'Registered! Your ticket is below.', 'success');
+          showMessage(data.message || 'Booked! Your ticket is below.', 'success');
           if (spamTip) spamTip.style.display = data.emailSent ? 'block' : 'none';
           showTicket(data);
           form.reset();
@@ -464,7 +464,7 @@
         showMessage('Cannot connect to server. Run "npm start" in the project folder, then open http://localhost:3001 in your browser.', 'error');
       }).then(function () {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Register Now';
+        submitBtn.textContent = 'Book Now';
       });
     });
 

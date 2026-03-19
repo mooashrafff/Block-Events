@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InstaPay Pending – BLOCK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0a0c; --card:#141418; --border:#25252d;
+      --text:#e8e8ed; --muted:#8888a0;
+      --accent:#6366f1; --accent-hover:#818cf8;
+      --bar-bg:#ffffff; --bar-text:#1a1a1a;
+      --ok:#22c55e; --danger:#ef4444;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Outfit',system-ui,sans-serif;
+      background:var(--bg); color:var(--text);
+      min-height:100vh; display:flex; flex-direction:column;
+      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent);
+    }
+    .top-bar-wrap{width:100%; padding:1rem clamp(0.75rem,3vw,1.25rem) 0; margin-bottom:1rem;}
+    .top-bar{
+      width:100%; max-width:min(1400px,96vw); margin:0 auto;
+      background:var(--bar-bg); border-radius:16px; padding:0.75rem 1.25rem;
+      display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+      box-shadow:0 4px 20px rgba(0,0,0,0.08);
+    }
+    .logo{width:110px; height:auto;}
+    .nav{margin-left:auto; display:flex; gap:1rem; flex-wrap:wrap;}
+    .nav a{color:var(--bar-text); text-decoration:none; font-weight:600; font-size:0.95rem;}
+    .nav a:hover{color:var(--accent);}
+    .main{flex:1; width:100%; max-width:980px; margin:0 auto; padding:1.25rem;}
+    h1{font-size:1.6rem; margin-bottom:0.35rem;}
+    .sub{color:var(--muted); margin-bottom:1rem;}
+    .card{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.25rem;}
+    .grid{display:grid; grid-template-columns: 1fr 1fr; gap:1rem;}
+    @media (max-width: 860px){ .grid{grid-template-columns:1fr;} }
+    .qrBox{
+      border:1px solid var(--border); border-radius:14px;
+      padding:1rem; background:#0f0f12;
+      display:flex; flex-direction:column; gap:0.75rem;
+      align-items:center;
+      text-align:center;
+    }
+    .qrBox img{width:240px; height:auto; max-width:100%;}
+    .meta{color:var(--muted); font-size:0.92rem;}
+    .btn{
+      padding:12px 14px; border-radius:12px;
+      border:none; background:var(--accent); color:white;
+      font:inherit; font-weight:900; cursor:pointer;
+    }
+    .btn:hover{background:var(--accent-hover);}
+    .btn.secondary{background:transparent; border:1px solid var(--border); color:var(--text); font-weight:800;}
+    .btn.secondary:hover{background:rgba(255,255,255,0.04);}
+    .msg{margin-top:0.9rem; padding:10px 12px; border-radius:12px; display:none; font-size:0.92rem;}
+    .msg.show{display:block;}
+    .msg.error{border:1px solid rgba(239,68,68,0.35); background:rgba(239,68,68,0.12); color:#fecaca;}
+    .msg.success{border:1px solid rgba(34,197,94,0.35); background:rgba(34,197,94,0.12); color:#bbf7d0;}
+    .row{display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1rem; align-items:center; justify-content:flex-start;}
+  </style>
+</head>
+<body>
+  <div class="top-bar-wrap">
+    <header class="top-bar">
+      <a href="/" aria-label="BLOCK Home"><img src="/block-logo.png" class="logo" alt="BLOCK"></a>
+      <nav class="nav">
+        <a href="/events">Events</a>
+        <a href="/profile">Profile</a>
+      </nav>
+    </header>
+  </div>
+
+  <main class="main">
+    <h1>InstaPay pending</h1>
+    <p class="sub">Your booking is waiting for manual payment confirmation. Admin will send your ticket via email after approval.</p>
+
+    <div class="card">
+      <div class="meta" style="margin-bottom:0.75rem;">Scan/track these references in InstaPay (mocked QR):</div>
+      <div id="qrs" class="grid"></div>
+      <div id="empty" class="meta" style="display:none;">No pending InstaPay bookings found.</div>
+
+      <div class="row">
+        <a class="btn secondary" href="/profile" style="text-decoration:none; display:inline-flex;">Go to profile</a>
+        <a class="btn" href="/events" style="text-decoration:none; display:inline-flex;">Book more events</a>
+      </div>
+
+      <div id="msg" class="msg"></div>
+    </div>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const idsRaw = params.get('bookingIds') || '';
+    const ids = idsRaw ? idsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+    const qrsEl = document.getElementById('qrs');
+    const emptyEl = document.getElementById('empty');
+    const msgEl = document.getElementById('msg');
+
+    function show(type, text){
+      msgEl.textContent = text || '';
+      msgEl.className = 'msg show ' + (type || '');
+      if (!text) msgEl.className = 'msg';
+    }
+
+    async function requireAuth(){
+      const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+      if (!me || !me.user) {
+        location.href = '/auth?next=' + encodeURIComponent('/instapay-success?bookingIds=' + encodeURIComponent(idsRaw));
+        return false;
+      }
+      return true;
+    }
+
+    async function loadQrForBookingId(id){
+      const r = await fetch('/api/bookings/instapay-qr/' + encodeURIComponent(id));
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Could not load QR.');
+      return d;
+    }
+
+    (async function init(){
+      if (!await requireAuth()) return;
+      if (!ids.length) {
+        emptyEl.style.display = 'block';
+        qrsEl.innerHTML = '';
+        return;
+      }
+      try{
+        const results = await Promise.all(ids.map(id => loadQrForBookingId(id).catch(() => null)));
+        const filtered = results.filter(Boolean);
+        if (!filtered.length) {
+          emptyEl.style.display = 'block';
+          qrsEl.innerHTML = '';
+          return;
+        }
+        qrsEl.innerHTML = filtered.map(r => {
+          return '<div class="qrBox">' +
+            '<div style="font-weight:1000;">InstaPay payment QR</div>' +
+            '<div class="meta" style="word-break:break-word;">' + (r.paymentRef || '') + '</div>' +
+            '<img alt="InstaPay payment QR" src="' + r.qrDataUrl + '">' +
+            '<div class="meta">Booking ID: ' + r.bookingId + '</div>' +
+          '</div>';
+        }).join('');
+      } catch (e){
+        show('error', e.message || 'Failed to load QRs.');
+      }
+    })();
+  </script>
+</body>
+</html>
+

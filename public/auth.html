@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log in – BLOCK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0a0c; --card:#141418; --border:#25252d;
+      --text:#e8e8ed; --muted:#8888a0;
+      --accent:#6366f1; --accent2:#22c55e;
+      --danger:#ef4444; --bar-bg:#ffffff; --bar-text:#1a1a1a; --search-bg:#f0f0f0;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Outfit',system-ui,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      background-image: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(99, 102, 241, 0.14), transparent);
+      display:flex; flex-direction:column;
+    }
+    .top-bar-wrap{width:100%; padding:1rem clamp(0.75rem,3vw,1.25rem) 0; margin-bottom:1rem;}
+    .top-bar{
+      width:100%; max-width:min(1400px,96vw); margin:0 auto;
+      background:var(--bar-bg); border-radius:16px; padding:0.75rem 1.25rem;
+      display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+      box-shadow:0 4px 20px rgba(0,0,0,0.08);
+    }
+    .logo{width:110px; height:auto; flex-shrink:0;}
+    .nav{margin-left:auto; display:flex; gap:1rem; flex-wrap:wrap;}
+    .nav a{color:var(--bar-text); text-decoration:none; font-weight:500; font-size:0.95rem;}
+    .nav a:hover{color:var(--accent);}
+    .main{flex:1; display:grid; place-items:center; padding:1.5rem;}
+    .shell{
+      width:min(980px, 100%);
+      display:grid; grid-template-columns: 1.1fr 0.9fr;
+      gap:1.25rem;
+      align-items:stretch;
+    }
+    .brand{
+      background: linear-gradient(180deg, rgba(99,102,241,0.18), rgba(20,20,24,0.0));
+      border:1px solid var(--border); border-radius:18px;
+      padding:2rem;
+      overflow:hidden;
+    }
+    .brand h1{font-size:2rem; line-height:1.15; margin-bottom:0.75rem;}
+    .brand p{color:var(--muted); line-height:1.6; font-size:1rem; max-width:44ch;}
+    .pill-row{display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:1.25rem;}
+    .pill{border:1px solid var(--border); color:var(--text); padding:8px 10px; border-radius:999px; font-size:0.85rem; background:rgba(20,20,24,0.7)}
+    .card{
+      background:var(--card); border:1px solid var(--border);
+      border-radius:18px; padding:1.5rem;
+    }
+    .tabs{display:flex; gap:0.5rem; margin-bottom:1rem;}
+    .tab{
+      flex:1;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#0f0f12;
+      color:var(--text);
+      font:inherit; font-weight:700;
+      cursor:pointer;
+    }
+    .tab.active{border-color:rgba(99,102,241,0.9); background:rgba(99,102,241,0.12);}
+    .field{margin-bottom:0.9rem;}
+    label{display:block; font-size:0.85rem; font-weight:700; color:var(--muted); margin-bottom:0.4rem;}
+    input{
+      width:100%;
+      padding:12px 14px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:#0f0f12;
+      color:var(--text);
+      font:inherit;
+    }
+    input:focus{outline:none; border-color:rgba(99,102,241,0.9);}
+    .btn{
+      width:100%;
+      padding:12px 14px;
+      border-radius:12px;
+      border:none;
+      background:var(--accent);
+      color:white;
+      font:inherit;
+      font-weight:800;
+      cursor:pointer;
+      transition:transform .15s, background .15s;
+    }
+    .btn:hover{background:#7c7ff7; transform:translateY(-1px);}
+    .btn:disabled{opacity:.7; cursor:not-allowed; transform:none;}
+    .btn.secondary{background:transparent; border:1px solid var(--border); color:var(--text); font-weight:700;}
+    .btn.secondary:hover{background:rgba(255,255,255,0.04); transform:none;}
+    .msg{margin-top:0.9rem; padding:10px 12px; border-radius:12px; display:none; font-size:0.92rem;}
+    .msg.show{display:block;}
+    .msg.error{border:1px solid rgba(239,68,68,0.35); background:rgba(239,68,68,0.12); color:#fecaca;}
+    .msg.success{border:1px solid rgba(34,197,94,0.35); background:rgba(34,197,94,0.12); color:#bbf7d0;}
+    .row{display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-top:0.75rem;}
+    .link{color:#a5b4fc; text-decoration:none; font-weight:700; font-size:0.9rem;}
+    .link:hover{text-decoration:underline;}
+    .hint{color:var(--muted); font-size:0.85rem; line-height:1.5; margin-top:0.5rem;}
+    @media (max-width: 860px){
+      .shell{grid-template-columns:1fr;}
+      .brand{order:2}
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar-wrap">
+    <header class="top-bar">
+      <a href="/" aria-label="BLOCK Home"><img src="/block-logo.png" class="logo" alt="BLOCK"></a>
+      <nav class="nav">
+        <a href="/events">Events</a>
+        <a href="/cart">Cart</a>
+        <a href="/profile">Profile</a>
+      </nav>
+    </header>
+  </div>
+
+  <main class="main">
+    <div class="shell">
+      <section class="brand" aria-label="Welcome panel">
+        <h1>Log in to book events.</h1>
+        <p>
+          A clean, fast flow (like Facebook): sign up once, stay logged in, add free or paid events to your cart, then checkout.
+        </p>
+        <div class="pill-row" aria-hidden="true">
+          <span class="pill">Email + password</span>
+          <span class="pill">Cart + checkout</span>
+          <span class="pill">Mock payments</span>
+          <span class="pill">No duplicate bookings</span>
+        </div>
+      </section>
+
+      <section class="card" aria-label="Auth form">
+        <div class="tabs">
+          <button class="tab active" id="tabLogin" type="button">Log in</button>
+          <button class="tab" id="tabSignup" type="button">Sign up</button>
+        </div>
+
+        <form id="formLogin">
+          <div class="field">
+            <label for="loginEmail">Email</label>
+            <input id="loginEmail" type="email" autocomplete="email" required placeholder="you@example.com">
+          </div>
+          <div class="field">
+            <label for="loginPassword">Password</label>
+            <input id="loginPassword" type="password" autocomplete="current-password" required placeholder="••••••••">
+          </div>
+          <button class="btn" id="btnLogin" type="submit">Log in</button>
+          <div class="row">
+            <a class="link" href="/events">Browse events</a>
+            <button class="btn secondary" id="btnGoogleMock" type="button">Continue with Google</button>
+          </div>
+          <p class="hint">Continue with Google redirects to OAuth (requires server config).</p>
+        </form>
+
+        <form id="formSignup" style="display:none; margin-top:0.5rem;">
+          <div class="field">
+            <label for="signupName">Name</label>
+            <input id="signupName" type="text" autocomplete="name" placeholder="Your name">
+          </div>
+          <div class="field">
+            <label for="signupEmail">Email</label>
+            <input id="signupEmail" type="email" autocomplete="email" required placeholder="you@example.com">
+          </div>
+          <div class="field">
+            <label for="signupPassword">Password</label>
+            <input id="signupPassword" type="password" autocomplete="new-password" required placeholder="Min 6 characters">
+          </div>
+          <div class="field">
+            <label for="signupAvatar">Profile picture URL (optional)</label>
+            <input id="signupAvatar" type="url" placeholder="https://...">
+          </div>
+          <button class="btn" id="btnSignup" type="submit">Create account</button>
+          <div class="row">
+            <a class="link" href="/events">Browse events</a>
+            <button class="btn secondary" id="btnGoogleSignup" type="button">Continue with Google</button>
+          </div>
+          <p class="hint">After sign up, you’ll stay logged in and can checkout immediately.</p>
+        </form>
+
+        <div id="msg" class="msg"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const tabLogin = document.getElementById('tabLogin');
+    const tabSignup = document.getElementById('tabSignup');
+    const formLogin = document.getElementById('formLogin');
+    const formSignup = document.getElementById('formSignup');
+    const msg = document.getElementById('msg');
+    const btnGoogleMock = document.getElementById('btnGoogleMock');
+    const btnGoogleSignup = document.getElementById('btnGoogleSignup');
+
+    function show(type, text) {
+      msg.textContent = text || '';
+      msg.className = 'msg show ' + (type || '');
+      if (!text) msg.className = 'msg';
+    }
+
+    function setTab(which) {
+      const isLogin = which === 'login';
+      tabLogin.classList.toggle('active', isLogin);
+      tabSignup.classList.toggle('active', !isLogin);
+      formLogin.style.display = isLogin ? '' : 'none';
+      formSignup.style.display = isLogin ? 'none' : '';
+      document.title = isLogin ? 'Log in – BLOCK' : 'Sign up – BLOCK';
+      show('', '');
+    }
+
+    tabLogin.addEventListener('click', () => setTab('login'));
+    tabSignup.addEventListener('click', () => setTab('signup'));
+
+    async function redirectAfterAuth() {
+      const params = new URLSearchParams(location.search);
+      const next = params.get('next') || '/profile';
+      location.href = next;
+    }
+
+    formLogin.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      show('', '');
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('btnLogin');
+      btn.disabled = true; btn.textContent = 'Logging in…';
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Login failed.');
+        show('success', 'Welcome back. Redirecting…');
+        await redirectAfterAuth();
+      } catch (err) {
+        show('error', err.message || 'Login failed.');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Log in';
+      }
+    });
+
+    formSignup.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      show('', '');
+      const name = document.getElementById('signupName').value.trim();
+      const email = document.getElementById('signupEmail').value.trim();
+      const password = document.getElementById('signupPassword').value;
+      const profilePictureUrl = document.getElementById('signupAvatar').value.trim();
+      const btn = document.getElementById('btnSignup');
+      btn.disabled = true; btn.textContent = 'Creating…';
+      try {
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password, profilePictureUrl })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Signup failed.');
+        show('success', 'Account created. Redirecting…');
+        await redirectAfterAuth();
+      } catch (err) {
+        show('error', err.message || 'Signup failed.');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Create account';
+      }
+    });
+
+    function goGoogle() {
+      const params = new URLSearchParams(location.search);
+      const next = params.get('next') || '/profile';
+      window.location.href = '/api/auth/google/start?next=' + encodeURIComponent(next);
+    }
+
+    if (btnGoogleMock) btnGoogleMock.addEventListener('click', goGoogle);
+    if (btnGoogleSignup) btnGoogleSignup.addEventListener('click', goGoogle);
+
+    (function showAuthErrorFromQuery(){
+      const params = new URLSearchParams(location.search);
+      const err = params.get('error') || '';
+      if (!err) return;
+      const map = {
+        'google_not_configured': 'Google OAuth is not configured. Set GOOGLE_OAUTH_CLIENT_ID/SECRET/REDIRECT_URI in your server .env.',
+        'google_state_invalid': 'Google sign-in failed (invalid state). Try again.',
+        'google_id_token_missing': 'Google sign-in failed (missing id_token). Try again.',
+        'google_email_missing': 'Google sign-in failed (email missing).',
+        'google_user_lookup_failed': 'Google sign-in failed. Could not create account.',
+      };
+      show('error', map[err] || 'Google sign-in failed.');
+    })();
+
+    (async function init() {
+      const hash = (location.hash || '').toLowerCase();
+      if (hash.includes('signup')) setTab('signup');
+      try {
+        const me = await fetch('/api/auth/me').then(r => r.json());
+        if (me && me.user) {
+          const params = new URLSearchParams(location.search);
+          const next = params.get('next') || '/profile';
+          location.href = next;
+        }
+      } catch (e) {}
+    })();
+  </script>
+</body>
+</html>

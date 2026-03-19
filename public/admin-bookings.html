@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InstaPay Bookings – Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0a0a0c;--card:#141418;--border:#25252d;--text:#e8e8ed;--muted:#8888a0;--accent:#6366f1;--accent-hover:#818cf8;--bar-bg:#ffffff;--bar-text:#1a1a1a;}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;background-image:radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,102,241,0.15), transparent);display:flex;flex-direction:column}
+    .top-bar-wrap{width:100%;padding:1rem clamp(0.75rem,3vw,1.25rem) 0;margin-bottom:1rem}
+    .top-bar{width:100%;max-width:min(1400px,96vw);margin:0 auto;background:var(--bar-bg);border-radius:16px;padding:0.75rem 1.25rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+    .logo{width:110px;height:auto}
+    .nav{margin-left:auto;display:flex;gap:1rem;flex-wrap:wrap}
+    .nav a{color:var(--bar-text);text-decoration:none;font-weight:700;font-size:0.95rem}
+    .nav a:hover{color:var(--accent)}
+    main{flex:1;width:100%;max-width:1100px;margin:0 auto;padding:1.25rem}
+    h1{font-size:1.6rem;margin-bottom:0.3rem}
+    .sub{color:var(--muted);margin-bottom:1rem}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.25rem}
+    .row{display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .controls{display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center}
+    select,input{padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#0f0f12;color:var(--text);font:inherit}
+    .btn{padding:10px 14px;border-radius:12px;border:none;background:var(--accent);color:white;font:inherit;font-weight:900;cursor:pointer}
+    .btn:hover{background:var(--accent-hover)}
+    .btn.secondary{background:transparent;border:1px solid var(--border);color:var(--text);font-weight:800}
+    .btn.secondary:hover{background:rgba(255,255,255,0.04)}
+    .btn.danger{background:transparent;border:1px solid rgba(239,68,68,0.45);color:#fecaca;font-weight:900}
+    .btn.danger:hover{background:rgba(239,68,68,0.08)}
+    .msg{margin-top:0.9rem;padding:10px 12px;border-radius:12px;display:none;font-size:0.92rem}
+    .msg.show{display:block}
+    .msg.error{border:1px solid rgba(239,68,68,0.35);background:rgba(239,68,68,0.12);color:#fecaca}
+    .msg.success{border:1px solid rgba(34,197,94,0.35);background:rgba(34,197,94,0.12);color:#bbf7d0}
+    table{width:100%;border-collapse:collapse;margin-top:1rem}
+    th,td{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,0.06);vertical-align:top}
+    th{color:var(--muted);font-size:0.9rem;text-align:left;font-weight:800}
+    td{font-size:0.95rem}
+    .small{font-size:0.9rem;color:var(--muted)}
+    .badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:#0f0f12;color:var(--muted);font-weight:900;font-size:0.85rem}
+  </style>
+</head>
+<body>
+  <div class="top-bar-wrap">
+    <header class="top-bar">
+      <a href="/"><img src="/block-logo.png" class="logo" alt="BLOCK"></a>
+      <nav class="nav">
+        <a href="/admin">Admin dashboard</a>
+        <a href="/events">Events</a>
+      </nav>
+    </header>
+  </div>
+
+  <main>
+    <h1>InstaPay bookings</h1>
+    <p class="sub">Pending payments require admin confirmation. When confirmed, the ticket is emailed to the user.</p>
+
+    <section class="card">
+      <div class="row">
+        <div class="controls">
+          <label class="small" for="filterStatus" style="font-weight:900;color:var(--muted)">Filter</label>
+          <select id="filterStatus">
+            <option value="pending_payment" selected>Pending Payment</option>
+            <option value="paid">Paid</option>
+          </select>
+          <button class="btn secondary" id="btnRefresh" type="button">Refresh</button>
+        </div>
+      </div>
+
+      <div id="msg" class="msg"></div>
+
+      <table aria-label="InstaPay booking list">
+        <thead>
+          <tr>
+            <th>Booking</th>
+            <th>User</th>
+            <th>Event</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="6" class="small">Loading…</td></tr>
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const tbody = document.getElementById('tbody');
+    const msg = document.getElementById('msg');
+    const filterStatus = document.getElementById('filterStatus');
+    const btnRefresh = document.getElementById('btnRefresh');
+
+    function show(type, text){
+      msg.textContent = text || '';
+      msg.className = 'msg show ' + (type || '');
+      if (!text) msg.className = 'msg';
+    }
+
+    function escapeHtml(s){
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    async function requireAdmin(){
+      // If ADMIN_API_KEY is not set, server may still allow localhost for dev.
+      const status = filterStatus.value;
+      const url = '/api/admin/instapay-bookings?status=' + encodeURIComponent(status);
+      const r = await fetch(url, { method:'GET' }).catch(() => null);
+      if (!r) throw new Error('Request failed.');
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Could not load bookings.');
+      return d;
+    }
+
+    async function confirmBooking(bookingId){
+      const url = '/api/admin/instapay-bookings/' + encodeURIComponent(bookingId) + '/confirm';
+      const r = await fetch(url, { method:'POST' }).catch(() => null);
+      const d = await r?.json().catch(() => ({}));
+      if (!r || !r.ok) throw new Error(d.error || 'Could not confirm.');
+      return d;
+    }
+
+    async function load(){
+      tbody.innerHTML = '<tr><td colspan="6" class="small">Loading…</td></tr>';
+      show('', '');
+      try{
+        const list = await requireAdmin();
+        const rows = (Array.isArray(list) ? list : []).map(item => {
+          const action =
+            item.status === 'pending_payment'
+              ? '<button class="btn" type="button" data-id="' + escapeHtml(item.id) + '">Confirm payment</button>'
+              : '<span class="badge">' + escapeHtml(item.status || '') + '</span>';
+
+          const amount = (item.pricePaid != null && item.pricePaid > 0) ? (Number(item.pricePaid).toFixed(2) + ' EGP') : 'FREE';
+
+          return '<tr>' +
+            '<td class="small">#' + escapeHtml(item.id) + '</td>' +
+            '<td>' + escapeHtml(item.user?.email || '') + '<div class="small">' + escapeHtml(item.user?.name || '') + '</div></td>' +
+            '<td>' + escapeHtml(item.event?.name || '') + '<div class="small">' + escapeHtml(item.event?.date || '') + '</div></td>' +
+            '<td>' + escapeHtml(amount) + '</td>' +
+            '<td><span class="badge">' + escapeHtml(item.status) + '</span></td>' +
+            '<td>' + action + '</td>' +
+          '</tr>';
+        }).join('');
+
+        if (!rows) {
+          tbody.innerHTML = '<tr><td colspan="6" class="small">No bookings found.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = rows;
+
+        tbody.querySelectorAll('button[data-id]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            btn.disabled = true;
+            btn.textContent = 'Confirming…';
+            try{
+              await confirmBooking(id);
+              show('success', 'Payment confirmed. Ticket email sent (if email is configured).');
+              await load();
+            } catch (e){
+              show('error', e.message || 'Could not confirm.');
+              btn.disabled = false;
+              btn.textContent = 'Confirm payment';
+            }
+          });
+        });
+      } catch (e){
+        show('error', e.message || 'Could not load bookings.');
+        tbody.innerHTML = '<tr><td colspan="6" class="small">Error loading bookings.</td></tr>';
+      }
+    }
+
+    filterStatus.addEventListener('change', load);
+    btnRefresh.addEventListener('click', load);
+    load();
+  </script>
+</body>
+</html>
+

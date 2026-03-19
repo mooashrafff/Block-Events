@@ -157,7 +157,7 @@
         <a href="/contact">Contact & Support</a>
       </nav>
       <div class="top-bar-icons">
-        <a href="/my-tickets" aria-label="My tickets" title="My tickets">
+        <a href="/profile" aria-label="My tickets" title="My tickets">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
         </a>
       </div>
@@ -194,7 +194,7 @@
         var col1 = links.filter(function(l){ return /ticket|event/i.test(l.label||''); });
         var col2 = links.filter(function(l){ return /who|what|contact/i.test(l.label||'') || /who-we-are|what-we-do|contact/.test(l.url||''); });
         if (!col2.length) col2 = [{label:'Who We Are',url:'/who-we-are'},{label:'What We Do',url:'/what-we-do'},{label:'Contact',url:'/contact'}];
-        if (!col1.length) col1 = [{label:'My tickets',url:'/my-tickets'},{label:'Events',url:'/events'}];
+        if (!col1.length) col1 = [{label:'My tickets',url:'/profile'},{label:'Events',url:'/events'}];
         el.innerHTML = '<div class="site-footer-inner"><div class="site-footer-top"><a href="/" class="site-footer-logo"><img src="/block-logo.png" alt="BLOCK" style="height:36px;"></a><div class="site-footer-cols"><div class="site-footer-col"><ul>' + col1.map(function(l){ return '<li><a href="'+(l.url||'#')+'">'+l.label+'</a></li>'; }).join('') + '</ul></div><div class="site-footer-col"><ul>' + col2.map(function(l){ return '<li><a href="'+(l.url||'#')+'">'+l.label+'</a></li>'; }).join('') + '</ul></div></div><a href="/contact" class="site-footer-cta">Need help? Contact us</a></div><div class="site-footer-bottom"><div class="site-footer-follow"><span>Follow us</span><div class="site-footer-social-icons"><a href="'+ig+'" target="_blank" rel="noopener" aria-label="Instagram"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></a></div></div><span class="site-footer-copy">' + (cfg.copyright||'© BLOCK') + '</span></div></div>';
       }).catch(function(){ el.innerHTML = '<div class="site-footer-inner"><div class="site-footer-bottom"><span class="site-footer-copy">© BLOCK</span></div></div>'; });
     })();

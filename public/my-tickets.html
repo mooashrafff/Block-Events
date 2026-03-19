@@ -336,7 +336,7 @@
         var data = await res.json();
         if (!Array.isArray(data)) data = [];
         if (data.length === 0) {
-          ticketList.innerHTML = '<p class="empty-msg">No registrations found for this email. Register for an event first.</p>';
+          ticketList.innerHTML = '<p class="empty-msg">No registrations found for this email. Book an event first.</p>';
         } else {
           var first = data[0];
           profileNameText.textContent = first.name || '—';

@@ -597,6 +597,14 @@
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" /></svg>
           <span>Footer</span>
         </div>
+        <a class="nav-item" href="/admin-bookings" style="text-decoration:none;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3M12 2a10 10 0 100 20 10 10 0 000-20z" /></svg>
+          <span>InstaPay</span>
+        </a>
+        <a class="nav-item" href="/admin-rules" style="text-decoration:none;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h8l4 4v10a2 2 0 01-2 2z" /></svg>
+          <span>Event Rules</span>
+        </a>
       </nav>
     </aside>
 
@@ -704,6 +712,10 @@
         <div class="field">
           <label for="eventDescription">Description</label>
           <textarea id="eventDescription" placeholder="Short description shown on event card and details page."></textarea>
+        </div>
+        <div class="field">
+          <label for="eventPrice">Price (EGP)</label>
+          <input type="number" id="eventPrice" min="0" step="0.01" placeholder="0 for FREE">
         </div>
         <div class="field">
           <label for="eventAvailableTickets">Available tickets (admin only, not shown to users)</label>
@@ -860,6 +872,7 @@
       var fCategory = document.getElementById('eventCategory');
       var fImage = document.getElementById('eventImage');
       var fDescription = document.getElementById('eventDescription');
+      var fPrice = document.getElementById('eventPrice');
       var fAvailableTickets = document.getElementById('eventAvailableTickets');
       var fImageFile = document.getElementById('eventImageFile');
       var imagePreview = document.getElementById('imagePreview');
@@ -1161,6 +1174,7 @@
           fCategory.value = '';
           fImage.value = '';
           fDescription.value = '';
+          if (fPrice) fPrice.value = '';
           if (fAvailableTickets) fAvailableTickets.value = '';
           if (imagePreview) {
             imagePreview.style.display = 'none';
@@ -1180,6 +1194,7 @@
           fCategory.value = event.category || '';
           fImage.value = event.image || '';
           fDescription.value = event.description || '';
+          if (fPrice) fPrice.value = event.price != null ? String(event.price) : '';
           if (fAvailableTickets) fAvailableTickets.value = event.available_tickets != null ? String(event.available_tickets) : '';
           if (imagePreview && event.image) {
             imagePreview.src = event.image;
@@ -1344,6 +1359,7 @@
           category: fCategory.value.trim() || null,
           image: fImage.value.trim() || null,
           description: fDescription.value.trim() || null,
+          price: fPrice && fPrice.value.trim() ? fPrice.value.trim() : 0,
           available_tickets: fAvailableTickets && fAvailableTickets.value.trim() ? fAvailableTickets.value.trim() : null
         };
         btnSave.disabled = true;
@@ -1469,6 +1485,24 @@
             adminKey = '';
           });
       });
+
+      // Dev convenience: if server allows localhost admin access without ADMIN_API_KEY,
+      // auto-load events and hide the modal.
+      if (modal && dashboardLayout && adminKeyInput) {
+        api('/api/admin/events')
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data && !data.error && Array.isArray(data)) {
+              events = data;
+              renderList();
+              if (events.length) setEditing(events[0]);
+              loadStats();
+              modal.style.display = 'none';
+              dashboardLayout.style.display = 'flex';
+            }
+          })
+          .catch(function () {});
+      }
 
       adminKeyInput.addEventListener('keydown', function (ev) {
         if (ev.key === 'Enter') {

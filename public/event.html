@@ -142,6 +142,34 @@
     }
     .btn-book:hover { background: #d4af37; transform: translateY(-1px); }
     .btn-book svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .btn-cart {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 18px;
+      font: inherit; font-size: 0.95rem; font-weight: 700;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .btn-cart:hover { border-color: var(--accent); color: var(--accent); }
+    .toast {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 18px;
+      background: rgba(20,20,24,0.92);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      max-width: min(520px, 92vw);
+      display: none;
+      z-index: 50;
+    }
+    .toast.show { display: block; }
     .event-detail-image {
       width: 100%; height: 100%; min-height: 360px;
       object-fit: cover;
@@ -238,7 +266,7 @@
         <a href="/contact">Contact & Support</a>
       </nav>
       <div class="top-bar-icons">
-        <a href="/my-tickets" aria-label="My tickets / Profile" title="My tickets">
+        <a href="/profile" aria-label="My tickets / Profile" title="My tickets">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
@@ -255,12 +283,13 @@
         <p class="venue" id="eventVenue">Venue</p>
         <p class="organizer">Organized by <strong>BLOCK</strong></p>
         <div class="event-detail-actions">
-          <a id="bookNowBtn" href="/register" class="btn-book">
+          <button id="bookNowBtn" type="button" class="btn-book">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
-            Register Now
-          </a>
+            Book Now
+          </button>
+          <button id="addToCartBtn" type="button" class="btn-cart">Add to cart</button>
         </div>
       </div>
       <div class="event-detail-image-wrap">
@@ -268,6 +297,8 @@
       </div>
     </div>
   </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <div id="aboutWrap" class="about-section" style="display: none;">
     <h2>About Event</h2>
@@ -286,7 +317,7 @@
   <footer class="site-footer">
     <div class="site-footer-inner">
       <nav class="site-footer-links" id="footerLinksNav">
-        <a href="/my-tickets">My tickets</a>
+        <a href="/profile">My tickets</a>
         <a href="/events">Events</a>
         <a href="/about-us">About Us</a>
         <a href="/contact">Contact & Support</a>
@@ -304,11 +335,14 @@
   <script>
     const params = new URLSearchParams(window.location.search);
     const eventId = params.get('id');
+    const shouldAutoBook = params.get('book') === '1' || params.get('book') === 'true';
     const eventDetailWrap = document.getElementById('eventDetailWrap');
     const eventTitle = document.getElementById('eventTitle');
     const eventMeta = document.getElementById('eventMeta');
     const eventVenue = document.getElementById('eventVenue');
     const bookNowBtn = document.getElementById('bookNowBtn');
+    const addToCartBtn = document.getElementById('addToCartBtn');
+    const toast = document.getElementById('toast');
     const eventImage = document.getElementById('eventImage');
     const aboutWrap = document.getElementById('aboutWrap');
     const eventDescription = document.getElementById('eventDescription');
@@ -316,6 +350,9 @@
     const upcomingCarousel = document.getElementById('upcomingCarousel');
     const loadingEl = document.getElementById('loadingEl');
     const errorEl = document.getElementById('errorEl');
+    // Prevent auto-click before the handlers are attached (fixes double-click issue).
+    bookNowBtn.disabled = true;
+    var bookingHandlerReady = false;
 
     function showError(msg) {
       loadingEl.style.display = 'none';
@@ -331,7 +368,7 @@
       { id: 'comedy-show', name: 'Konafa ADHD Interactive Comedy Show', date: 'Feb 27', time: '09:00 PM', venue: 'El Rihany Theater', image: '/block-logo.png', description: 'Interactive comedy night at El Rihany Theater.' },
       { id: 'zed-park', name: 'ZED PARK', date: 'Feb 19 to Mar 19', time: '08:00 PM', venue: 'Zed Park, Elsheikh Zayed', image: '/block-logo.png', description: 'Live events at Zed Park throughout the season.' }
     ];
-    function showEvent(event, others) {
+      function showEvent(event, others) {
       loadingEl.style.display = 'none';
       errorEl.style.display = 'none';
       eventDetailWrap.style.display = 'block';
@@ -339,7 +376,62 @@
       eventTitle.textContent = event.name;
       eventMeta.textContent = [event.date, event.time].filter(Boolean).join(' | ');
       eventVenue.textContent = event.venue;
-      bookNowBtn.href = '/register?eventId=' + encodeURIComponent(event.id);
+        addToCartBtn.onclick = async function () {
+          addToCartBtn.disabled = true;
+          try {
+            var r = await fetch('/api/cart/add', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ eventId: event.id })
+            });
+            var d = await r.json();
+            if (r.status === 401) {
+              window.location.href = '/auth?next=' + encodeURIComponent('/event?id=' + encodeURIComponent(event.id) + '&book=1');
+              return;
+            }
+            if (!r.ok) throw new Error(d.error || 'Could not add to cart.');
+            toast.textContent = 'Added to cart. Open Cart to checkout.';
+            toast.classList.add('show');
+            setTimeout(function () { toast.classList.remove('show'); }, 1200);
+          } catch (e) {
+            toast.textContent = e.message || 'Could not add to cart.';
+            toast.classList.add('show');
+            setTimeout(function () { toast.classList.remove('show'); }, 1500);
+          } finally {
+            addToCartBtn.disabled = false;
+          }
+        };
+
+        bookingHandlerReady = true;
+        bookNowBtn.disabled = false;
+        bookNowBtn.onclick = async function () {
+          bookNowBtn.disabled = true;
+          try {
+            var me = await fetch('/api/auth/me').then(function (r) { return r.json(); }).catch(function () { return null; });
+            if (!me || !me.user) {
+              window.location.href = '/auth?next=' + encodeURIComponent('/event?id=' + encodeURIComponent(event.id) + '&book=1');
+              return;
+            }
+            var r = await fetch('/api/cart/add', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ eventId: event.id })
+            });
+            var d = await r.json().catch(function(){ return {}; });
+            if (!r.ok) throw new Error(d.error || 'Could not add to cart.');
+            toast.textContent = 'Starting checkout…';
+            toast.classList.add('show');
+            setTimeout(function () { toast.classList.remove('show'); }, 900);
+            window.location.href = '/checkout';
+          } catch (e) {
+            toast.textContent = e.message || 'Could not start booking.';
+            toast.classList.add('show');
+            setTimeout(function () { toast.classList.remove('show'); }, 1500);
+          } finally {
+            bookNowBtn.disabled = false;
+          }
+        };
+
       eventImage.src = event.image || '/block-logo.png';
       eventImage.alt = event.name;
       if (event.description) {
@@ -392,6 +484,20 @@
       alert('Venue layout view can be added here.');
     });
     loadEvent();
+
+    // Auto-book after login (e.g. when coming from homepage with ?book=1)
+    if (shouldAutoBook) {
+      // Wait until showEvent sets up handlers, then click.
+      var _tries = 0;
+      var timer = setInterval(function () {
+        _tries += 1;
+        if (bookNowBtn && bookingHandlerReady && !bookNowBtn.disabled && eventId && typeof bookNowBtn.onclick === 'function') {
+          clearInterval(timer);
+          bookNowBtn.click();
+        }
+        if (_tries > 20) clearInterval(timer);
+      }, 250);
+    }
 
     (function loadFooterConfig() {
       fetch('/api/site-config').then(function(r){ return r.json(); }).then(function(cfg){
