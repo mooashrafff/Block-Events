@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>About Us – BLOCK</title>
+  <title>FAQ – BLOCK</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
@@ -31,59 +31,34 @@
       --accent-hover: #3385ff;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { overflow-x: hidden; width: 100%; }
     body {
       font-family: 'Outfit', system-ui, sans-serif;
       background: var(--bg-page);
       color: var(--text);
       min-height: 100vh;
-      width: 100%;
-      max-width: 100vw;
-      overflow-x: hidden;
       display: flex;
       flex-direction: column;
     }
     .page-main {
       width: 100%;
-      max-width: 800px;
+      max-width: 720px;
       margin: 0 auto;
       padding: 1.5rem clamp(0.75rem, 3vw, 1.25rem) 3rem;
       flex: 1;
     }
     .page-main h1 { font-size: 1.75rem; margin-bottom: 0.5rem; font-weight: 700; }
-    .page-main .subtitle { color: var(--muted); font-size: 0.95rem; margin-bottom: 2rem; }
-    .about-card {
+    .page-main .subtitle { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+    .faq-item {
       background: var(--card);
-      border-radius: 16px;
       border: 1px solid var(--border);
-      padding: 1.75rem;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 2px 12px rgba(17, 24, 39, 0.06);
+      border-radius: 14px;
+      padding: 1.1rem 1.25rem;
+      margin-bottom: 0.75rem;
     }
-    .about-card h2 { font-size: 1.25rem; color: var(--accent); margin-bottom: 1rem; font-weight: 600; }
-    .about-card p { color: var(--muted); font-size: 0.95rem; line-height: 1.7; margin-bottom: 0.75rem; }
-    .about-card .lead { font-size: 1.05rem; color: var(--text); font-weight: 500; }
-    .about-card .tagline { font-size: 1rem; font-weight: 600; color: var(--accent); margin-top: 1rem; }
-    .service-block {
-      background: var(--card);
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      padding: 1.25rem 1.75rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 12px rgba(17, 24, 39, 0.06);
-    }
-    .service-block h3 { font-size: 1.1rem; color: var(--accent); margin-bottom: 0.5rem; font-weight: 600; }
-    .service-block p { color: var(--muted); font-size: 0.95rem; line-height: 1.65; margin-bottom: 0.5rem; }
-    .service-block ul { list-style: none; padding: 0; margin: 0.5rem 0 0 0; }
-    .service-block li {
-      position: relative;
-      padding-left: 1rem;
-      margin-bottom: 0.35rem;
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
-    .service-block li::before { content: '•'; position: absolute; left: 0; color: var(--accent); }
-    .page-main > h2 { color: var(--text); }
+    .faq-item h2 { font-size: 1rem; font-weight: 700; margin-bottom: 0.45rem; color: var(--text); }
+    .faq-item p { color: var(--muted); font-size: 0.92rem; line-height: 1.55; }
+    .faq-item a { color: var(--accent); font-weight: 600; text-decoration: none; }
+    .faq-item a:hover { color: var(--accent-hover); text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -108,46 +83,25 @@
   </header>
 
   <main class="page-main">
-    <h1>About Us</h1>
-    <p class="subtitle">Who we are and what we do.</p>
+    <h1>Frequently asked questions</h1>
+    <p class="subtitle">Quick answers about BLOCK tickets and your account.</p>
 
-    <section class="about-card">
-      <h2>Who We Are</h2>
-      <p class="lead">Block is a full-service event management and ticketing agency built to turn ideas into unforgettable experiences.</p>
-      <p>From crafting the concept to managing the entrance, we handle every detail with creativity, precision, and smart technology.</p>
-      <p>We believe events aren't just gatherings — they're powerful moments that connect people, build brands, and create lasting impact.</p>
-      <p class="tagline">At Block, we don't just organize events.</p>
-      <p class="lead">We build them — block by block.</p>
-    </section>
-
-    <h2 style="font-size: 1.25rem; margin-bottom: 1rem;">What We Do</h2>
-
-    <section class="service-block">
-      <h3>01. Event Creation</h3>
-      <p>We design and develop event concepts from the ground up — defining the vision, structure, logistics, and experience tailored to your goals.</p>
-    </section>
-
-    <section class="service-block">
-      <h3>02. Full Event Management</h3>
-      <p>Venue sourcing, production setup, vendor coordination, timeline execution, and on-site operations — all handled seamlessly by our team.</p>
-    </section>
-
-    <section class="service-block">
-      <h3>03. Smart Ticketing System</h3>
-      <p>Our integrated ticketing platform provides:</p>
-      <ul>
-        <li>Online ticket sales</li>
-        <li>Secure payment processing</li>
-        <li>QR code generation</li>
-        <li>Real-time attendance tracking</li>
-        <li>Access control & check-in system</li>
-      </ul>
-    </section>
-
-    <section class="service-block">
-      <h3>04. Entrance & Guest Experience</h3>
-      <p>From smooth check-in to VIP access and crowd flow management, we ensure the first impression sets the tone for an exceptional event.</p>
-    </section>
+    <div class="faq-item">
+      <h2>Do I need an account to book?</h2>
+      <p>Yes. Create a free BLOCK account or sign in so we can sync your bookings and tickets in one place.</p>
+    </div>
+    <div class="faq-item">
+      <h2>Where are my tickets after I pay?</h2>
+      <p>Open <strong>My Tickets</strong> from the menu. You’ll see QR codes and details for check-in.</p>
+    </div>
+    <div class="faq-item">
+      <h2>What kinds of events do you sell?</h2>
+      <p>We list sports, concerts, and other live experiences under one roof — browse everything after you sign in.</p>
+    </div>
+    <div class="faq-item">
+      <h2>Who can I contact for help?</h2>
+      <p>Visit <a href="/contact">Contact &amp; Support</a> or email the address listed there.</p>
+    </div>
   </main>
 
   <footer class="site-chrome-footer">

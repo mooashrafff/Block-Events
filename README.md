@@ -91,6 +91,14 @@ For a programmatic scanner (e.g. tablet at the door), you can call:
 - **GET** `https://yoursite.com/api/checkin/{ticketId}`  
   Returns JSON: `{ "ok": true }` or `{ "ok": false }` if the ticket was not found.
 
+### Scanner profiles (`/scan/{scannerId}`)
+
+- **Up to 50** scanner **slots** in **Admin → Scanner Profiles**. Each slot has a unique link: `https://your-domain.com/scan/<uuid>`. Plain `/scan` without an ID is only for the older **scanner API key** flow.
+- **No passwords for staff.** They open their link, enter **only their name**, and tap **Request access**. You see the request under **Pending activations** and tap **Approve** or **Reject**. After approval, that phone can scan until they sign out or the session expires.
+- **History:** Scan logs (who scanned which ticket) stay on the server; admin can open **History** per slot and filter by device. Staff name is stored on each scan.
+- **Vercel:** Use your production URL when sharing links, or set **Public site URL for scanner links** in admin so **Copy link** isn’t a preview hostname.
+- Run new SQL from `supabase-schema.sql` in Supabase (table `scanner_access_requests`, nullable `scanners.password_hash`, etc.).
+
 ---
 
 ## File overview

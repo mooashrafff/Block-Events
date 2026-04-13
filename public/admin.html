@@ -26,8 +26,8 @@
       --border: #25252d;
       --text: #e8e8ed;
       --muted: #8888a0;
-      --accent: #6366f1;
-      --accent-hover: #818cf8;
+      --accent: #0066ff;
+      --accent-hover: #3385ff;
       --danger: #ef4444;
       --gold: #c9a227;
       --bar-bg: #ffffff;
@@ -87,6 +87,19 @@
       border-left-color: var(--accent);
     }
     .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .nav-group-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      padding: 0.85rem 1.25rem 0.35rem;
+      opacity: 0.85;
+    }
+    .nav-item.nav-sub {
+      padding-left: 1.65rem;
+      font-size: 0.88rem;
+    }
     .main-content {
       flex: 1;
       padding: 1.5rem 1.75rem 2rem;
@@ -108,8 +121,9 @@
     @media (max-width: 768px) {
       .sidebar { width: 72px; min-width: 72px; padding: 0.75rem 0; }
       .sidebar-logo { padding: 0 0.5rem; }
-      .sidebar-logo span, .nav-item span { display: none; }
+      .sidebar-logo span, .nav-item span, .nav-group-label { display: none; }
       .nav-item { padding: 0.75rem; justify-content: center; }
+      .nav-item.nav-sub { padding-left: 0.75rem; }
       .nav-item svg { margin: 0; }
     }
     .page-main {
@@ -248,7 +262,7 @@
       color: var(--muted);
       margin-bottom: 0.25rem;
     }
-    .field input,
+    .field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
     .field textarea {
       width: 100%;
       padding: 9px 11px;
@@ -258,6 +272,17 @@
       background: #05050a;
       border-radius: 10px;
       border: 1px solid var(--border);
+    }
+    .field input[type="checkbox"],
+    .field input[type="radio"] {
+      width: auto;
+      height: auto;
+      min-width: 1.1rem;
+      min-height: 1.1rem;
+      margin: 0;
+      accent-color: var(--accent);
+      cursor: pointer;
+      vertical-align: middle;
     }
     .field input:focus,
     .field textarea:focus {
@@ -293,6 +318,81 @@
       display: flex;
       gap: 0.5rem;
       align-items: center;
+    }
+
+    .social-admin-row {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.22);
+    }
+    .social-admin-row__fields {
+      flex: 1;
+      min-width: 0;
+    }
+    .social-admin-visibility {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      padding: 0.15rem 0;
+    }
+    .social-admin-visibility .vis-label {
+      font-size: 0.68rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.2;
+      max-width: 4.5rem;
+    }
+    .social-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+    .social-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+    .social-switch-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.14);
+      border-radius: 26px;
+      transition: background 0.2s;
+      border: 1px solid var(--border);
+    }
+    .social-switch-slider:before {
+      position: absolute;
+      content: '';
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    }
+    .social-switch input:checked + .social-switch-slider {
+      background: rgba(59, 130, 246, 0.55);
+      border-color: rgba(59, 130, 246, 0.45);
+    }
+    .social-switch input:checked + .social-switch-slider:before {
+      transform: translateX(18px);
+    }
+    .social-switch input:focus-visible + .social-switch-slider {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
     }
 
     /* Summary cards */
@@ -442,8 +542,30 @@
     }
     .attendees-table {
       width: 100%;
+      min-width: 720px;
       border-collapse: collapse;
       font-size: 0.86rem;
+    }
+    .payments-table {
+      width: 100%;
+      min-width: 1020px;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+    }
+    .payments-table th,
+    .payments-table td {
+      padding: 6px 4px;
+      text-align: left;
+      border-bottom: 1px solid rgba(31,41,55,0.8);
+    }
+    .payments-table th {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .payments-table tbody tr:last-child td {
+      border-bottom: none;
     }
     .attendees-table th,
     .attendees-table td {
@@ -568,6 +690,185 @@
       outline: none;
       border-color: var(--accent);
     }
+
+    /* Event editor – user-facing preview (BLOCK dark theme) */
+    .admin-event-editor-column {
+      max-height: calc(100vh - 5rem);
+      overflow-y: auto;
+    }
+    .ev-user-preview {
+      --pv-bg: #0b0b0b;
+      --pv-panel: #1a1a1a;
+      --pv-border: #2a2a2a;
+      --pv-text: #ffffff;
+      --pv-muted: #888888;
+      --pv-accent: #0066ff;
+      --pv-cta: #0066ff;
+      background: var(--pv-bg);
+      color: var(--pv-text);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .ev-user-preview .preview-images-row {
+      display: grid;
+      grid-template-columns: 1fr 1.25fr;
+      gap: 0.75rem;
+      margin-bottom: 0.85rem;
+    }
+    @media (max-width: 640px) {
+      .ev-user-preview .preview-images-row { grid-template-columns: 1fr; }
+    }
+    .ev-user-preview .preview-img-label {
+      font-size: 0.72rem;
+      color: var(--pv-muted);
+      margin-bottom: 0.3rem;
+      font-weight: 600;
+    }
+    .ev-user-preview .card-mini {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      aspect-ratio: 4 / 3;
+      max-height: 120px;
+      background: #2a2a2a;
+    }
+    .ev-user-preview .card-mini img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .ev-user-preview .hero-mini {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      max-height: 140px;
+      background: #2a2a2a;
+    }
+    .ev-user-preview .hero-mini img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .ev-user-preview .preview-title {
+      width: 100%;
+      font: inherit;
+      font-size: 1.35rem;
+      font-weight: 700;
+      border: 1px dashed var(--pv-border);
+      border-radius: 10px;
+      padding: 0.5rem 0.65rem;
+      margin-bottom: 0.5rem;
+      background: var(--pv-panel);
+      color: var(--pv-text);
+    }
+    .ev-user-preview .preview-sub {
+      font-size: 0.92rem;
+      color: var(--pv-muted);
+      margin-bottom: 0.35rem;
+    }
+    .ev-user-preview textarea.desc-preview {
+      width: 100%;
+      min-height: 88px;
+      font: inherit;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      border: 1px dashed var(--pv-border);
+      border-radius: 10px;
+      padding: 0.65rem 0.75rem;
+      background: var(--pv-panel);
+      color: var(--pv-text);
+      resize: vertical;
+    }
+    .ev-user-preview .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+ }
+    .ev-user-preview .chip-row input {
+      flex: 1 1 120px;
+      min-width: 0;
+      font: inherit;
+      font-size: 0.85rem;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--pv-border);
+      background: var(--pv-panel);
+      color: var(--pv-text);
+    }
+    .ticket-edit-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+      margin-top: 0.35rem;
+    }
+    .ticket-edit-table th,
+    .ticket-edit-table td {
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      text-align: left;
+    }
+    .ticket-edit-table th { color: var(--muted); font-weight: 600; }
+    .ticket-edit-table input[type="text"],
+    .ticket-edit-table input[type="number"] {
+      width: 100%;
+      max-width: 120px;
+      font: inherit;
+      padding: 4px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #0f0f12;
+      color: var(--text);
+    }
+    .ticket-edit-table input[type="checkbox"] {
+      width: 1.15rem;
+      height: 1.15rem;
+      margin: 0 auto;
+      display: block;
+      cursor: pointer;
+      accent-color: var(--accent);
+    }
+    .ticket-edit-table input.wide { max-width: none; }
+    .admin-meta-details {
+      margin-bottom: 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.85rem;
+      background: rgba(0,0,0,0.2);
+    }
+    .admin-meta-details summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .instapay-admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.75rem;
+    }
+    .instapay-admin-table th,
+    .instapay-admin-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      vertical-align: top;
+      text-align: left;
+    }
+    .instapay-admin-table th { color: var(--muted); font-size: 0.88rem; }
+    .chrome-links-editor .link-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      align-items: center;
+    }
+    .chrome-links-editor .link-row input {
+      width: 100%;
+    }
   </style>
 </head>
 <body>
@@ -585,9 +886,14 @@
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
           <span>Events</span>
         </div>
-        <div class="nav-item" data-view="attendees">
+        <div class="nav-group-label"><span>Attendance</span></div>
+        <div class="nav-item nav-sub" data-view="attendees">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
           <span>Attendees</span>
+        </div>
+        <div class="nav-item nav-sub" data-view="payments">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+          <span>Payments</span>
         </div>
         <div class="nav-item" data-view="scanner">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" /></svg>
@@ -595,16 +901,12 @@
         </div>
         <div class="nav-item" data-view="footer">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" /></svg>
-          <span>Footer</span>
+          <span>Header & footer</span>
         </div>
-        <a class="nav-item" href="/admin-bookings" style="text-decoration:none;">
+        <div class="nav-item" data-view="instapay">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3M12 2a10 10 0 100 20 10 10 0 000-20z" /></svg>
           <span>InstaPay</span>
-        </a>
-        <a class="nav-item" href="/admin-rules" style="text-decoration:none;">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h8l4 4v10a2 2 0 01-2 2z" /></svg>
-          <span>Event Rules</span>
-        </a>
+        </div>
       </nav>
     </aside>
 
@@ -667,65 +969,134 @@
       <div id="eventsList" class="events-grid"></div>
     </section>
 
-    <section class="column">
+    <section class="column admin-event-editor-column">
       <div class="column-header">
         <div>
           <h1 id="formTitle">Create event</h1>
-          <p class="subtitle" id="formSubtitle">Fill in the details then hit Save.</p>
+          <p class="subtitle" id="formSubtitle">Edit in a layout similar to the public event page. Rules and ticket categories save with the event.</p>
         </div>
       </div>
       <form id="eventForm" class="form">
         <input type="hidden" id="eventId">
+        <div class="ev-user-preview">
+          <div class="preview-images-row">
+            <div>
+              <div class="preview-img-label">List / cards (outside) 4∶3</div>
+              <div class="card-mini">
+                <img id="previewCardImg" src="/block-logo.png" alt="">
+              </div>
+            </div>
+            <div>
+              <div class="preview-img-label">Event detail (inside) ~16∶9</div>
+              <div class="hero-mini">
+                <img id="previewHeroImg" src="/block-logo.png" alt="">
+              </div>
+            </div>
+          </div>
+          <label for="eventName" class="small" style="color:var(--pv-muted);">Title *</label>
+          <input type="text" id="eventName" class="preview-title" required placeholder="Event title">
+          <div class="preview-sub">Venue</div>
+          <input type="text" id="eventVenue" class="preview-title" style="font-size:1rem;font-weight:600;" placeholder="Venue name">
+          <label for="eventDescription" class="small" style="display:block;margin-top:0.65rem;color:var(--pv-muted);">Description</label>
+          <textarea id="eventDescription" class="desc-preview" placeholder="Full description on the event page."></textarea>
+          <div class="chip-row">
+            <input type="text" id="eventCategory" placeholder="Category (e.g. Ramadan)">
+          </div>
+          <div class="field" style="margin-top:0.75rem;">
+            <label for="eventPublished" style="display:flex; align-items:center; gap:0.55rem; cursor:pointer; font-weight:600;">
+              <input type="checkbox" id="eventPublished" checked>
+              Show on site
+            </label>
+            <p class="small" style="color:var(--muted);margin:0.35rem 0 0 0;">When off, the event is hidden from the home page, events list, and public API listings. Saved event links can still open.</p>
+          </div>
+        </div>
+
         <div class="field">
-          <label for="eventName">Name *</label>
-          <input type="text" id="eventName" required placeholder="Laylina Tent at Mohamed Ali Palace">
+          <label>List / outside image</label>
+          <p class="small" style="color:var(--muted);margin:0 0 0.35rem;">Used on the Events page, home carousel, cart, and ticket thumbnails. Target <strong>4∶3</strong> (e.g. <strong>1200×900</strong> px or larger).</p>
+          <input type="text" id="eventImageCard" placeholder="URL or upload below">
+          <input type="file" id="eventImageCardFile" accept="image/*" style="margin-top:0.5rem;">
+          <img id="imagePreviewCard" class="image-preview" alt="" style="display:none;margin-top:0.5rem;">
         </div>
         <div class="field">
-          <label for="eventSlug">Slug (URL id – optional)</label>
-          <input type="text" id="eventSlug" placeholder="ramadan-palace">
+          <label>Detail / inside image</label>
+          <p class="small" style="color:var(--muted);margin:0 0 0.35rem;">Used on the event detail hero and ticket QR modal banner. Target wide <strong>16∶9</strong> (e.g. <strong>1920×1080</strong>) or <strong>8∶3</strong> (e.g. <strong>1920×720</strong>).</p>
+          <input type="text" id="eventImageDetail" placeholder="URL or upload below">
+          <input type="file" id="eventImageDetailFile" accept="image/*" style="margin-top:0.5rem;">
+          <img id="imagePreviewDetail" class="image-preview" alt="" style="display:none;margin-top:0.5rem;">
+        </div>
+
+        <div class="field">
+          <label>Ticket categories</label>
+          <p class="small" style="color:var(--muted);margin-bottom:0.35rem;">Set price, optional cap (blank = unlimited), and sold out.</p>
+          <table class="ticket-edit-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Price (EGP)</th>
+                <th>Cap</th>
+                <th>Sold out</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="ticketRowsBody"></tbody>
+          </table>
+          <button type="button" class="btn btn-ghost" id="btnAddTicketRow" style="margin-top:0.5rem;">+ Add category</button>
+        </div>
+
+        <div class="field">
+          <label for="eventGallery">Gallery (one image URL per line)</label>
+          <textarea id="eventGallery" rows="4" placeholder="https://…"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="eventLocationAddress">Map / location address (optional, for Google Maps link)</label>
+          <input type="text" id="eventLocationAddress" placeholder="Same as venue or full address">
         </div>
         <div class="field">
-          <label for="eventDate">Date</label>
-          <input type="date" id="eventDate">
+          <label for="eventMapEmbed">Embed map URL (optional, Google Maps embed https URL)</label>
+          <input type="url" id="eventMapEmbed" placeholder="https://www.google.com/maps/embed?...">
+        </div>
+
+        <div class="field">
+          <label for="eventRulesTerms">Terms of entry (shown in popup &amp; accordion; one rule per line)</label>
+          <textarea id="eventRulesTerms" rows="6" placeholder="No refunds…"></textarea>
         </div>
         <div class="field">
-          <label for="eventTime">Time</label>
-          <input type="time" id="eventTime">
+          <label for="eventRulesMaxTickets">Max tickets per order</label>
+          <input type="number" id="eventRulesMaxTickets" min="1" max="100" value="10">
         </div>
-        <div class="field">
-          <label for="eventVenue">Venue</label>
-          <input type="text" id="eventVenue" placeholder="Mohamed Ali Palace">
-        </div>
-        <div class="field">
-          <label for="eventCategory">Category</label>
-          <input type="text" id="eventCategory" placeholder="Ramadan, Comedy, Concert…">
-        </div>
-        <div class="field">
-          <label for="eventImage">Image URL</label>
-          <input type="text" id="eventImage" placeholder="/images/my-event.jpg">
-        </div>
-        <div class="field">
-          <label for="eventImageFile">Upload image from device</label>
-          <input type="file" id="eventImageFile" accept="image/*">
-          <img id="imagePreview" class="image-preview" alt="Event image preview">
-        </div>
-        <div class="field">
-          <label for="eventDescription">Description</label>
-          <textarea id="eventDescription" placeholder="Short description shown on event card and details page."></textarea>
-        </div>
-        <div class="field">
-          <label for="eventPrice">Price (EGP)</label>
-          <input type="number" id="eventPrice" min="0" step="0.01" placeholder="0 for FREE">
-        </div>
-        <div class="field">
-          <label for="eventAvailableTickets">Available tickets (admin only, not shown to users)</label>
-          <input type="number" id="eventAvailableTickets" min="0" placeholder="Leave empty for unlimited">
-        </div>
+
+        <details class="admin-meta-details" open>
+          <summary>Slug, schedule &amp; inventory</summary>
+          <div class="field" style="margin-top:0.75rem;">
+            <label for="eventSlug">Slug (URL id – optional)</label>
+            <input type="text" id="eventSlug" placeholder="ramadan-palace">
+          </div>
+          <div class="field">
+            <label for="eventDate">Date</label>
+            <input type="date" id="eventDate">
+          </div>
+          <div class="field">
+            <label for="eventTime">Time</label>
+            <input type="time" id="eventTime">
+          </div>
+          <div class="field">
+            <label for="eventPrice">Fallback price (EGP)</label>
+            <input type="number" id="eventPrice" min="0" step="0.01" placeholder="Used if no categories">
+            <p class="small" style="color:var(--muted);margin-top:0.25rem;">Ticket rows above override this for the booking page.</p>
+          </div>
+          <div class="field">
+            <label for="eventAvailableTickets">Total registrations cap (admin only)</label>
+            <input type="number" id="eventAvailableTickets" min="0" placeholder="Unlimited if empty">
+          </div>
+        </details>
+
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" id="btnCancelEdit" style="display:none;">Cancel edit</button>
           <div class="form-actions-right">
             <button type="button" class="btn btn-danger" id="btnDelete" style="display:none;">Delete</button>
-            <button type="submit" class="btn btn-primary" id="btnSave">Save</button>
+            <button type="submit" class="btn btn-primary" id="btnSave">Save event</button>
           </div>
         </div>
         <div id="formMessage" class="message"></div>
@@ -758,7 +1129,7 @@
                   <th>Phone</th>
                   <th>Event</th>
                   <th>Registered</th>
-                  <th>Status</th>
+                  <th>Check-in</th>
                   <th>Scanned at</th>
                   <th>Actions</th>
                 </tr>
@@ -774,34 +1145,117 @@
         </section>
       </div>
 
-      <!-- Footer view -->
+      <!-- Payments (per ticket / registration) -->
+      <div class="view" id="view-payments">
+        <div class="main-header">
+          <div>
+            <h1>Payments</h1>
+            <p class="subtitle">Payment status, method, and amounts per ticket. Uses checkout bookings when linked; guest or legacy rows may show empty payment fields.</p>
+          </div>
+          <div class="attendees-controls">
+            <select id="paymentsEventFilter">
+              <option value="">All events</option>
+            </select>
+          </div>
+        </div>
+        <section class="attendees-section" id="paymentsSection" style="display:none;">
+          <div class="column" style="margin-top:0;">
+            <div style="max-height: 420px; overflow:auto; border-radius: 12px; border: 1px solid rgba(31,41,55,0.9);">
+              <table class="payments-table">
+                <thead>
+                  <tr>
+                    <th>Event</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Ticket #</th>
+                    <th>Category</th>
+                    <th>Payment</th>
+                    <th>Pay method</th>
+                    <th>Amount</th>
+                    <th>Booked at</th>
+                  </tr>
+                </thead>
+                <tbody id="paymentsBody">
+                </tbody>
+              </table>
+            </div>
+            <div style="margin-top: 1rem;">
+              <button type="button" class="btn btn-primary" id="btnDownloadPaymentsExcel">Download payments as Excel (CSV)</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Header & footer view -->
       <div class="view" id="view-footer">
         <div class="main-header">
           <div>
-            <h1>Footer & social</h1>
-            <p class="subtitle">Edit footer text, Instagram link, and copyright. Changes apply to all pages.</p>
+            <h1>Header &amp; footer</h1>
+            <p class="subtitle">Navigation links, copyright, and social URLs. The site chrome and landing page use these everywhere icons appear.</p>
           </div>
         </div>
-        <div class="column" style="max-width: 560px;">
+        <div class="column" style="max-width: 720px;">
           <form id="footerForm" class="form">
+            <h2 style="font-size:1rem;margin-bottom:0.5rem;">Header navigation</h2>
+            <p class="small" style="color:var(--muted);margin-bottom:0.5rem;">Add, edit, or remove links (label + path or URL).</p>
+            <div id="headerLinksEditor" class="chrome-links-editor"></div>
+            <button type="button" class="btn btn-ghost" id="btnAddHeaderLink" style="margin-bottom:1.25rem;">+ Add header link</button>
+
+            <h2 style="font-size:1rem;margin-bottom:0.5rem;">Footer navigation</h2>
+            <div id="footerLinksEditor" class="chrome-links-editor"></div>
+            <button type="button" class="btn btn-ghost" id="btnAddFooterLink" style="margin-bottom:1.25rem;">+ Add footer link</button>
+
+            <h2 style="font-size:1rem;margin-bottom:0.5rem;">Social links</h2>
+            <p class="small" style="color:var(--muted);margin-bottom:0.75rem;">Used in the header, footer, and any page with matching icons (e.g. landing rail). Use <strong>Show on site</strong> to publish or hide a link; the URL can stay saved while hidden. Click <strong>Save site chrome</strong> after changing toggles.</p>
+            <div id="socialLinksFields" class="social-links-admin-grid" style="display:flex;flex-direction:column;gap:0.65rem;margin-bottom:1.25rem;"></div>
+
+            <h2 style="font-size:1rem;margin-bottom:0.5rem;">Branding</h2>
             <div class="field">
               <label for="footerCopyright">Copyright text</label>
               <input type="text" id="footerCopyright" placeholder="© BLOCK">
             </div>
-            <div class="field">
-              <label for="footerInstagramUrl">Instagram URL</label>
-              <input type="url" id="footerInstagramUrl" placeholder="https://www.instagram.com/blockagency.eg">
-            </div>
-            <div class="field">
-              <label for="footerInstagramLabel">Instagram label (text next to icon)</label>
-              <input type="text" id="footerInstagramLabel" placeholder="Instagram">
-            </div>
             <div class="form-actions">
               <span></span>
-              <button type="submit" class="btn btn-primary" id="btnSaveFooter">Save footer</button>
+              <button type="submit" class="btn btn-primary" id="btnSaveFooter">Save site chrome</button>
             </div>
             <div id="footerFormMessage" class="message"></div>
           </form>
+        </div>
+      </div>
+
+      <!-- InstaPay (in-dashboard) -->
+      <div class="view" id="view-instapay">
+        <div class="main-header">
+          <div>
+            <h1>InstaPay bookings</h1>
+            <p class="subtitle">Pending payments need confirmation before tickets are emailed.</p>
+          </div>
+        </div>
+        <div class="column">
+          <div class="row" style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;margin-bottom:0.75rem;">
+            <label class="small" for="instapayFilterStatus" style="font-weight:700;color:var(--muted);">Filter</label>
+            <select id="instapayFilterStatus" style="padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:#0f0f12;color:var(--text);font:inherit;">
+              <option value="pending_payment" selected>Pending Payment</option>
+              <option value="paid">Paid</option>
+            </select>
+            <button type="button" class="btn btn-ghost" id="instapayRefresh">Refresh</button>
+          </div>
+          <div id="instapayMsg" class="message"></div>
+          <table class="instapay-admin-table" aria-label="InstaPay bookings">
+            <thead>
+              <tr>
+                <th>Booking</th>
+                <th>User</th>
+                <th>Event</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="instapayTbody">
+              <tr><td colspan="6" class="small" style="color:var(--muted);">Open this tab to load bookings.</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -810,22 +1264,18 @@
         <div class="main-header">
           <div>
             <h1>Scanner Profiles</h1>
-            <p class="subtitle">Create scanner accounts, send each scanner its link, and view online status + server-side scan history.</p>
+            <p class="subtitle">Up to <strong>50</strong> scanner slots. Each link is unique — staff open it, enter <strong>only their name</strong>, then you <strong>approve</strong> here. Full scan history stays on the server.</p>
           </div>
         </div>
 
         <div class="column" style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
           <section class="card" style="flex:1; min-width:320px; max-width: 560px;">
-            <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Create scanner</h3>
-            <p class="subtitle" style="margin-bottom: 0.75rem;">Admin creates scanner accounts. Scanners login once and history is stored on the server (can’t be cleared).</p>
+            <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Create scanner slot</h3>
+            <p class="subtitle" style="margin-bottom: 0.75rem;">Label this slot (e.g. “Gate A”, “North entrance”). Share its link with one staff member — they sign in with <strong>name only</strong> until you approve.</p>
 
             <div class="field">
-              <label for="scannerNameInput">Scanner name *</label>
-              <input type="text" id="scannerNameInput" placeholder="Scanner 1" />
-            </div>
-            <div class="field">
-              <label for="scannerPasswordInput">Scanner password *</label>
-              <input type="password" id="scannerPasswordInput" placeholder="Set a strong password" />
+              <label for="scannerNameInput">Slot / station name *</label>
+              <input type="text" id="scannerNameInput" placeholder="Gate A" />
             </div>
             <div class="field" style="display:flex; align-items:center; gap:0.5rem;">
               <input type="checkbox" id="scannerActiveInput" checked />
@@ -839,9 +1289,23 @@
             <div id="scannerCreateMessage" class="message show" style="display:none;"></div>
           </section>
 
+          <section class="card" style="flex:1; min-width:320px; max-width:560px;">
+            <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Pending activations</h3>
+            <p class="subtitle" style="margin-bottom: 0.75rem;">Staff requested access from their scanner link. Approve to let that phone scan tickets, or reject.</p>
+            <div id="scannerRequestsList" class="events-grid"></div>
+            <div id="scannerRequestsEmpty" class="small" style="color:var(--muted); padding:0.5rem 0;">No pending requests.</div>
+          </section>
+
           <section class="card" style="flex:2; min-width:360px;">
             <h3 style="font-size: 1rem; margin-bottom: 0.5rem;">Scanners</h3>
             <p class="subtitle" style="margin-bottom: 0.75rem;">Online status updates when the scanner pings the server.</p>
+            <div class="field" style="margin-bottom: 1rem;">
+              <label for="scannerPublicBaseUrl">Public site URL for scanner links (optional)</label>
+              <input type="url" id="scannerPublicBaseUrl" placeholder="https://block-events.vercel.app" style="width:100%; max-width: 520px;" />
+              <p class="small" style="margin-top: 0.35rem; color: var(--muted);">
+                Use your <strong>production</strong> domain here so “Open scanner” / Copy link don’t use a Vercel <em>preview</em> URL (the long <code>…vercel.app</code> with extra random text). Open this admin page on production when copying links, or set the URL above once — it’s saved in this browser.
+              </p>
+            </div>
             <div id="scannersList" class="events-grid"></div>
           </section>
         </div>
@@ -908,6 +1372,9 @@
       var attendeesSection = document.getElementById('attendeesSection');
       var attendeesBody = document.getElementById('attendeesBody');
       var attendeesEventFilter = document.getElementById('attendeesEventFilter');
+      var paymentsSection = document.getElementById('paymentsSection');
+      var paymentsBody = document.getElementById('paymentsBody');
+      var paymentsEventFilter = document.getElementById('paymentsEventFilter');
 
       var fId = document.getElementById('eventId');
       var fName = document.getElementById('eventName');
@@ -916,14 +1383,31 @@
       var fTime = document.getElementById('eventTime');
       var fVenue = document.getElementById('eventVenue');
       var fCategory = document.getElementById('eventCategory');
-      var fImage = document.getElementById('eventImage');
+      var fImageCard = document.getElementById('eventImageCard');
+      var fImageDetail = document.getElementById('eventImageDetail');
       var fDescription = document.getElementById('eventDescription');
       var fPrice = document.getElementById('eventPrice');
       var fAvailableTickets = document.getElementById('eventAvailableTickets');
-      var fImageFile = document.getElementById('eventImageFile');
-      var imagePreview = document.getElementById('imagePreview');
+      var fImageCardFile = document.getElementById('eventImageCardFile');
+      var fImageDetailFile = document.getElementById('eventImageDetailFile');
+      var imagePreviewCard = document.getElementById('imagePreviewCard');
+      var imagePreviewDetail = document.getElementById('imagePreviewDetail');
+      var previewCardImg = document.getElementById('previewCardImg');
+      var previewHeroImg = document.getElementById('previewHeroImg');
+      var ticketRowsBody = document.getElementById('ticketRowsBody');
+      var btnAddTicketRow = document.getElementById('btnAddTicketRow');
+      var fGallery = document.getElementById('eventGallery');
+      var fLocAddr = document.getElementById('eventLocationAddress');
+      var fMapEmbed = document.getElementById('eventMapEmbed');
+      var fRulesTerms = document.getElementById('eventRulesTerms');
+      var fRulesMax = document.getElementById('eventRulesMaxTickets');
+      var fPublished = document.getElementById('eventPublished');
       var latestStats = [];
       var attendees = [];
+      var attendeesLastError = '';
+      var paymentRows = [];
+      var paymentsLastError = '';
+      var scannerTabPollTimer = null;
 
       var modal = document.getElementById('adminKeyModal');
       var adminKeyInput = document.getElementById('adminKeyInput');
@@ -933,7 +1417,7 @@
       var attendanceChart = null;
 
       function switchView(name) {
-        ['dashboard', 'events', 'attendees', 'scanner', 'footer'].forEach(function (v) {
+        ['dashboard', 'events', 'attendees', 'payments', 'scanner', 'footer', 'instapay'].forEach(function (v) {
           var vEl = document.getElementById('view-' + v);
           var nEl = document.querySelector('.nav-item[data-view="' + v + '"]');
           if (vEl) vEl.classList.toggle('active', v === name);
@@ -941,15 +1425,33 @@
         });
         if (name === 'scanner') {
           loadScanners();
+          loadScannerRequests();
+          if (scannerTabPollTimer) clearInterval(scannerTabPollTimer);
+          scannerTabPollTimer = setInterval(function () {
+            loadScannerRequests();
+          }, 4000);
+        } else {
+          if (scannerTabPollTimer) {
+            clearInterval(scannerTabPollTimer);
+            scannerTabPollTimer = null;
+          }
         }
         if (name === 'attendees') {
+          buildAttendeeFilterOptions();
           loadAttendees();
+        }
+        if (name === 'payments') {
+          buildAttendeeFilterOptions();
+          loadPayments();
         }
         if (name === 'events') {
           reloadFromServer();
         }
         if (name === 'footer') {
           loadFooterConfig();
+        }
+        if (name === 'instapay') {
+          loadInstapayBookings();
         }
       }
 
@@ -965,6 +1467,196 @@
       function showFormMessage(text, type) {
         formMessage.textContent = text || '';
         formMessage.className = 'message ' + (text ? 'show ' + (type || '') : '');
+      }
+
+      function syncImagePreviews() {
+        var cardUrl = (fImageCard && fImageCard.value.trim()) || '/block-logo.png';
+        var detailUrl = (fImageDetail && fImageDetail.value.trim()) || cardUrl;
+        if (previewCardImg) {
+          previewCardImg.src = cardUrl;
+          previewCardImg.alt = (fName && fName.value) || '';
+        }
+        if (previewHeroImg) {
+          previewHeroImg.src = detailUrl;
+          previewHeroImg.alt = (fName && fName.value) || '';
+        }
+        if (imagePreviewCard) {
+          if (fImageCard && fImageCard.value.trim()) {
+            imagePreviewCard.src = cardUrl;
+            imagePreviewCard.style.display = 'block';
+          } else {
+            imagePreviewCard.style.display = 'none';
+            imagePreviewCard.src = '';
+          }
+        }
+        if (imagePreviewDetail) {
+          if (fImageDetail && fImageDetail.value.trim()) {
+            imagePreviewDetail.src = detailUrl;
+            imagePreviewDetail.style.display = 'block';
+          } else {
+            imagePreviewDetail.style.display = 'none';
+            imagePreviewDetail.src = '';
+          }
+        }
+      }
+
+      function ticketRowHtml(row) {
+        var id = row.ticketId || row.id || '';
+        var name = row.ticketName || row.name || '';
+        var price = row.price != null ? row.price : '';
+        var cap = row.available != null && row.available !== '' ? row.available : '';
+        var so = row.soldOut ? ' checked' : '';
+        return (
+          '<tr data-tid="' + escapeAttrib(id) + '">' +
+            '<td><input type="text" class="wide t-name" value="' + escapeAttrib(name) + '" placeholder="VIP"></td>' +
+            '<td><input type="number" class="t-price" min="0" step="0.01" value="' + escapeAttrib(price) + '"></td>' +
+            '<td><input type="number" class="t-cap" min="0" step="1" placeholder="∞" value="' + escapeAttrib(cap) + '"></td>' +
+            '<td style="text-align:center;"><input type="checkbox" class="t-sold"' + so + '></td>' +
+            '<td><button type="button" class="btn btn-ghost t-remove" style="padding:4px 8px;">Remove</button></td>' +
+          '</tr>'
+        );
+      }
+
+      function renderTicketRows(list) {
+        if (!ticketRowsBody) return;
+        var rows = Array.isArray(list) && list.length ? list : [{ ticketId: 'regular', ticketName: 'Regular', price: 0, available: null, soldOut: false }];
+        ticketRowsBody.innerHTML = rows.map(ticketRowHtml).join('');
+        ticketRowsBody.querySelectorAll('.t-remove').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var tr = btn.closest('tr');
+            if (tr && ticketRowsBody.querySelectorAll('tr').length > 1) tr.remove();
+          });
+        });
+      }
+
+      function collectTicketsFromRows() {
+        if (!ticketRowsBody) return [];
+        var out = [];
+        ticketRowsBody.querySelectorAll('tr').forEach(function (tr, i) {
+          var nm = tr.querySelector('.t-name');
+          var pr = tr.querySelector('.t-price');
+          var cap = tr.querySelector('.t-cap');
+          var so = tr.querySelector('.t-sold');
+          var tid = tr.getAttribute('data-tid') || '';
+          var name = nm && nm.value.trim();
+          if (!name) return;
+          var capVal = cap && cap.value.trim() !== '' ? cap.value.trim() : null;
+          out.push({
+            ticketId: tid || 't' + (i + 1),
+            ticketName: name,
+            ticketCategory: name,
+            price: pr && pr.value !== '' ? Number(pr.value) : 0,
+            available: capVal != null ? capVal : null,
+            soldOut: so && so.checked,
+          });
+        });
+        return out;
+      }
+
+      function loadRulesForEditor(eventId) {
+        if (!fRulesTerms || !fRulesMax) return;
+        if (!eventId) {
+          fRulesTerms.value = '';
+          fRulesMax.value = '10';
+          return;
+        }
+        api('/api/admin/booking-event-rules/' + encodeURIComponent(eventId))
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && d.rules) {
+              fRulesTerms.value = d.rules.termsText || '';
+              fRulesMax.value = String(d.rules.maxTicketsPerOrder != null ? d.rules.maxTicketsPerOrder : 10);
+            }
+          })
+          .catch(function () {});
+      }
+
+      function loadInstapayBookings() {
+        var tbody = document.getElementById('instapayTbody');
+        var msg = document.getElementById('instapayMsg');
+        var sel = document.getElementById('instapayFilterStatus');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="6" class="small" style="color:var(--muted);">Loading…</td></tr>';
+        if (msg) { msg.textContent = ''; msg.className = 'message'; }
+        var st = sel && sel.value ? sel.value : 'pending_payment';
+        api('/api/admin/instapay-bookings?status=' + encodeURIComponent(st))
+          .then(function (r) { return r.json(); })
+          .then(function (list) {
+            if (list && list.error) throw new Error(list.error);
+            var rows = (Array.isArray(list) ? list : []).map(function (item) {
+              var action =
+                item.status === 'pending_payment'
+                  ? '<button type="button" class="btn btn-primary instapay-confirm" data-id="' + escapeAttrib(item.id) + '">Confirm</button>'
+                  : '<span class="chip">' + escapeAttrib(item.status || '') + '</span>';
+              var amount = item.pricePaid != null && item.pricePaid > 0 ? Number(item.pricePaid).toFixed(2) + ' EGP' : 'FREE';
+              return (
+                '<tr><td class="small">#' + escapeAttrib(item.id) + '</td>' +
+                '<td>' + escapeAttrib(item.user && item.user.email ? item.user.email : '') + '<div class="small">' + escapeAttrib(item.user && item.user.name ? item.user.name : '') + '</div></td>' +
+                '<td>' + escapeAttrib(item.event && item.event.name ? item.event.name : '') + '<div class="small">' + escapeAttrib(item.event && item.event.date ? item.event.date : '') + '</div></td>' +
+                '<td>' + escapeAttrib(amount) + '</td>' +
+                '<td><span class="chip">' + escapeAttrib(item.status) + '</span></td>' +
+                '<td>' + action + '</td></tr>'
+              );
+            }).join('');
+            tbody.innerHTML = rows || '<tr><td colspan="6" class="small" style="color:var(--muted);">No bookings.</td></tr>';
+            tbody.querySelectorAll('.instapay-confirm').forEach(function (btn) {
+              btn.addEventListener('click', function () {
+                var id = btn.getAttribute('data-id');
+                btn.disabled = true;
+                api('/api/admin/instapay-bookings/' + encodeURIComponent(id) + '/confirm', { method: 'POST' })
+                  .then(function (r) { return r.json(); })
+                  .then(function (d) {
+                    if (d && d.error) throw new Error(d.error);
+                    if (msg) { msg.textContent = 'Confirmed.'; msg.className = 'message show success'; }
+                    loadInstapayBookings();
+                  })
+                  .catch(function (e) {
+                    if (msg) { msg.textContent = e.message || 'Could not confirm.'; msg.className = 'message show error'; }
+                    btn.disabled = false;
+                  });
+              });
+            });
+          })
+          .catch(function () {
+            tbody.innerHTML = '<tr><td colspan="6" class="small" style="color:var(--muted);">Could not load bookings (check Supabase / server logs).</td></tr>';
+          });
+      }
+
+      function renderLinkEditor(container, links) {
+        if (!container) return;
+        var arr = Array.isArray(links) ? links : [];
+        container.innerHTML = arr
+          .map(function (l, i) {
+            return (
+              '<div class="link-row" data-i="' +
+              i +
+              '"><input type="text" class="link-label" placeholder="Label" value="' +
+              escapeAttrib(l.label || '') +
+              '"><input type="text" class="link-url" placeholder="/events or https://…" value="' +
+              escapeAttrib(l.url || '') +
+              '"><button type="button" class="btn btn-ghost link-remove" style="padding:6px 10px;">Remove</button></div>'
+            );
+          })
+          .join('');
+        container.querySelectorAll('.link-remove').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var row = btn.closest('.link-row');
+            if (row) row.remove();
+          });
+        });
+      }
+
+      function collectLinkEditor(container) {
+        if (!container) return [];
+        var out = [];
+        container.querySelectorAll('.link-row').forEach(function (row) {
+          var lb = row.querySelector('.link-label');
+          var ur = row.querySelector('.link-url');
+          var label = lb && lb.value.trim();
+          var url = ur && ur.value.trim();
+          if (label || url) out.push({ label: label || url, url: url || '/' });
+        });
+        return out;
       }
 
       function renderStats(stats) {
@@ -989,32 +1681,47 @@
       }
 
       function buildAttendeeFilterOptions() {
-        if (!attendeesEventFilter) return;
-        var seen = {};
-        events.forEach(function (e) {
-          if (!e.name) return;
-          if (seen[e.name]) return;
-          seen[e.name] = true;
-        });
-        latestStats.forEach(function (s) {
-          if (!s.eventName) return;
-          if (seen[s.eventName]) return;
-          seen[s.eventName] = true;
-        });
-        var current = attendeesEventFilter.value;
-        attendeesEventFilter.innerHTML = '<option value="">All events</option>';
-        Object.keys(seen).sort().forEach(function (name) {
-          var opt = document.createElement('option');
-          opt.value = name;
-          opt.textContent = name;
-          if (name === current) opt.selected = true;
-          attendeesEventFilter.appendChild(opt);
-        });
+        function fillSelect(sel) {
+          if (!sel) return;
+          var current = sel.value;
+          var currentText = '';
+          if (sel.selectedOptions && sel.selectedOptions[0]) {
+            currentText = sel.selectedOptions[0].textContent || '';
+          }
+          sel.innerHTML = '<option value="">All events</option>';
+          var namesFromEvents = {};
+          events.forEach(function (e) {
+            if (!e || !e.id || !e.name) return;
+            namesFromEvents[e.name] = true;
+            var opt = document.createElement('option');
+            opt.value = e.id;
+            opt.textContent = e.name;
+            if (e.id === current || e.name === current || e.name === currentText) opt.selected = true;
+            sel.appendChild(opt);
+          });
+          latestStats.forEach(function (s) {
+            if (!s || !s.eventName || namesFromEvents[s.eventName]) return;
+            var opt = document.createElement('option');
+            opt.value = s.eventName;
+            opt.textContent = s.eventName + ' (stats)';
+            if (s.eventName === current || s.eventName === currentText) opt.selected = true;
+            sel.appendChild(opt);
+          });
+        }
+        fillSelect(attendeesEventFilter);
+        fillSelect(paymentsEventFilter);
       }
 
       function renderAttendees() {
         if (!attendeesSection || !attendeesBody) return;
         attendeesSection.style.display = 'block';
+        if (attendeesLastError) {
+          attendeesBody.innerHTML =
+            '<tr><td colspan="8" style="text-align:center; padding:2rem; color:#f87171;">' +
+            escapeHtml(attendeesLastError) +
+            '</td></tr>';
+          return;
+        }
         if (!Array.isArray(attendees) || !attendees.length) {
           attendeesBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--muted);">No attendees found</td></tr>';
           return;
@@ -1046,6 +1753,48 @@
           '</tr>';
         }).join('');
         attachResendHandlers();
+      }
+
+      function renderPayments() {
+        if (!paymentsSection || !paymentsBody) return;
+        paymentsSection.style.display = 'block';
+        function fmtEgpCell(n) {
+          if (n == null || n === '' || isNaN(Number(n))) return '—';
+          return Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EGP';
+        }
+        if (paymentsLastError) {
+          paymentsBody.innerHTML =
+            '<tr><td colspan="9" style="text-align:center; padding:2rem; color:#f87171;">' +
+            escapeHtml(paymentsLastError) +
+            '</td></tr>';
+          return;
+        }
+        if (!Array.isArray(paymentRows) || !paymentRows.length) {
+          paymentsBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:2rem; color:var(--muted);">No payment rows found</td></tr>';
+          return;
+        }
+        paymentsBody.innerHTML = paymentRows.map(function (row) {
+          var bookD = row.booking_time ? new Date(row.booking_time) : null;
+          var bookStr = bookD ? bookD.toLocaleDateString() + ' ' + bookD.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+          var payRaw = String(row.payment_status || '');
+          var payPending = /pending/i.test(payRaw);
+          var payClass = payPending ? 'att-status att-status-pending' : /paid|confirmed/i.test(payRaw) ? 'att-status att-status-ok' : 'att-status';
+          var amt =
+            row.payment_amount_ticket != null && !isNaN(Number(row.payment_amount_ticket))
+              ? row.payment_amount_ticket
+              : row.payment_amount_total;
+          return '<tr>' +
+            '<td>' + escapeHtml(row.event_name || '') + '</td>' +
+            '<td>' + escapeHtml(row.name || '') + '</td>' +
+            '<td>' + escapeHtml(row.email || '') + '</td>' +
+            '<td>' + escapeHtml(row.ticket_number || '—') + '</td>' +
+            '<td>' + escapeHtml(row.ticket_category || '—') + '</td>' +
+            '<td><span class="' + payClass + '">' + escapeHtml(row.payment_status || '—') + '</span></td>' +
+            '<td>' + escapeHtml(row.payment_method || '—') + '</td>' +
+            '<td>' + fmtEgpCell(amt) + '</td>' +
+            '<td>' + bookStr + '</td>' +
+          '</tr>';
+        }).join('');
       }
 
       function escapeHtml(s) {
@@ -1101,6 +1850,7 @@
               .then(function (data) {
                 if (data && data.error) throw new Error(data.error);
                 loadAttendees();
+                loadPayments();
                 loadStats();
               })
               .catch(function (err) {
@@ -1131,7 +1881,7 @@
       }
 
       function downloadAttendeesExcel() {
-        var headers = ['Name', 'Email', 'Phone', 'Event', 'Registered', 'Ticket status', 'Scanned at', 'Ticket ID'];
+        var headers = ['Name', 'Email', 'Phone', 'Event', 'Registered', 'Check-in', 'Scanned at', 'Ticket ID'];
         var rows = [headers];
         (attendees || []).forEach(function (row) {
           var reg = row.created_at ? new Date(row.created_at).toLocaleString() : '';
@@ -1158,7 +1908,75 @@
         var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
         var a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'attendees-' + (attendeesEventFilter && attendeesEventFilter.value ? attendeesEventFilter.value.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 30) : 'all') + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+        var filtLabel =
+          attendeesEventFilter && attendeesEventFilter.selectedOptions && attendeesEventFilter.selectedOptions[0]
+            ? attendeesEventFilter.selectedOptions[0].textContent.trim()
+            : '';
+        if (filtLabel === 'All events') filtLabel = '';
+        a.download =
+          'attendees-' +
+          (filtLabel ? filtLabel.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 40) : 'all') +
+          '-' +
+          new Date().toISOString().slice(0, 10) +
+          '.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }
+
+      function downloadPaymentsExcel() {
+        var headers = [
+          'Event',
+          'Name',
+          'Email',
+          'Ticket number',
+          'Category',
+          'Payment status',
+          'Pay method',
+          'Amount (EGP)',
+          'Booked at',
+          'Ticket ID'
+        ];
+        var rows = [headers];
+        (paymentRows || []).forEach(function (row) {
+          var book = row.booking_time ? new Date(row.booking_time).toLocaleString() : '';
+          var amt =
+            row.payment_amount_ticket != null && !isNaN(Number(row.payment_amount_ticket))
+              ? row.payment_amount_ticket
+              : row.payment_amount_total;
+          rows.push([
+            row.event_name || '',
+            row.name || '',
+            row.email || '',
+            row.ticket_number || '',
+            row.ticket_category || '',
+            row.payment_status || '',
+            row.payment_method || '',
+            amt != null && !isNaN(Number(amt)) ? Number(amt) : '',
+            book,
+            row.ticket_id || ''
+          ]);
+        });
+        var csv = rows.map(function (r) {
+          return r.map(function (cell) {
+            var s = String(cell).replace(/"/g, '""');
+            if (/[",\n\r]/.test(s)) return '"' + s + '"';
+            return s;
+          }).join(',');
+        }).join('\r\n');
+        var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        var filtLabel =
+          paymentsEventFilter && paymentsEventFilter.selectedOptions && paymentsEventFilter.selectedOptions[0]
+            ? paymentsEventFilter.selectedOptions[0].textContent.trim()
+            : '';
+        if (filtLabel === 'All events') filtLabel = '';
+        a.download =
+          'payments-' +
+          (filtLabel ? filtLabel.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 40) : 'all') +
+          '-' +
+          new Date().toISOString().slice(0, 10) +
+          '.csv';
         a.click();
         URL.revokeObjectURL(a.href);
       }
@@ -1217,14 +2035,18 @@
           fTime.value = '';
           fVenue.value = '';
           fCategory.value = '';
-          fImage.value = '';
+          if (fImageCard) fImageCard.value = '';
+          if (fImageDetail) fImageDetail.value = '';
           fDescription.value = '';
           if (fPrice) fPrice.value = '';
           if (fAvailableTickets) fAvailableTickets.value = '';
-          if (imagePreview) {
-            imagePreview.style.display = 'none';
-            imagePreview.src = '';
-          }
+          if (fGallery) fGallery.value = '';
+          if (fLocAddr) fLocAddr.value = '';
+          if (fMapEmbed) fMapEmbed.value = '';
+          renderTicketRows([{ ticketId: 'regular', ticketName: 'Regular', price: 0, available: null, soldOut: false }]);
+          loadRulesForEditor('');
+          syncImagePreviews();
+          if (fPublished) fPublished.checked = true;
           btnDelete.style.display = 'none';
           btnCancelEdit.style.display = 'none';
           formTitle.textContent = 'Create event';
@@ -1237,21 +2059,29 @@
           fTime.value = event.time || '';
           fVenue.value = event.venue || '';
           fCategory.value = event.category || '';
-          fImage.value = event.image || '';
+          var leg = event.image || '';
+          if (fImageCard) fImageCard.value = event.image_card || leg || '';
+          if (fImageDetail) fImageDetail.value = event.image_detail || leg || '';
           fDescription.value = event.description || '';
           if (fPrice) fPrice.value = event.price != null ? String(event.price) : '';
           if (fAvailableTickets) fAvailableTickets.value = event.available_tickets != null ? String(event.available_tickets) : '';
-          if (imagePreview && event.image) {
-            imagePreview.src = event.image;
-            imagePreview.style.display = 'block';
-          } else if (imagePreview) {
-            imagePreview.style.display = 'none';
-            imagePreview.src = '';
+          if (fGallery) fGallery.value = Array.isArray(event.gallery) ? event.gallery.join('\n') : '';
+          var loc = event.location && typeof event.location === 'object' ? event.location : null;
+          if (fLocAddr) fLocAddr.value = (loc && loc.address) || '';
+          if (fMapEmbed) fMapEmbed.value = (loc && loc.mapEmbedUrl) || '';
+          var tix = Array.isArray(event.tickets) && event.tickets.length ? event.tickets : null;
+          if (!tix) {
+            var p = event.price != null ? Number(event.price) : 0;
+            tix = [{ ticketId: 'regular', ticketName: 'Regular', ticketCategory: 'Regular', price: p, available: null, soldOut: false }];
           }
+          renderTicketRows(tix);
+          loadRulesForEditor(event.id || '');
+          syncImagePreviews();
+          if (fPublished) fPublished.checked = event.published !== false;
           btnDelete.style.display = 'inline-flex';
           btnCancelEdit.style.display = 'inline-flex';
           formTitle.textContent = 'Edit event';
-          formSubtitle.textContent = 'Update the details and hit Save.';
+          formSubtitle.textContent = 'Matches the public event page; save to publish changes.';
         }
         showFormMessage('');
         var formSection = form && form.closest('.column');
@@ -1271,10 +2101,12 @@
           if ((e.description || '').length > 80) desc += '…';
           var isExpired = e.date && new Date(e.date) < new Date();
           return '<article class="event-card" data-id="' + escapeAttrib(e.id) + '">' +
-            '<img src="' + escapeAttrib(e.image || '/block-logo.png') + '" alt="">' +
+            '<img src="' + escapeAttrib(e.image_card || e.image || '/block-logo.png') + '" alt="">' +
             '<div class="event-card-body">' +
               '<h3 class="event-card-title">' + escapeAttrib(e.name || '') + '</h3>' +
-              '<div class="event-card-meta">' + escapeAttrib(meta || 'No date set') + (isExpired ? ' <span style="color:var(--danger);">(Expired)</span>' : '') + '</div>' +
+              '<div class="event-card-meta">' + escapeAttrib(meta || 'No date set') +
+ (e.published === false ? ' <span style="color:var(--muted);">(Hidden)</span>' : '') +
+              (isExpired ? ' <span style="color:var(--danger);">(Expired)</span>' : '') + '</div>' +
               (desc ? '<div class="event-card-desc">' + escapeAttrib(desc) + '</div>' : '') +
               '<div class="event-card-actions">' +
                 '<button type="button" class="btn btn-primary btn-edit" data-id="' + escapeAttrib(e.id) + '">Edit</button> ' +
@@ -1321,7 +2153,7 @@
         if (addEl) addEl.addEventListener('click', function () { setEditing(null); });
       }
 
-      function reloadFromServer() {
+      function reloadFromServer(reselectAfter) {
         api('/api/admin/events')
           .then(function (r) { return r.json(); })
           .then(function (data) {
@@ -1331,10 +2163,11 @@
             }
             events = Array.isArray(data) ? data : [];
             renderList();
-            if (!fId.value && events.length) {
+            if (typeof reselectAfter === 'function') {
+              reselectAfter();
+            } else if (!fId.value && events.length) {
               setEditing(events[0]);
             }
-            // Also refresh stats whenever we reload events
             loadStats();
           })
           .catch(function () {
@@ -1354,7 +2187,9 @@
             renderStats(latestStats);
             renderSummary();
             buildAttendeeFilterOptions();
-            loadAttendees(); // default: all events
+            var active = document.querySelector('.view.active');
+            if (active && active.id === 'view-attendees') loadAttendees();
+            if (active && active.id === 'view-payments') loadPayments();
           })
           .catch(function () {
             // ignore stats errors silently; admin can still manage events
@@ -1362,21 +2197,120 @@
       }
 
       function loadAttendees() {
+        attendeesLastError = '';
         var params = '';
         if (attendeesEventFilter && attendeesEventFilter.value) {
-          params = '?eventName=' + encodeURIComponent(attendeesEventFilter.value);
+          var v = attendeesEventFilter.value;
+          if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)) {
+            params = '?eventId=' + encodeURIComponent(v);
+          } else {
+            params = '?eventName=' + encodeURIComponent(v);
+          }
         }
         api('/api/admin/attendees' + params)
-          .then(function (r) { return r.json(); })
-          .then(function (data) {
-            if (data && data.error) {
+          .then(function (r) {
+            var status = r.status;
+            return r.json().then(function (data) {
+              return { ok: r.ok, status: status, data: data };
+            }).catch(function () {
+              return { ok: false, status: status, data: { error: 'Invalid response from server.' } };
+            });
+          })
+          .then(function (res) {
+            var data = res.data;
+            if (!res.ok || (data && data.error)) {
+              attendees = [];
+              var baseErr =
+                (data && data.error) ||
+                (!res.ok
+                  ? 'Could not load attendees (HTTP ' + res.status + '). Check admin key, Supabase env (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY), and server logs.'
+                  : 'Could not load attendees.');
+              var detail = data && data.details ? String(data.details) : '';
+              attendeesLastError = detail ? baseErr + ' — ' + detail : baseErr;
+              renderAttendees();
               return;
             }
             attendees = Array.isArray(data) ? data : [];
+            attendeesLastError = '';
             renderAttendees();
           })
           .catch(function () {
-            // ignore error in attendees list; admin can still use rest
+            attendees = [];
+            attendeesLastError = 'Network error loading attendees. Check your connection and try again.';
+            renderAttendees();
+          });
+      }
+
+      function loadPayments() {
+        paymentsLastError = '';
+        var params = '';
+        if (paymentsEventFilter && paymentsEventFilter.value) {
+          var v = paymentsEventFilter.value;
+          if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)) {
+            params = '?eventId=' + encodeURIComponent(v);
+          } else {
+            params = '?eventName=' + encodeURIComponent(v);
+          }
+        }
+        api('/api/admin/payments' + params)
+          .then(function (r) {
+            var status = r.status;
+            return r.text().then(function (text) {
+              if (text == null || String(text).trim() === '') {
+                return {
+                  ok: r.ok,
+                  status: status,
+                  data: {
+                    error: 'Empty response from server.',
+                    details: 'HTTP ' + status + '. Restart the app after updating, or check the /api/admin/payments route on your host.',
+                  },
+                };
+              }
+              try {
+                var data = JSON.parse(text);
+                return { ok: r.ok, status: status, data: data };
+              } catch (parseErr) {
+                var snippet = String(text).replace(/\s+/g, ' ').trim();
+                if (snippet.length > 160) snippet = snippet.slice(0, 160) + '…';
+                return {
+                  ok: false,
+                  status: status,
+                  data: {
+                    error: 'Server did not return JSON.',
+                    details:
+                      'HTTP ' +
+                      status +
+                      (snippet ? ': ' + snippet : '') +
+                      (status === 404
+                        ? ' — Deploy/restart the server so GET /api/admin/payments exists.'
+                        : ''),
+                  },
+                };
+              }
+            });
+          })
+          .then(function (res) {
+            var data = res.data;
+            if (!res.ok || (data && data.error)) {
+              paymentRows = [];
+              var baseErr =
+                (data && data.error) ||
+                (!res.ok
+                  ? 'Could not load payments (HTTP ' + res.status + '). Check admin key and Supabase env.'
+                  : 'Could not load payments.');
+              var detail = data && data.details ? String(data.details) : '';
+              paymentsLastError = detail ? baseErr + ' — ' + detail : baseErr;
+              renderPayments();
+              return;
+            }
+            paymentRows = Array.isArray(data) ? data : [];
+            paymentsLastError = '';
+            renderPayments();
+          })
+          .catch(function () {
+            paymentRows = [];
+            paymentsLastError = 'Network error loading payments. Check your connection and try again.';
+            renderPayments();
           });
       }
 
@@ -1385,6 +2319,21 @@
       btnCancelEdit.addEventListener('click', function () {
         setEditing(null);
       });
+
+      /* Enter in ticket row inputs must not submit the whole form (browser default). */
+      if (form && ticketRowsBody) {
+        form.addEventListener(
+          'keydown',
+          function (e) {
+            if (e.key !== 'Enter') return;
+            var t = e.target;
+            if (!t || !ticketRowsBody.contains(t)) return;
+            if (t.tagName === 'TEXTAREA') return;
+            e.preventDefault();
+          },
+          true
+        );
+      }
 
       form.addEventListener('submit', function (ev) {
         ev.preventDefault();
@@ -1395,6 +2344,17 @@
           return;
         }
         var id = fId.value;
+        var tickets = collectTicketsFromRows();
+        if (!tickets.length) {
+          showFormMessage('Add at least one ticket category.', 'error');
+          return;
+        }
+        var primaryPrice = tickets.length ? tickets[0].price : 0;
+        var galleryLines = (fGallery && fGallery.value) || '';
+        var gallery = galleryLines
+          .split(/\r?\n/)
+          .map(function (s) { return s.trim(); })
+          .filter(Boolean);
         var body = {
           name: name,
           slug: fSlug.value.trim() || null,
@@ -1402,10 +2362,18 @@
           time: fTime.value.trim() || null,
           venue: fVenue.value.trim() || null,
           category: fCategory.value.trim() || null,
-          image: fImage.value.trim() || null,
+          image_card: fImageCard && fImageCard.value.trim() ? fImageCard.value.trim() : null,
+          image_detail: fImageDetail && fImageDetail.value.trim() ? fImageDetail.value.trim() : null,
           description: fDescription.value.trim() || null,
-          price: fPrice && fPrice.value.trim() ? fPrice.value.trim() : 0,
-          available_tickets: fAvailableTickets && fAvailableTickets.value.trim() ? fAvailableTickets.value.trim() : null
+          price: fPrice && fPrice.value.trim() ? fPrice.value.trim() : primaryPrice,
+          available_tickets: fAvailableTickets && fAvailableTickets.value.trim() ? fAvailableTickets.value.trim() : null,
+          tickets: tickets,
+          gallery: gallery,
+          location: {
+            address: fLocAddr && fLocAddr.value.trim() ? fLocAddr.value.trim() : null,
+            mapEmbedUrl: fMapEmbed && fMapEmbed.value.trim() ? fMapEmbed.value.trim() : null,
+          },
+          published: fPublished ? fPublished.checked : true,
         };
         btnSave.disabled = true;
         showFormMessage('');
@@ -1413,19 +2381,42 @@
         var path = id ? '/api/admin/events/' + encodeURIComponent(id) : '/api/admin/events';
         api(path, {
           method: method,
-          body: JSON.stringify(body)
-        }).then(function (r) { return r.json(); }).then(function (data) {
-          if (data && data.error) {
-            showFormMessage(data.error, 'error');
-          } else {
+          body: JSON.stringify(body),
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data && data.error) throw new Error(data.error);
+            var newId = id || (data && data.id);
+            if (!newId) return data;
+            if (data && data.id && !fId.value) fId.value = data.id;
+            var rulesPayload = {
+              termsText: fRulesTerms ? fRulesTerms.value.trim() : '',
+              maxTicketsPerOrder: fRulesMax && fRulesMax.value ? parseInt(fRulesMax.value, 10) : 10,
+            };
+            return api('/api/admin/booking-event-rules/' + encodeURIComponent(newId), {
+              method: 'PUT',
+              body: JSON.stringify(rulesPayload),
+            })
+              .then(function (r2) { return r2.json(); })
+              .then(function (d2) {
+                if (d2 && d2.error) throw new Error(d2.error);
+                return { data: data, savedId: newId };
+              });
+          })
+          .then(function (pack) {
             showFormMessage('Saved.', 'success');
-            reloadFromServer();
-          }
-        }).catch(function () {
-          showFormMessage('Could not save event.', 'error');
-        }).finally(function () {
-          btnSave.disabled = false;
-        });
+            var savedId = (pack && pack.savedId) || fId.value;
+            reloadFromServer(function () {
+              var evt = events.find(function (e) { return e.id === savedId; });
+              if (evt) setEditing(evt);
+            });
+          })
+          .catch(function (e) {
+            showFormMessage(e.message || 'Could not save event.', 'error');
+          })
+          .finally(function () {
+            btnSave.disabled = false;
+          });
       });
 
       btnDelete.addEventListener('click', function () {
@@ -1451,27 +2442,51 @@
         });
       });
 
-      if (fImageFile) {
-        fImageFile.addEventListener('change', function () {
-          var file = fImageFile.files && fImageFile.files[0];
+      function wireImageFileInput(fileInput, textInput) {
+        if (!fileInput || !textInput) return;
+        fileInput.addEventListener('change', function () {
+          var file = fileInput.files && fileInput.files[0];
           if (!file) return;
           if (!/^image\//.test(file.type)) {
             showFormMessage('Please choose an image file (jpg, png, etc.).', 'error');
-            fImageFile.value = '';
+            fileInput.value = '';
             return;
           }
           var reader = new FileReader();
           reader.onload = function (ev) {
             var dataUrl = ev.target && ev.target.result;
             if (typeof dataUrl === 'string') {
-              fImage.value = dataUrl; // store as data URL so front-end can render directly
-              if (imagePreview) {
-                imagePreview.src = dataUrl;
-                imagePreview.style.display = 'block';
-              }
+              textInput.value = dataUrl;
+              syncImagePreviews();
             }
           };
           reader.readAsDataURL(file);
+        });
+      }
+      wireImageFileInput(fImageCardFile, fImageCard);
+      wireImageFileInput(fImageDetailFile, fImageDetail);
+      if (fImageCard) fImageCard.addEventListener('input', syncImagePreviews);
+      if (fImageDetail) fImageDetail.addEventListener('input', syncImagePreviews);
+      if (fName) {
+        fName.addEventListener('input', function () {
+          var t = fName.value || '';
+          if (previewCardImg) previewCardImg.alt = t;
+          if (previewHeroImg) previewHeroImg.alt = t;
+        });
+      }
+
+      if (btnAddTicketRow && ticketRowsBody) {
+        btnAddTicketRow.addEventListener('click', function () {
+          ticketRowsBody.insertAdjacentHTML('beforeend', ticketRowHtml({ ticketId: '', ticketName: '', price:0, available: null, soldOut: false }));
+          var last = ticketRowsBody.lastElementChild;
+          if (last) {
+            var rm = last.querySelector('.t-remove');
+            if (rm) {
+              rm.addEventListener('click', function () {
+                if (ticketRowsBody.querySelectorAll('tr').length > 1) last.remove();
+              });
+            }
+          }
         });
       }
 
@@ -1480,10 +2495,21 @@
           loadAttendees();
         });
       }
+      if (paymentsEventFilter) {
+        paymentsEventFilter.addEventListener('change', function () {
+          loadPayments();
+        });
+      }
       var btnDownloadAttendeesExcel = document.getElementById('btnDownloadAttendeesExcel');
       if (btnDownloadAttendeesExcel) {
         btnDownloadAttendeesExcel.addEventListener('click', function () {
           downloadAttendeesExcel();
+        });
+      }
+      var btnDownloadPaymentsExcel = document.getElementById('btnDownloadPaymentsExcel');
+      if (btnDownloadPaymentsExcel) {
+        btnDownloadPaymentsExcel.addEventListener('click', function () {
+          downloadPaymentsExcel();
         });
       }
 
@@ -1562,65 +2588,290 @@
         });
       });
 
+      var ADMIN_SOCIAL_NETWORKS = [
+        { id: 'facebook', title: 'Facebook' },
+        { id: 'instagram', title: 'Instagram' },
+        { id: 'linkedin', title: 'LinkedIn' },
+        { id: 'twitter', title: 'Twitter / X' },
+        { id: 'youtube', title: 'YouTube' },
+        { id: 'tiktok', title: 'TikTok' },
+      ];
+
+      function renderSocialLinksAdmin(cfg) {
+        var wrap = document.getElementById('socialLinksFields');
+        if (!wrap) return;
+        var list = Array.isArray(cfg.socialLinks) ? cfg.socialLinks : [];
+        function urlFor(id) {
+          var row = list.find(function (s) { return s && s.id === id; });
+          return row && row.url ? row.url : '';
+        }
+        function labelFor(id, fallback) {
+          var row = list.find(function (s) { return s && s.id === id; });
+          if (row && row.label) return row.label;
+          return fallback;
+        }
+        function visibleFor(id) {
+          var row = list.find(function (s) { return s && s.id === id; });
+          if (!row) return true;
+          var v = row.visible;
+          if (v === false || v === 'false' || v === 0 || v === '0') return false;
+          return true;
+        }
+        wrap.innerHTML = ADMIN_SOCIAL_NETWORKS.map(function (n) {
+          var uid = 'socialAdminUrl_' + n.id;
+          var lid = 'socialAdminLabel_' + n.id;
+          var vid = 'socialAdminVisible_' + n.id;
+          var uVal = String(urlFor(n.id)).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+          var lVal = String(labelFor(n.id, n.title)).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+          var visChecked = visibleFor(n.id) ? ' checked' : '';
+          return (
+            '<div class="social-admin-row">' +
+            '<div class="social-admin-row__fields">' +
+            '<div class="field" style="margin:0;">' +
+            '<label for="' + uid + '">' + n.title + ' URL</label>' +
+            '<input type="url" id="' + uid + '" data-social-id="' + n.id + '" placeholder="https://…" value="' + uVal + '">' +
+            '<label for="' + lid + '" class="small" style="display:block;margin-top:0.35rem;color:var(--muted);">Label (screen readers)</label>' +
+            '<input type="text" id="' + lid + '" data-social-label-for="' + n.id + '" placeholder="' + n.title + '" value="' + lVal + '">' +
+            '</div></div>' +
+            '<div class="social-admin-visibility">' +
+            '<label class="social-switch" title="Show or hide this link on the public site">' +
+            '<input type="checkbox" id="' + vid + '" data-social-visible="' + n.id + '"' + visChecked + '>' +
+            '<span class="social-switch-slider"></span>' +
+            '</label>' +
+            '<span class="vis-label">Show on site</span>' +
+            '</div>' +
+            '</div>'
+          );
+        }).join('');
+      }
+
+      function collectSocialLinksFromAdmin() {
+        return ADMIN_SOCIAL_NETWORKS.map(function (n) {
+          var u = document.getElementById('socialAdminUrl_' + n.id);
+          var l = document.getElementById('socialAdminLabel_' + n.id);
+          var vis = document.getElementById('socialAdminVisible_' + n.id);
+          return {
+            id: n.id,
+            url: u && u.value ? u.value.trim() : '',
+            label: l && l.value.trim() ? l.value.trim() : n.title,
+            visible: vis ? vis.checked : true,
+          };
+        });
+      }
+
       function loadFooterConfig() {
         var base = window.location.origin || 'http://localhost:3001';
+        var headerEl = document.getElementById('headerLinksEditor');
+        var footerEl = document.getElementById('footerLinksEditor');
         fetch(base + '/api/site-config')
           .then(function (r) { return r.json(); })
           .then(function (cfg) {
             var copyright = document.getElementById('footerCopyright');
-            var instagramUrl = document.getElementById('footerInstagramUrl');
-            var instagramLabel = document.getElementById('footerInstagramLabel');
             if (copyright) copyright.value = cfg.copyright || '© BLOCK';
-            if (instagramUrl) instagramUrl.value = cfg.instagramUrl || '';
-            if (instagramLabel) instagramLabel.value = cfg.instagramLabel || 'Instagram';
+            renderSocialLinksAdmin(cfg);
+            var hLinks = Array.isArray(cfg.headerLinks) && cfg.headerLinks.length ? cfg.headerLinks : cfg.links;
+            var fLinks = Array.isArray(cfg.footerLinks) && cfg.footerLinks.length ? cfg.footerLinks : cfg.links;
+            renderLinkEditor(headerEl, hLinks);
+            renderLinkEditor(footerEl, fLinks);
           })
           .catch(function () {});
       }
+
+      var btnAddHeaderLink = document.getElementById('btnAddHeaderLink');
+      var btnAddFooterLink = document.getElementById('btnAddFooterLink');
+      if (btnAddHeaderLink) {
+        btnAddHeaderLink.addEventListener('click', function () {
+          var c = document.getElementById('headerLinksEditor');
+          if (!c) return;
+          c.insertAdjacentHTML('beforeend', '<div class="link-row"><input type="text" class="link-label" placeholder="Label"><input type="text" class="link-url" placeholder="/path"><button type="button" class="btn btn-ghost link-remove" style="padding:6px 10px;">Remove</button></div>');
+          var row = c.lastElementChild;
+          if (row) {
+            row.querySelector('.link-remove').addEventListener('click', function () { row.remove(); });
+          }
+        });
+      }
+      if (btnAddFooterLink) {
+        btnAddFooterLink.addEventListener('click', function () {
+          var c = document.getElementById('footerLinksEditor');
+          if (!c) return;
+          c.insertAdjacentHTML('beforeend', '<div class="link-row"><input type="text" class="link-label" placeholder="Label"><input type="text" class="link-url" placeholder="/path"><button type="button" class="btn btn-ghost link-remove" style="padding:6px 10px;">Remove</button></div>');
+          var row = c.lastElementChild;
+          if (row) {
+            row.querySelector('.link-remove').addEventListener('click', function () { row.remove(); });
+          }
+        });
+      }
+
+      var instapayRefresh = document.getElementById('instapayRefresh');
+      var instapayFilter = document.getElementById('instapayFilterStatus');
+      if (instapayRefresh) instapayRefresh.addEventListener('click', loadInstapayBookings);
+      if (instapayFilter) instapayFilter.addEventListener('change', loadInstapayBookings);
 
       var footerForm = document.getElementById('footerForm');
       if (footerForm) {
         footerForm.addEventListener('submit', function (ev) {
           ev.preventDefault();
           var copyright = document.getElementById('footerCopyright');
-          var instagramUrl = document.getElementById('footerInstagramUrl');
-          var instagramLabel = document.getElementById('footerInstagramLabel');
           var msg = document.getElementById('footerFormMessage');
           var btn = document.getElementById('btnSaveFooter');
+          var headerLinks = collectLinkEditor(document.getElementById('headerLinksEditor'));
+          var footerLinks = collectLinkEditor(document.getElementById('footerLinksEditor'));
           var body = {
-            copyright: copyright && copyright.value.trim() || '© BLOCK',
-            instagramUrl: instagramUrl && instagramUrl.value.trim() || '',
-            instagramLabel: instagramLabel && instagramLabel.value.trim() || 'Instagram'
+            copyright: (copyright && copyright.value.trim()) || '© BLOCK',
+            socialLinks: collectSocialLinksFromAdmin(),
+            links: headerLinks.length ? headerLinks : footerLinks,
+            headerLinks: headerLinks,
+            footerLinks: footerLinks,
           };
           btn.disabled = true;
           if (msg) msg.textContent = '';
           api('/api/admin/site-config', {
             method: 'PUT',
-            body: JSON.stringify(body)
-          }).then(function (r) { return r.json(); }).then(function (data) {
-            if (data && data.error) {
-              if (msg) { msg.textContent = data.error; msg.className = 'message show error'; }
-            } else {
-              if (msg) { msg.textContent = 'Footer saved.'; msg.className = 'message show success'; }
-            }
-          }).catch(function () {
-            if (msg) { msg.textContent = 'Could not save.'; msg.className = 'message show error'; }
-          }).finally(function () {
-            btn.disabled = false;
-          });
+            body: JSON.stringify(body),
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              if (data && data.error) {
+                if (msg) { msg.textContent = data.error; msg.className = 'message show error'; }
+              } else {
+                if (msg) { msg.textContent = 'Site chrome saved.'; msg.className = 'message show success'; }
+              }
+            })
+            .catch(function () {
+              if (msg) { msg.textContent = 'Could not save.'; msg.className = 'message show error'; }
+            })
+            .finally(function () {
+              btn.disabled = false;
+            });
         });
       }
 
       // ----- Scanner profiles (create + list + history) -----
+      var SCANNER_PUBLIC_BASE_KEY = 'block_events_scanner_public_base';
+
+      function getScannerLinksBase() {
+        var inp = document.getElementById('scannerPublicBaseUrl');
+        var v = inp && inp.value ? inp.value.trim().replace(/\/$/, '') : '';
+        if (v) return v;
+        return window.location.origin || '';
+      }
+
+      function initScannerPublicBaseField() {
+        var inp = document.getElementById('scannerPublicBaseUrl');
+        if (!inp || inp.dataset.bound === '1') return;
+        inp.dataset.bound = '1';
+        try {
+          var s = localStorage.getItem(SCANNER_PUBLIC_BASE_KEY);
+          if (s) inp.value = s;
+        } catch (e) {}
+        inp.addEventListener('change', function () {
+          try {
+            localStorage.setItem(SCANNER_PUBLIC_BASE_KEY, inp.value.trim());
+          } catch (e2) {}
+        });
+      }
+
+      function loadScannerRequests() {
+        var listEl = document.getElementById('scannerRequestsList');
+        var emptyEl = document.getElementById('scannerRequestsEmpty');
+        if (!listEl) return;
+        api('/api/admin/scanner-requests')
+          .then(function (r) {
+            return r.json().then(function (data) {
+              return { ok: r.ok, status: r.status, data: data };
+            }).catch(function () {
+              return { ok: r.ok, status: r.status, data: null };
+            });
+          })
+          .then(function (resp) {
+            if (!resp.ok || resp.data == null) {
+              if (emptyEl) emptyEl.style.display = 'none';
+              var msg = (resp.data && resp.data.error) ? resp.data.error : ('HTTP ' + (resp.status || '') + ' — check admin key and redeploy latest server.');
+              listEl.innerHTML = '<div class="small" style="color:#fecaca;">' + escapeHtml(msg) + '</div>';
+              return;
+            }
+            var rows = resp.data;
+            if (!Array.isArray(rows)) {
+              if (emptyEl) emptyEl.style.display = 'none';
+              listEl.innerHTML = '<div class="small" style="color:#fecaca;">' + escapeHtml(rows.error || 'Could not load requests.') + '</div>';
+              return;
+            }
+            if (!rows.length) {
+              listEl.innerHTML = '';
+              if (emptyEl) emptyEl.style.display = 'block';
+              return;
+            }
+            if (emptyEl) emptyEl.style.display = 'none';
+            listEl.innerHTML = rows.map(function (q) {
+              var t = q.createdAt ? new Date(q.createdAt).toLocaleString() : '';
+              return '<div style="border:1px solid var(--border); border-radius:12px; padding:0.75rem; background:#141418; margin-bottom:0.6rem;">' +
+                '<div style="font-weight:1000;">' + escapeHtml(q.requestedName || '') + '</div>' +
+                '<div class="small" style="color:var(--muted); margin-top:0.25rem;">Slot: ' + escapeHtml(q.scannerName || q.scannerId || '') + '</div>' +
+                '<div class="small" style="color:var(--muted); margin-top:0.15rem;">' + escapeHtml(t) + '</div>' +
+                '<div style="display:flex; gap:0.5rem; margin-top:0.65rem; flex-wrap:wrap;">' +
+                  '<button type="button" class="btn btn-primary" data-approve-req="' + escapeHtml(q.id) + '">Approve</button>' +
+                  '<button type="button" class="btn btn-secondary" data-reject-req="' + escapeHtml(q.id) + '" style="background:transparent;border:1px solid var(--border);color:var(--text);">Reject</button>' +
+                '</div></div>';
+            }).join('');
+
+            listEl.querySelectorAll('[data-approve-req]').forEach(function (btn) {
+              btn.addEventListener('click', function () {
+                var id = btn.getAttribute('data-approve-req');
+                api('/api/admin/scanner-requests/' + encodeURIComponent(id) + '/approve', { method: 'POST', body: '{}' })
+                  .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+                  .then(function (resp) {
+                    if (!resp.ok) { window.alert((resp.data && resp.data.error) ? resp.data.error : 'Approve failed'); return; }
+                    loadScannerRequests();
+                  })
+                  .catch(function () { window.alert('Approve failed'); });
+              });
+            });
+            listEl.querySelectorAll('[data-reject-req]').forEach(function (btn) {
+              btn.addEventListener('click', function () {
+                var id = btn.getAttribute('data-reject-req');
+                api('/api/admin/scanner-requests/' + encodeURIComponent(id) + '/reject', { method: 'POST', body: '{}' })
+                  .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+                  .then(function (resp) {
+                    if (!resp.ok) { window.alert((resp.data && resp.data.error) ? resp.data.error : 'Reject failed'); return; }
+                    loadScannerRequests();
+                  })
+                  .catch(function () { window.alert('Reject failed'); });
+              });
+            });
+          })
+          .catch(function () {
+            if (emptyEl) emptyEl.style.display = 'none';
+            listEl.innerHTML = '<div class="small" style="color:#fecaca;">Failed to load requests.</div>';
+          });
+      }
+
       function loadScanners() {
+        initScannerPublicBaseField();
         var listEl = document.getElementById('scannersList');
         if (!listEl) return;
         listEl.innerHTML = '<div class="small" style="color:var(--muted); padding:1rem;">Loading…</div>';
 
         api('/api/admin/scanners')
-          .then(function (r) { return r.json(); })
-          .then(function (scanners) {
-            if (!Array.isArray(scanners) || !scanners.length) {
-              listEl.innerHTML = '<div class="small" style="color:var(--muted); padding:1rem;">No scanners yet.</div>';
+          .then(function (r) {
+            return r.json().then(function (data) {
+              return { ok: r.ok, status: r.status, data: data };
+            }).catch(function () {
+              return { ok: r.ok, status: r.status, data: null };
+            });
+          })
+          .then(function (resp) {
+            if (!resp.ok || resp.data == null) {
+              var msg = (resp.data && resp.data.error) ? resp.data.error : ('HTTP ' + (resp.status || '') + ' — check admin key and redeploy latest server.');
+              listEl.innerHTML = '<div class="small" style="color:#fecaca; padding:1rem;">' + escapeHtml(msg) + '</div>';
+              return;
+            }
+            var scanners = resp.data;
+            if (!Array.isArray(scanners)) {
+              listEl.innerHTML = '<div class="small" style="color:#fecaca; padding:1rem;">' + escapeHtml(scanners.error || 'Could not load scanners. Check admin key and Supabase.') + '</div>';
+              return;
+            }
+            if (!scanners.length) {
+              listEl.innerHTML = '<div class="small" style="color:var(--muted); padding:1rem;">No scanner slots yet. Create one on the left (max 50).</div>';
               return;
             }
 
@@ -1628,7 +2879,7 @@
               var onlineTxt = s.online ? 'Online' : 'Offline';
               var onlineColor = s.online ? '#22c55e' : '#8888a0';
               var last = s.lastScan ? ('Last: ' + new Date(s.lastScan.at).toLocaleTimeString() + ' (' + (s.lastScan.status || '') + ')') : 'No scans yet';
-              var openUrl = (window.location.origin || 'http://localhost:3001') + '/scan/' + encodeURIComponent(s.id);
+              var openUrl = getScannerLinksBase() + '/scan/' + encodeURIComponent(s.id);
 
               return '<div style="border:1px solid var(--border); border-radius:14px; padding:0.9rem; background:#0f0f12; margin-bottom:0.75rem;">' +
                 '<div style="display:flex; justify-content:space-between; gap:0.75rem; align-items:flex-start;">' +
@@ -1643,7 +2894,12 @@
                 '</div>' +
                 '<div style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center; margin-top:0.75rem;">' +
                   '<a class="btn btn-secondary" target="_blank" rel="noopener" href="' + escapeHtml(openUrl) + '" style="text-decoration:none; display:inline-flex; align-items:center;">Open scanner</a>' +
+                  '<button type="button" class="btn btn-secondary" data-copy-scanner="' + escapeHtml(s.id) + '" style="padding:10px 12px;">Copy link</button>' +
                   '<button type="button" class="btn btn-primary" data-scanner-history="' + escapeHtml(s.id) + '" style="padding:10px 12px;">History</button>' +
+                  '<button type="button" class="btn btn-danger btn-delete-scanner" data-delete-scanner="' + escapeAttrib(s.id) + '" data-delete-scanner-name="' + escapeAttrib(s.name || '') + '" title="Delete scanner slot" style="padding:10px 12px; display:inline-flex; align-items:center; gap:0.35rem; margin-left:auto;">' +
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>' +
+                    '<span>Delete</span>' +
+                  '</button>' +
                 '</div>' +
               '</div>';
             }).join('');
@@ -1651,6 +2907,81 @@
             listEl.querySelectorAll('button[data-scanner-history]').forEach(function (btn) {
               btn.addEventListener('click', function () {
                 openScannerHistory(btn.getAttribute('data-scanner-history') || '');
+              });
+            });
+
+            listEl.querySelectorAll('button[data-copy-scanner]').forEach(function (btn) {
+              btn.addEventListener('click', function () {
+                var id = btn.getAttribute('data-copy-scanner') || '';
+                var url = getScannerLinksBase() + '/scan/' + encodeURIComponent(id);
+                function okMsg() {
+                  var prev = btn.textContent;
+                  btn.textContent = 'Copied!';
+                  setTimeout(function () { btn.textContent = prev; }, 1600);
+                }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                  navigator.clipboard.writeText(url).then(okMsg).catch(function () {
+                    window.prompt('Copy scanner link:', url);
+                  });
+                } else {
+                  window.prompt('Copy scanner link:', url);
+                }
+              });
+            });
+
+            listEl.querySelectorAll('button.btn-delete-scanner').forEach(function (btn) {
+              btn.addEventListener('click', function () {
+                var sid = btn.getAttribute('data-delete-scanner') || '';
+                var sname = btn.getAttribute('data-delete-scanner-name') || 'this slot';
+                if (!sid) return;
+                if (
+                  !confirm(
+                    'Delete scanner "' +
+                      sname +
+                      '"?\n\nApproved devices and pending requests for this slot will be removed. Old scan log rows stay in the database but are no longer tied to this profile.'
+                  )
+                ) {
+                  return;
+                }
+                btn.disabled = true;
+                api('/api/admin/scanners/' + encodeURIComponent(sid), { method: 'DELETE' })
+                  .then(function (r) {
+                    var status = r.status;
+                    return r.text().then(function (text) {
+                      if (!text || !String(text).trim()) {
+                        return {
+                          ok: r.ok,
+                          data: { error: 'Empty response (HTTP ' + status + '). Restart the server after updating.' },
+                        };
+                      }
+                      try {
+                        return { ok: r.ok, data: JSON.parse(text) };
+                      } catch (e) {
+                        return {
+                          ok: false,
+                          data: {
+                            error: 'Invalid JSON from server (HTTP ' + status + ').',
+                            details: String(text).replace(/\s+/g, ' ').trim().slice(0, 200),
+                          },
+                        };
+                      }
+                    });
+                  })
+                  .then(function (out) {
+                    if (!out.ok || (out.data && out.data.error)) {
+                      var msg = (out.data && out.data.error) || 'Could not delete scanner.';
+                      var extra = out.data && (out.data.details || out.data.hint) ? '\n\n' + String(out.data.details || out.data.hint) : '';
+                      window.alert(msg + extra);
+                      btn.disabled = false;
+                      return;
+                    }
+                    loadScanners();
+                    loadScannerRequests();
+                  })
+                  .catch(function () {
+                    window.alert('Network error while deleting scanner.');
+                    btn.disabled = false;
+                  });
               });
             });
           })
@@ -1682,7 +3013,8 @@
 
             deviceSel.innerHTML = '<option value="">All devices</option>' +
               (activeDevicesForHistory || []).map(function (d) {
-                return '<option value="' + escapeHtml(d.deviceId || '') + '">' + escapeHtml(d.deviceId || '') + '</option>';
+                var label = (d.operatorName ? (escapeHtml(d.operatorName) + ' — ') : '') + escapeHtml(d.deviceId || '');
+                return '<option value="' + escapeHtml(d.deviceId || '') + '">' + label + '</option>';
               }).join('');
 
             modal.style.display = 'flex';
@@ -1728,6 +3060,7 @@
                 '<div class="small" style="color:var(--muted); margin-top:0.35rem;">Event: ' + escapeHtml(l.eventName || '') + '</div>' +
                 '<div class="small" style="color:var(--muted); margin-top:0.15rem;">User: ' + escapeHtml(l.userName || '') + ' ' + (l.userEmail ? ('(' + l.userEmail + ')') : '') + '</div>' +
                 '<div class="small" style="color:var(--muted); margin-top:0.15rem;">Ticket: ' + (l.ticketNumber != null ? ('#' + escapeHtml(l.ticketNumber) + ' ') : '') + escapeHtml(l.ticketId || '') + '</div>' +
+                '<div class="small" style="color:var(--muted); margin-top:0.15rem;">Staff (scanner device): ' + escapeHtml(l.operatorName || '—') + '</div>' +
                 '<div class="small" style="color:var(--muted); margin-top:0.15rem;">Device: ' + escapeHtml(l.deviceId || '') + '</div>' +
               '</div>';
             }).join('');
@@ -1757,12 +3090,11 @@
       if (btnCreateScanner) {
         btnCreateScanner.addEventListener('click', function () {
           var name = document.getElementById('scannerNameInput') ? document.getElementById('scannerNameInput').value.trim() : '';
-          var password = document.getElementById('scannerPasswordInput') ? document.getElementById('scannerPasswordInput').value : '';
           var active = document.getElementById('scannerActiveInput') ? document.getElementById('scannerActiveInput').checked : true;
           var msg = document.getElementById('scannerCreateMessage');
 
-          if (!name || !password) {
-            if (msg) { msg.textContent = 'Name and password are required.'; msg.style.display = 'block'; msg.className = 'message show error'; }
+          if (!name) {
+            if (msg) { msg.textContent = 'Slot name is required.'; msg.style.display = 'block'; msg.className = 'message show error'; }
             return;
           }
 
@@ -1772,7 +3104,7 @@
 
           api('/api/admin/scanners', {
             method: 'POST',
-            body: JSON.stringify({ name: name, password: password, active: active })
+            body: JSON.stringify({ name: name, active: active })
           })
             .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
             .then(function (resp) {
@@ -1780,7 +3112,7 @@
                 if (msg) { msg.textContent = (resp.data && resp.data.error) ? resp.data.error : 'Could not create scanner.'; msg.style.display = 'block'; msg.className = 'message show error'; }
                 return;
               }
-              if (msg) { msg.textContent = 'Scanner created.'; msg.style.display = 'block'; msg.className = 'message show success'; }
+              if (msg) { msg.textContent = 'Scanner slot created. Copy its link and send to staff.'; msg.style.display = 'block'; msg.className = 'message show success'; }
               loadScanners();
             })
             .catch(function () {

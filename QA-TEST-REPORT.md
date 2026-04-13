@@ -206,3 +206,47 @@ Then:
 2. Deploy to Vercel (CLI: `vercel` or connect Git)
 3. Set `BASE_URL` and all env vars in Vercel dashboard
 4. Test scanner on production URL (HTTPS)
+
+---
+
+## 10. Pre-launch audit (2026-04-13) — code + Supabase
+
+### Schema / SQL (run or verify in Supabase)
+| Item | Status |
+|------|--------|
+| `pgcrypto` extension | Required once; duplicate `CREATE EXTENSION` lines removed from `supabase-schema.sql` |
+| `app_users`: `phone`, `birthdate`, `gender`, password reset columns | Covered by `ALTER TABLE ... IF NOT EXISTS` in schema — safe to re-run |
+| `bookings.status` | Column is `text` (no enum). Server uses `paid`, `pending_payment`, `confirmed`, etc. — **no SQL enum change needed** |
+| `bookings` index | Added `bookings_user_status_idx (user_id, status)` — also shipped in **`supabase-production-deltas.sql`** for paste-into-SQL-Editor upgrades |
+| `events.extra` (jsonb) | Already in schema; server reads/writes it |
+| `country-dial-codes.json` | Static file under `public/` — ensure deploy includes it (signup international phone) |
+
+### Environment (production)
+| Variable | Notes |
+|----------|--------|
+| `JWT_SECRET` | **Must** be set in production (server warns if empty) |
+| `BASE_URL` | Must match public HTTPS URL (QR links, OAuth redirect) |
+| `GOOGLE_OAUTH_REDIRECT_URI` | Must exactly match URI configured in Google Cloud Console |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only; never expose to browser |
+
+### Code sanity
+
+| Check | Result |
+|-------|--------|
+| `node --check server.js` | Passes |
+| `/api/auth/profile` | Uses `requireAuth` → returns 503 if Supabase unset |
+| Google new users | Random `password_hash` stored (password login unusable until reset — documented in code) |
+| Signup `phone` | E.164 validated server-side (8–15 digits after `+`) |
+
+### Manual smoke tests before go-live
+1. **Auth:** email signup (with/without phone), login, forgot/reset password, Google OAuth (production redirect).
+2. **Events:** list, detail, add to cart, checkout (free + paid/InstaPay if used).
+3. **My tickets / ticket page:** QR loads; resend email if mail configured.
+4. **Admin:** login with `ADMIN_API_KEY`; create/edit event; list attendees.
+5. **Scanner:** `/scan` on **HTTPS**; approve pending device if using approval flow; scan valid → success; repeat → already used.
+6. **Blocked users:** block email/phone in admin; confirm registration rejected.
+
+### Known gaps / follow-ups (not blockers if you accept risk)
+- Legacy `PATCH /api/profile` updates **`attendees`** by email (not `app_users`). The in-app profile UI uses **`/api/auth/profile`** (updates `app_users`). If you still call the old endpoint, behaviour may diverge.
+- No automated `npm test` in repo — rely on manual checklist above.
+- RLS: tables are accessed with **service role** from Node; RLS policies on these tables are optional for this architecture.

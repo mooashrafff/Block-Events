@@ -1,5 +1,6 @@
 node_modules/
 .env
+public/uploads/
 *.json
 !package.json
 !package-lock.json

@@ -1,0 +1,20 @@
+/**
+ * BLOCK brand tokens — primary dark + electric blue accent.
+ * Link after fonts; before page-specific styles. Override per-page if needed.
+ */
+:root {
+  --block-black: #0b0b0b;
+  --block-black-soft: #121212;
+  --block-card: #1a1a1a;
+  --block-border: #2a2a2a;
+  --block-text: #ffffff;
+  --block-muted: #888888;
+  --block-section-gray: #e5e5e5;
+
+  --accent: #0066ff;
+  --accent-hover: #3385ff;
+  --accent-mid: #1a75ff;
+  --accent-purple: #7c3aed;
+  --accent-soft: rgba(0, 102, 255, 0.16);
+  --accent-glow: rgba(0, 102, 255, 0.35);
+}

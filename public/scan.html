@@ -64,12 +64,12 @@
       padding: 0.6rem 1rem;
       border: none;
       border-radius: 8px;
-      background: #6366f1;
+      background: #0066ff;
       color: #fff;
       font-weight: 600;
       cursor: pointer;
     }
-    .manual-row button:hover { background: #818cf8; }
+    .manual-row button:hover { background: #7c3aed; }
     .camera-placeholder {
       width: 100%;
       max-width: 320px;
@@ -87,24 +87,184 @@
     .btn-camera {
       padding: 0.75rem 1.5rem;
       font-size: 1rem;
-      background: #6366f1;
+      background: #0066ff;
       color: #fff;
       border: none;
       border-radius: 8px;
       cursor: pointer;
       font-weight: 600;
     }
-    .btn-camera:hover { background: #818cf8; }
+    .btn-camera:hover { background: #3385ff; }
     .btn-camera:disabled { opacity: 0.7; cursor: not-allowed; }
 
     /* Server-side history is blur-hidden; eye reveals it for 10 seconds. */
     #history.blurred { filter: blur(7px); opacity: 0.35; }
+
+    #scannerSessionBar {
+      width: 100%;
+      max-width: 420px;
+      margin-bottom: 0.75rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: 12px;
+      border: 1px solid #25252d;
+      background: #141418;
+      text-align: left;
+      font-size: 0.88rem;
+      display: none;
+    }
+    #scannerSessionBar .row1 { font-weight: 800; color: #e8e8ed; }
+    #scannerSessionBar .row2 { color: #8888a0; margin-top: 0.2rem; font-size: 0.82rem; }
+    #scannerSessionBar button {
+      margin-top: 0.45rem;
+      font-size: 0.78rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 8px;
+      border: 1px solid #35354a;
+      background: transparent;
+      color: #a5a5c0;
+      cursor: pointer;
+    }
+
+    #scanGate {
+      width: 100%;
+      max-width: 420px;
+      margin-bottom: 1rem;
+      padding: 1rem 1.1rem;
+      border-radius: 14px;
+      border: 1px solid #2a2a35;
+      background: #16161c;
+      text-align: left;
+    }
+    #scanGate h2 { font-size: 1rem; margin-bottom: 0.4rem; }
+    #scanGate p { color: #8888a0; font-size: 0.88rem; line-height: 1.45; margin-bottom: 0.65rem; }
+    #scanGate input {
+      width: 100%;
+      padding: 0.65rem 0.75rem;
+      border-radius: 10px;
+      border: 1px solid #25252d;
+      background: #0f0f12;
+      color: #e8e8ed;
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+    }
+    #scanGate .gate-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.35rem; }
+    #scanGate button {
+      padding: 0.55rem 1rem;
+      border-radius: 10px;
+      border: none;
+      background: #0066ff;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    #scanGate button.secondary { background: #25252d; color: #e8e8ed; }
+
+    #scannerLoginOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 1rem;
+    }
+    #scannerLoginOverlay.show { display: flex; }
+    #scannerLoginCard {
+      width: 100%;
+      max-width: 380px;
+      background: #141418;
+      border: 1px solid #2a2a35;
+      border-radius: 16px;
+      padding: 1.25rem 1.35rem;
+      text-align: left;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.45);
+    }
+    #scannerLoginCard h2 { font-size: 1.1rem; margin-bottom: 0.35rem; }
+    #scannerLoginCard .profile { color: #7cb3ff; font-weight: 800; margin-bottom: 0.75rem; font-size: 0.95rem; }
+    #scannerLoginCard label { display: block; font-size: 0.8rem; color: #8888a0; margin-bottom: 0.3rem; margin-top: 0.55rem; }
+    #scannerLoginCard input {
+      width: 100%;
+      padding: 0.65rem 0.75rem;
+      border-radius: 10px;
+      border: 1px solid #25252d;
+      background: #0f0f12;
+      color: #e8e8ed;
+      font-size: 1rem;
+    }
+    #scannerLoginCard .err { color: #fecaca; font-size: 0.85rem; margin-top: 0.5rem; min-height: 1.2rem; }
+    #scannerLoginCard .actions { margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end; }
+    #scannerLoginCard .actions button {
+      padding: 0.65rem 1.1rem;
+      border-radius: 10px;
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    #btnScannerLoginCancel { background: #25252d; color: #e8e8ed; }
+    #btnScannerLoginSubmit { background: #0066ff; color: #fff; }
+
+    #invalidLinkBanner {
+      display: none;
+      width: 100%;
+      max-width: 420px;
+      margin-bottom: 0.75rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: 12px;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fecaca;
+      font-size: 0.88rem;
+      text-align: left;
+    }
   </style>
 </head>
 <body>
+  <div id="invalidLinkBanner"></div>
+  <div id="scanGate" style="display:none;">
+    <h2>Scanner profile link required</h2>
+    <p>Each scanner should open a <strong>personal link</strong> from the admin dashboard (it looks like <code style="color:#c4b5fd;">yoursite.com/scan/‹id›</code>). The short <code>/scan</code> URL alone is only for legacy setup.</p>
+    <p style="margin-bottom:0.5rem;">Paste the full link or just the ID:</p>
+    <input type="text" id="gatePasteInput" placeholder="https://…vercel.app/scan/xxxxxxxx-xxxx-…" autocomplete="off" />
+    <div class="gate-actions">
+      <button type="button" id="btnGateContinue">Continue</button>
+      <button type="button" class="secondary" id="btnGateLegacy">Use legacy scanner key</button>
+    </div>
+  </div>
+
+  <div id="scannerSessionBar">
+    <div class="row1" id="sessionBarLine1">—</div>
+    <div class="row2" id="sessionBarLine2">—</div>
+    <button type="button" id="btnScannerSignOut">Switch staff / sign out</button>
+  </div>
+
+  <div id="scannerLoginOverlay" aria-hidden="true">
+    <div id="scannerLoginCard">
+      <h2>Activate scanner</h2>
+      <div class="profile" id="scannerLoginProfile">Profile: —</div>
+      <div id="scannerActivationWaiting" style="display:none;">
+        <p style="color:#c4b5fd;font-size:0.92rem;line-height:1.5;margin-bottom:0.85rem;">
+          <strong>Waiting for admin approval.</strong><br>
+          Your supervisor must open <strong>Admin → Scanner Profiles</strong> and approve this device. This screen updates automatically.
+        </p>
+        <p style="color:#8888a0;font-size:0.85rem;">Checking every few seconds…</p>
+      </div>
+      <div id="scannerActivationForm">
+        <p style="color:#8888a0;font-size:0.85rem;margin-bottom:0.65rem;line-height:1.45;">Enter <strong>your name</strong> only. No password — the admin approves you once from the dashboard.</p>
+        <label for="scannerLoginStaff">Your full name *</label>
+        <input type="text" id="scannerLoginStaff" placeholder="e.g. Ahmed Hassan" autocomplete="name" />
+        <div class="err" id="scannerLoginErr"></div>
+        <div class="actions">
+          <button type="button" id="btnScannerLoginCancel">Cancel</button>
+          <button type="button" id="btnScannerLoginSubmit">Request access</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <img src="/block-logo.png" alt="BLOCK" class="logo">
   <h1>Ticket Scanner</h1>
-  <p class="sub">Point the camera at the attendee’s QR code</p>
+  <p class="sub" id="scannerSubtext">Point the camera at the attendee’s QR code</p>
   <div id="cameraPlaceholder" class="camera-placeholder">
     <p>Camera access is required to scan QR codes.<br>Click the button below to start.</p>
     <button type="button" class="btn-camera" id="btnStartCamera">Start camera</button>
@@ -287,6 +447,239 @@
       return newId;
     }
 
+    var publicProfileName = '';
+    var currentLoginScannerId = '';
+    var loginPromiseResolve = null;
+    var accessPollTimer = null;
+
+    function stopAccessPolling() {
+      if (accessPollTimer) {
+        clearInterval(accessPollTimer);
+        accessPollTimer = null;
+      }
+    }
+
+    function setActivationUI(phase) {
+      var formBlock = document.getElementById('scannerActivationForm');
+      var waitBlock = document.getElementById('scannerActivationWaiting');
+      if (formBlock) formBlock.style.display = phase === 'pending' ? 'none' : 'block';
+      if (waitBlock) waitBlock.style.display = phase === 'pending' ? 'block' : 'none';
+    }
+
+    async function tryFinalizeActivation(scannerId) {
+      var deviceId = getDeviceId();
+      var stRes = await fetch(
+        '/api/scanner/access-status?' +
+          new URLSearchParams({ scannerId: scannerId, deviceId: deviceId })
+      ).catch(function () {
+        return null;
+      });
+      var st = stRes ? await stRes.json().catch(function () {
+        return {};
+      }) : {};
+      if (st.phase === 'ready' && st.approvalToken) {
+        var fin = await fetch('/api/scanner/complete-activation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            scannerId: scannerId,
+            deviceId: deviceId,
+            approvalToken: st.approvalToken,
+          }),
+        }).catch(function () {
+          return null;
+        });
+        var fd = fin ? await fin.json().catch(function () {
+          return {};
+        }) : {};
+        if (fin && fin.ok && fd.ok) {
+          stopAccessPolling();
+          setActivationUI('form');
+          var meR = await fetch('/api/scanner/me').catch(function () {
+            return null;
+          });
+          var me = meR ? await meR.json().catch(function () {
+            return {};
+          }) : {};
+          updateSessionBar(me);
+          ensureScannerPing();
+          closeLoginOverlay(true);
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function startAccessPolling(scannerId) {
+      stopAccessPolling();
+      accessPollTimer = setInterval(function () {
+        tryFinalizeActivation(scannerId).then(function (finalized) {
+          if (finalized) return;
+          var deviceId = getDeviceId();
+          fetch(
+            '/api/scanner/access-status?' +
+              new URLSearchParams({ scannerId: scannerId, deviceId: deviceId })
+          )
+            .then(function (r) {
+              return r.json();
+            })
+            .then(function (st) {
+              if (st.phase === 'idle') {
+                stopAccessPolling();
+                setActivationUI('form');
+                var errEl = document.getElementById('scannerLoginErr');
+                if (errEl) {
+                  errEl.textContent =
+                    'This request was not approved (or was rejected). Enter your name and request again.';
+                }
+              }
+            })
+            .catch(function () {});
+        });
+      }, 2500);
+    }
+
+    function parseScannerIdFromPaste(raw) {
+      var t = (raw || '').trim();
+      if (!t) return '';
+      var m = t.match(/\/scan\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i);
+      if (m) return m[1];
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(t)) return t;
+      return '';
+    }
+
+    function setInvalidLink(msg) {
+      var b = document.getElementById('invalidLinkBanner');
+      if (!b) return;
+      if (!msg) {
+        b.style.display = 'none';
+        b.textContent = '';
+        return;
+      }
+      b.textContent = msg;
+      b.style.display = 'block';
+    }
+
+    function updateSessionBar(me) {
+      var bar = document.getElementById('scannerSessionBar');
+      var l1 = document.getElementById('sessionBarLine1');
+      var l2 = document.getElementById('sessionBarLine2');
+      if (!bar || !l1 || !l2) return;
+      if (me && me.ok && me.scanner) {
+        bar.style.display = 'block';
+        l1.textContent = 'Profile: ' + (me.scanner.name || '—');
+        l2.textContent = 'Signed in as: ' + (me.operatorName || '—');
+      } else {
+        bar.style.display = 'none';
+      }
+    }
+
+    function closeLoginOverlay(success) {
+      stopAccessPolling();
+      setActivationUI('form');
+      var ov = document.getElementById('scannerLoginOverlay');
+      if (ov) {
+        ov.classList.remove('show');
+        ov.setAttribute('aria-hidden', 'true');
+      }
+      var fn = loginPromiseResolve;
+      loginPromiseResolve = null;
+      if (fn) fn(!!success);
+    }
+
+    function openLoginOverlay(scannerId, profileLabel) {
+      return new Promise(function (resolve) {
+        loginPromiseResolve = resolve;
+        currentLoginScannerId = scannerId;
+        var ov = document.getElementById('scannerLoginOverlay');
+        var prof = document.getElementById('scannerLoginProfile');
+        var staff = document.getElementById('scannerLoginStaff');
+        var err = document.getElementById('scannerLoginErr');
+        if (err) err.textContent = '';
+        if (prof) prof.textContent = 'Profile: ' + (profileLabel || scannerId || '—');
+        var pref = '';
+        try {
+          pref = localStorage.getItem('scanner_staff_name_' + scannerId) || '';
+        } catch (e) {}
+        if (staff) staff.value = pref;
+        if (ov) {
+          ov.classList.add('show');
+          ov.setAttribute('aria-hidden', 'false');
+        }
+
+        (async function bootstrapActivation() {
+          var deviceId = getDeviceId();
+          var stRes = await fetch(
+            '/api/scanner/access-status?' +
+              new URLSearchParams({ scannerId: scannerId, deviceId: deviceId })
+          ).catch(function () {
+            return null;
+          });
+          var st = stRes ? await stRes.json().catch(function () {
+            return {};
+          }) : {};
+
+          if (st.phase === 'ready' && st.approvalToken) {
+            var done = await tryFinalizeActivation(scannerId);
+            if (done) return;
+          }
+
+          if (st.phase === 'pending') {
+            setActivationUI('pending');
+            startAccessPolling(scannerId);
+            return;
+          }
+
+          setActivationUI('form');
+          stopAccessPolling();
+          if (staff) {
+            setTimeout(function () {
+              try {
+                staff.focus();
+              } catch (e2) {}
+            }, 50);
+          }
+        })();
+      });
+    }
+
+    async function submitScannerAccessRequest() {
+      var scannerId = currentLoginScannerId;
+      var staffEl = document.getElementById('scannerLoginStaff');
+      var err = document.getElementById('scannerLoginErr');
+      var staff = staffEl ? staffEl.value.trim() : '';
+      if (!staff || staff.length < 2) {
+        if (err) err.textContent = 'Enter your name.';
+        return;
+      }
+      var deviceId = getDeviceId();
+      var reqRes = await fetch('/api/scanner/request-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scannerId: scannerId,
+          deviceId: deviceId,
+          requestedName: staff,
+        }),
+      }).catch(function () {
+        return null;
+      });
+      var data = reqRes ? await reqRes.json().catch(function () {
+        return {};
+      }) : {};
+      if (!reqRes || !reqRes.ok) {
+        if (err) err.textContent = (data && data.error) ? data.error : 'Could not send request.';
+        return;
+      }
+      try {
+        localStorage.setItem('scanner_staff_name_' + scannerId, staff);
+      } catch (e) {}
+      if (err) err.textContent = '';
+      setActivationUI('pending');
+      startAccessPolling(scannerId);
+    }
+
     async function loadHistoryFromServer() {
       var limit = 25;
       var r = await fetch('/api/scanner/history?limit=' + encodeURIComponent(limit)).catch(() => null);
@@ -399,8 +792,6 @@
           return;
         }
 
-        var deviceId = getDeviceId();
-
         var r = await fetch('/api/scanner/scan-ticket', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -410,20 +801,9 @@
         var data = await r.json().catch(() => ({}));
 
         if (r.status === 401) {
-          var password = prompt('Scanner password required (enter it once).');
-          if (!password) {
-            setResult('Unauthorized', 'error');
-            return;
-          }
-
-          var loginRes = await fetch('/api/scanner/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ scannerId: scannerId, password: password, deviceId: deviceId })
-          }).catch(() => null);
-
-          if (!loginRes || !loginRes.ok) {
-            setResult('Login failed', 'error');
+          var signedIn = await openLoginOverlay(scannerId, publicProfileName || scannerId);
+          if (!signedIn) {
+            setResult('Sign in required', 'error');
             return;
           }
           return doScan(ticketId, fromScan);
@@ -527,15 +907,103 @@
     }
     setHistoryBlurred(true);
 
-    // If scanner is already logged in (session cookie exists), mark them online immediately.
-    (async function initScannerOnline() {
-      try {
-        var r = await fetch('/api/scanner/me', { method: 'GET' }).catch(function () { return null; });
-        if (r && r.ok) {
-          ensureScannerPing();
+    var btnLoginSubmit = document.getElementById('btnScannerLoginSubmit');
+    var btnLoginCancel = document.getElementById('btnScannerLoginCancel');
+    if (btnLoginSubmit) {
+      btnLoginSubmit.addEventListener('click', function () {
+        submitScannerAccessRequest();
+      });
+    }
+    if (btnLoginCancel) {
+      btnLoginCancel.addEventListener('click', function () {
+        closeLoginOverlay(false);
+      });
+    }
+    var staffNameEl = document.getElementById('scannerLoginStaff');
+    if (staffNameEl) {
+      staffNameEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') submitScannerAccessRequest();
+      });
+    }
+
+    var btnOut = document.getElementById('btnScannerSignOut');
+    if (btnOut) {
+      btnOut.addEventListener('click', async function () {
+        stopAccessPolling();
+        try {
+          await fetch('/api/scanner/logout', { method: 'POST' });
+        } catch (e) {}
+        updateSessionBar(null);
+        var sid = getScannerIdFromLocation();
+        if (sid) await openLoginOverlay(sid, publicProfileName || sid);
+      });
+    }
+
+    var btnGateGo = document.getElementById('btnGateContinue');
+    var btnGateLeg = document.getElementById('btnGateLegacy');
+    if (btnGateGo) {
+      btnGateGo.addEventListener('click', function () {
+        var raw = document.getElementById('gatePasteInput') ? document.getElementById('gatePasteInput').value : '';
+        var id = parseScannerIdFromPaste(raw);
+        if (!id) {
+          window.alert('Could not find a scanner ID. Paste the full link from your supervisor or the UUID only.');
+          return;
         }
-      } catch (e) {}
-    })();
+        window.location.assign('/scan/' + encodeURIComponent(id));
+      });
+    }
+    if (btnGateLeg) {
+      btnGateLeg.addEventListener('click', function () {
+        var g = document.getElementById('scanGate');
+        if (g) g.style.display = 'none';
+      });
+    }
+
+    var sidInit = getScannerIdFromLocation();
+    if (!sidInit) {
+      var g0 = document.getElementById('scanGate');
+      if (g0) g0.style.display = 'block';
+    } else {
+      (async function initScannerProfileFlow() {
+        try {
+          setInvalidLink('');
+          var pr = await fetch(
+            '/api/scanner/public-info?scannerId=' + encodeURIComponent(sidInit)
+          ).catch(function () {
+            return null;
+          });
+          var pi = pr ? await pr.json().catch(function () {
+            return {};
+          }) : {};
+          if (!pr || !pr.ok || !pi.ok || !pi.scanner) {
+            setInvalidLink(
+              'This scanner link is invalid or inactive. Ask your supervisor for a new link from Admin → Scanner Profiles.'
+            );
+            return;
+          }
+          publicProfileName = pi.scanner.name || '';
+          var sub = document.getElementById('scannerSubtext');
+          if (sub) {
+            sub.textContent =
+              'Profile: ' +
+              publicProfileName +
+              ' — point the camera at the attendee’s QR code';
+          }
+          var meR = await fetch('/api/scanner/me', { method: 'GET' }).catch(function () {
+            return null;
+          });
+          if (meR && meR.ok) {
+            var me = await meR.json().catch(function () {
+              return {};
+            });
+            updateSessionBar(me);
+            ensureScannerPing();
+          } else {
+            await openLoginOverlay(sidInit, publicProfileName);
+          }
+        } catch (e) {}
+      })();
+    }
   </script>
 </body>
 </html>

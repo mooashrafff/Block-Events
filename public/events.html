@@ -6,7 +6,9 @@
   <title>Events – BLOCK</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/block-theme.css">
+  <link rel="stylesheet" href="/site-chrome.css">
   <script>
     (function() {
       var isFile = location.protocol === 'file:';
@@ -20,312 +22,540 @@
   </script>
   <style>
     :root {
-      --bg: #0a0a0c;
-      --card: #141418;
-      --border: #25252d;
-      --text: #e8e8ed;
-      --muted: #8888a0;
-      --accent: #6366f1;
-      --accent-hover: #818cf8;
-      --bar-bg: #ffffff;
-      --bar-text: #1a1a1a;
-      --bar-muted: #5a5a5a;
-      --search-bg: #f0f0f0;
+      --page-bg: #0b0b0b;
+      --panel: #1a1a1a;
+      --border: #2a2a2a;
+      --text: #ffffff;
+      --muted: #888888;
+      --accent: #0066ff;
+      --accent-hover: #3385ff;
+      --accent-purple: #7c3aed;
+      --accent-soft: rgba(0, 102, 255, 0.16);
+      --header-bar: #0066ff;
+      --header-end: #0048cc;
+      --banner-bg: #121212;
+      --cta: #0066ff;
+      --cta-hover: #7c3aed;
+      --danger: #f87171;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { overflow-x: hidden; width: 100%; }
     body {
       font-family: 'Outfit', system-ui, sans-serif;
-      background: var(--bg);
+      background: var(--page-bg);
       color: var(--text);
       min-height: 100vh;
-      width: 100%;
-      max-width: 100vw;
-      overflow-x: hidden;
       display: flex;
       flex-direction: column;
-      background-image: radial-gradient(ellipse 80% 40% at 50% -10%, rgba(99, 102, 241, 0.12), transparent);
     }
-    .top-bar-wrap { width: 100%; padding: 1rem clamp(0.75rem, 3vw, 1.25rem) 0; margin-bottom: 1.5rem; }
-    .top-bar {
-      width: 100%;
+    .tk-header {
+      background: linear-gradient(135deg, var(--header-bar), var(--header-end));
+      color: #fff;
+      box-shadow: 0 4px 28px rgba(0, 102, 255, 0.22);
+    }
+    .tk-header-inner {
       max-width: min(1400px, 96vw);
       margin: 0 auto;
-      background: var(--bar-bg);
-      border-radius: 16px;
-      padding: 0.75rem 1.25rem;
+      padding: 0.85rem clamp(0.75rem, 3vw, 1.5rem);
       display: flex;
       align-items: center;
-      gap: 1.5rem;
-      flex-wrap: wrap;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      justify-content: space-between;
+      gap: 1rem;
     }
-    .top-bar .logo { width: 110px; height: auto; flex-shrink: 0; }
-    .search-wrap { flex: 1; min-width: 180px; max-width: 360px; position: relative; }
-    .search-wrap svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--bar-muted); }
-    .search-wrap input {
-      width: 100%;
-      padding: 10px 12px 10px 40px;
-      font: inherit;
-      font-size: 0.95rem;
-      color: var(--bar-text);
-      background: var(--search-bg);
+    .tk-header-left { display: flex; align-items: center; gap: 0.65rem; }
+    .tk-menu-btn {
+      width: 42px; height: 42px;
       border: none;
-      border-radius: 12px;
-    }
-    .search-wrap input::placeholder { color: var(--bar-muted); }
-    .search-wrap input:focus { outline: none; }
-    .top-bar-nav { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; margin-left: auto; }
-    .top-bar-nav a { color: var(--bar-text); text-decoration: none; font-size: 0.95rem; font-weight: 500; }
-    .top-bar-nav a:hover { color: var(--accent); }
-    .top-bar-icons {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      border-radius: 10px;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.75rem;
-      flex-shrink: 0;
     }
-    .top-bar-icons a {
-      display: flex; align-items: center; justify-content: center;
-      width: clamp(36px, 9vw, 40px); height: clamp(36px, 9vw, 40px);
-      min-width: 36px; min-height: 36px;
-      border-radius: 10px;
-      color: var(--bar-text); text-decoration: none;
+    .tk-menu-btn:hover { background: rgba(255,255,255,0.2); }
+    .tk-header .logo { height: 32px; width: auto; max-width: 120px; filter: brightness(0) invert(1); }
+    .tk-header a.logo-link { display: flex; align-items: center; }
+    .tk-header-util { display: flex; flex-wrap: wrap; gap: 0.25rem; justify-content: flex-end; }
+    .tk-header-util a, .tk-header-util button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.65rem;
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #fff;
+      text-decoration: none;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
     }
-    .top-bar-icons a:hover { background: var(--search-bg); color: var(--accent); }
-    .top-bar-icons svg { width: clamp(18px, 4.5vw, 20px); height: clamp(18px, 4.5vw, 20px); }
+    .tk-header-util a:hover, .tk-header-util button:hover { background: rgba(255,255,255,0.15); }
+    .tk-util-hide-guest { display: none; }
+    body.has-session .tk-util-hide-guest { display: inline-flex; }
+    body.has-session .tk-util-show-guest { display: none !important; }
 
-    .page-main {
-      width: 100%;
+    .tk-subbar { background: var(--panel); border-bottom: 1px solid var(--border); }
+    .tk-subbar-inner {
       max-width: min(1400px, 96vw);
       margin: 0 auto;
-      padding: 0 clamp(0.75rem, 3vw, 1.25rem) 3rem;
-    }
-    .page-main-header {
-      margin-bottom: 1.5rem;
+      padding: 1rem clamp(0.75rem, 3vw, 1.5rem);
       display: flex;
-      align-items: baseline;
+      align-items: center;
       justify-content: space-between;
       gap: 1rem;
       flex-wrap: wrap;
     }
-    .page-main-header h1 { font-size: 1.6rem; }
-    .page-main-header .count { color: var(--muted); font-size: 0.9rem; }
-    .events-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
-      gap: 1.5rem;
-    }
-    .event-card {
-      background: var(--card);
-      border-radius: 14px;
-      border: 1px solid var(--border);
+    .tk-user-block { display: flex; align-items: center; gap: 0.85rem; }
+    .tk-avatar {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, var(--accent), var(--accent-hover));
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      flex-shrink: 0;
       overflow: hidden;
+    }
+    .tk-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .tk-user-text .welcome { font-size: 0.8rem; color: var(--muted); }
+    .tk-user-text .name { font-size: 1.05rem; font-weight: 700; }
+    .tk-user-text .member-id { font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem; }
+    .tk-main-nav { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+    .tk-nav-item {
       display: flex;
       flex-direction: column;
-      transition: border-color 0.2s, transform 0.2s;
-    }
-    .event-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-    .event-card img {
-      width: 100%;
-      max-width: 100%;
-      aspect-ratio: 16/9;
-      object-fit: cover;
-      background: var(--border);
-    }
-    .event-card-body {
-      padding: 1.25rem;
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-    }
-    .event-card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.35rem; }
-    .event-card-meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 0.4rem; }
-    .event-card-venue { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; }
-    .event-card a.btn-register {
-      margin-top: auto;
-      align-self: flex-start;
-      padding: 10px 18px;
-      font: inherit;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: white;
-      background: var(--accent);
-      border-radius: 10px;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.5rem 1rem;
+      min-width: 72px;
       text-decoration: none;
-    }
-    .event-card a.btn-register:hover { background: var(--accent-hover); }
-    .empty-msg { text-align: center; color: var(--muted); padding: 3rem 1.25rem; }
-    @media (max-width: 600px) {
-      .top-bar { padding: 0.6rem 1rem; gap: 0.6rem; }
-      .top-bar .logo { width: 90px; }
-      .search-wrap { flex: 1 1 100%; min-width: 100%; max-width: 100%; order: 1; }
-      .top-bar-nav { order: 2; flex: 1 1 100%; margin-left: 0; gap: 0.75rem; font-size: 0.85rem; }
-      .top-bar-nav a { font-size: 0.85rem; white-space: nowrap; }
-      .top-bar-icons { order: 0; margin-left: auto; }
-      .filter-bar { flex-direction: column; align-items: stretch; }
-      .filter-group select { min-width: 0; width: 100%; }
-    }
-
-    /* TicketsMarche-style filter bar */
-    .filter-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      align-items: flex-end;
-      margin-bottom: 2rem;
-      padding: 1.25rem;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-    }
-    .filter-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .filter-group label {
-      font-size: 0.85rem;
+      color: var(--muted);
+      font-size: 0.8rem;
       font-weight: 600;
+      border-radius: 12px;
+    }
+    .tk-nav-item svg { width: 24px; height: 24px; stroke-width: 1.75; }
+    .tk-nav-item:hover, .tk-nav-item.active { color: var(--accent); background: var(--accent-soft); }
+
+    .tk-banner {
+      background: var(--banner-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 0.55rem 1rem;
+      text-align: center;
+      font-size: 0.82rem;
       color: var(--muted);
     }
-    .filter-group select {
-      min-width: min(160px, 100%);
+
+    .tk-drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(17,24,39,0.45); z-index: 300; }
+    .tk-drawer-overlay.open { display: block; }
+    .tk-drawer {
+      position: fixed; top: 0; left: 0;
+      width: min(300px, 88vw); height: 100%;
+      background: var(--panel);
+      z-index: 301;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+      box-shadow: 8px 0 32px rgba(0,0,0,0.12);
+      padding: 1.25rem;
+    }
+    .tk-drawer.open { transform: translateX(0); }
+    .tk-drawer a {
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.75rem;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      border-radius: 10px;
+    }
+    .tk-drawer a:hover { background: var(--accent-soft); color: var(--accent); }
+
+    .page-main {
+      flex: 1;
+      width: 100%;
+      max-width: min(1400px, 96vw);
+      margin: 0 auto;
+      padding: 1.25rem clamp(0.75rem, 3vw, 1.5rem) 3rem;
+    }
+    .events-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding: 1.25rem;
+      background: var(--panel);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .filter-field { display: flex; flex-direction: column; gap: 0.4rem; flex: 1 1 140px; min-width: 120px; }
+    .filter-field label { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+    .filter-field input, .filter-field select {
       padding: 10px 12px;
       font: inherit;
       font-size: 0.95rem;
-      color: var(--text);
-      background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 10px;
+      background: #121212;
+      color: var(--text);
     }
-    .filter-group select:focus { outline: none; border-color: var(--accent); }
-    .filter-group .btn-apply {
-      padding: 10px 18px;
+    .filter-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem;
+      margin-left: auto;
+    }
+    .btn-search {
+      padding: 10px 22px;
       font: inherit;
-      font-size: 0.9rem;
-      font-weight: 600;
-      color: white;
+      font-weight: 700;
+      color: #fff;
       background: var(--accent);
       border: none;
       border-radius: 10px;
       cursor: pointer;
     }
-    .filter-group .btn-apply:hover { background: var(--accent-hover); }
+    .btn-search:hover { background: var(--accent-purple); }
+    .link-clear {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: underline;
+    }
 
-    .site-footer { margin-top: auto; padding: 2.5rem 1.25rem; border-top: 1px solid var(--border); background: linear-gradient(180deg, rgba(20,20,24,0.6), var(--card)); }
-    .site-footer-inner { width: 100%; max-width: min(1400px, 96vw); margin: 0 auto; padding: 0 clamp(0.75rem, 3vw, 1.25rem); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.75rem; }
-    .site-footer-links { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem; }
-    .site-footer-links a { color: var(--muted); text-decoration: none; font-size: 0.95rem; font-weight: 500; }
+    .page-title-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+    }
+    .page-title-row h1 { font-size: 1.75rem; font-weight: 700; }
+    .count { color: var(--muted); font-size: 0.95rem; }
+
+    .events-list { display: flex; flex-direction: column; gap: 1.25rem; }
+    /* Slim horizontal cards: fixed thumbnail size (all events same visual weight) */
+    .event-row {
+      display: grid;
+      grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+      gap: 0;
+      align-items: start;
+      min-height: 200px;
+      background: var(--panel);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .event-row:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 102, 255, 0.15);
+    }
+    @media (max-width: 900px) {
+      .event-row {
+        grid-template-columns: 1fr;
+        min-height: 0;
+      }
+    }
+    .event-row-image-wrap {
+      position: relative;
+      width: 100%;
+      height: 200px;
+      min-height: 200px;
+      max-height: 220px;
+      flex-shrink: 0;
+      background: #2a2a2a;
+      overflow: hidden;
+      border-radius: 12px 0 0 12px;
+    }
+    @media (max-width: 900px) {
+      .event-row-image-wrap {
+        height: 180px;
+        min-height: 180px;
+        max-height: 220px;
+        border-radius: 12px 12px 0 0;
+      }
+    }
+    @media (max-width: 480px) {
+      .event-row-image-wrap {
+        height: 160px;
+        min-height: 160px;
+        max-height: 180px;
+      }
+    }
+    .event-row-image-wrap img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+    }
+    .badge-tickets {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background: rgba(0, 102, 255, 0.92);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 8px;
+      max-width: calc(100% - 24px);
+    }
+    .event-row-body {
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      min-width: 0;
+      min-height: 200px;
+    }
+    @media (max-width: 900px) {
+      .event-row-body { min-height: 0; }
+    }
+    .event-row-body h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .event-row-body .shows { font-size: 0.9rem; color: var(--muted); margin-bottom: 0.35rem; }
+    .event-row-body .loc {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.95rem;
+      color: var(--accent);
+      font-weight: 600;
+      text-decoration: none;
+      margin-bottom: 0.35rem;
+    }
+    .event-row-body .loc:hover { text-decoration: underline; }
+    .event-row-body .date-line { font-weight: 600; margin-bottom: 0.5rem; }
+    .price-from { font-size: 0.9rem; color: var(--muted); margin-bottom: 0.65rem; }
+    .price-from strong { color: var(--text); }
+    .btn-buy {
+      align-self: flex-end;
+      margin-top: auto;
+      padding: 9px 18px;
+      font: inherit;
+      font-weight: 700;
+      color: #fff;
+      background: var(--cta);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .btn-buy:hover { background: var(--cta-hover); }
+
+    .empty-msg { text-align: center; color: var(--muted); padding: 3rem 1rem; }
+
+    /* Rules modal (Terms of entry) */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(17, 24, 39, 0.55);
+      z-index: 400;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-rules {
+      width: 100%;
+      max-width: 480px;
+      background: var(--panel);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+    }
+    .modal-rules-header {
+      padding: 1.25rem 1.5rem;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-rules-header h3 {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--danger);
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .modal-rules-body {
+      padding: 1.25rem 1.5rem;
+      color: var(--text);
+      font-size: 0.95rem;
+      line-height: 1.55;
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+    .modal-rules-body ul { margin: 0; padding-left: 1.2rem; }
+    .modal-rules-body li { margin-bottom: 0.5rem; }
+    .modal-rules-footer {
+      padding: 1rem 1.5rem;
+      background: #121212;
+      display: flex;
+      justify-content: center;
+    }
+    .btn-accept {
+      padding: 12px 2.5rem;
+      font: inherit;
+      font-weight: 700;
+      color: #fff;
+      background: var(--cta);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .btn-accept:hover { background: var(--cta-hover); }
+
+    .site-footer {
+      margin-top: auto;
+      padding: 2rem 1.25rem;
+      border-top: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .site-footer-inner {
+      max-width: min(1400px, 96vw);
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+    }
+    .site-footer-links { display: flex; flex-wrap: wrap; gap: 1.25rem; }
+    .site-footer-links a { color: var(--muted); text-decoration: none; font-weight: 500; }
     .site-footer-links a:hover { color: var(--accent); }
-    .site-footer-social { display: flex; align-items: center; gap: 1rem; }
-    .site-footer-instagram { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--muted); text-decoration: none; font-size: 0.95rem; font-weight: 500; padding: 0.4rem 0.75rem; border-radius: 10px; transition: color 0.2s, background 0.2s; }
-    .site-footer-instagram:hover { color: var(--accent); background: rgba(99,102,241,0.08); }
-    .site-footer-instagram svg { width: 20px; height: 20px; }
     .site-footer-copy { color: var(--muted); font-size: 0.85rem; }
   </style>
 </head>
 <body>
-  <div class="top-bar-wrap">
-    <header class="top-bar">
-      <a href="/"><img src="/block-logo.png" alt="BLOCK" class="logo"></a>
-      <div class="search-wrap">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input type="search" id="searchInput" placeholder="Search for events..." aria-label="Search events">
-      </div>
-      <nav class="top-bar-nav">
-        <a href="/events">Events</a>
-        <a href="/about-us">About Us</a>
-        <a href="/contact">Contact & Support</a>
+  <header class="site-chrome-header">
+    <div class="site-chrome-header__inner">
+      <a href="/" class="site-chrome-header__logo-wrap" aria-label="BLOCK Home">
+        <img src="/block-logo.png" alt="" class="site-chrome-header__logo-img" width="120" height="26">
+      </a>
+      <nav class="site-chrome-nav site-chrome-nav--header" aria-label="Main">
+        <a href="/" data-nav-match="/">Home</a>
+        <a href="/events" data-nav-match="/events">Events</a>
+        <a href="/my-tickets" data-nav-match="/my-tickets">My Tickets</a>
+        <a href="/contact" data-nav-match="/contact">Contact Us</a>
+        <a href="/about-us" data-nav-match="/about-us">About</a>
       </nav>
-      <div class="top-bar-icons">
-        <a href="/profile" aria-label="My tickets / Profile" title="My tickets">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        </a>
+      <div class="site-chrome-header__account">
+        <a href="/profile" class="site-chrome-header__account-link" data-nav-match="/profile">Account</a>
+        <a href="/auth" class="site-chrome-header__signin">Sign in</a>
+        <button type="button" class="site-chrome-header__signout" id="siteChromeSignOut">Sign out</button>
       </div>
-    </header>
-  </div>
+    </div>
+  </header>
+
+  <div class="tk-banner">BLOCK is your pass to live events. Browse below, then continue to the event page to choose ticket categories.</div>
 
   <main class="page-main">
-    <div class="page-main-header">
+    <div class="page-title-row">
       <h1>Events</h1>
       <span class="count" id="eventsCount"></span>
     </div>
 
-    <section class="filter-bar" aria-label="Filter events">
-      <div class="filter-group">
-        <label for="filterDate">Select Date</label>
-        <select id="filterDate" aria-label="Filter by date">
-          <option value="">All Dates</option>
-        </select>
-        <button type="button" class="btn-apply" id="applyDate">Apply</button>
+    <section class="events-toolbar" aria-label="Search events">
+      <div class="filter-field">
+        <label for="filterName">Event Name</label>
+        <input type="text" id="filterName" placeholder="Search by name" autocomplete="off">
       </div>
-      <div class="filter-group">
-        <label for="filterVenue">Select Venue</label>
-        <select id="filterVenue" aria-label="Filter by venue">
-          <option value="">All Venues</option>
-        </select>
-        <button type="button" class="btn-apply" id="applyVenue">Apply</button>
+      <div class="filter-field">
+        <label for="filterCategory">Event Category</label>
+        <select id="filterCategory"><option value="">All categories</option></select>
       </div>
-      <div class="filter-group">
-        <label for="filterCategory">Select Category</label>
-        <select id="filterCategory" aria-label="Filter by category">
-          <option value="">All Categories</option>
-        </select>
-        <button type="button" class="btn-apply" id="applyCategory">Apply</button>
+      <div class="filter-field">
+        <label for="filterDate">Event Date</label>
+        <input type="text" id="filterDate" placeholder="e.g. May 2026" autocomplete="off">
+      </div>
+      <div class="filter-actions">
+        <button type="button" class="link-clear" id="btnClearSearch">Clear Search</button>
+        <button type="button" class="btn-search" id="btnSearch">Search</button>
       </div>
     </section>
 
-    <div id="eventsContainer" class="events-grid"></div>
-    <p id="emptyMsg" class="empty-msg" style="display:none;">No events found.</p>
+    <div id="eventsContainer" class="events-list"></div>
+    <p id="emptyMsg" class="empty-msg" style="display:none;">No events match your filters.</p>
   </main>
 
-  <footer class="site-footer">
-    <div class="site-footer-inner">
-      <nav class="site-footer-links" id="footerLinksNav">
-        <a href="/profile">My tickets</a>
-        <a href="/events">Events</a>
-        <a href="/about-us">About Us</a>
-        <a href="/contact">Contact & Support</a>
-      </nav>
-      <div class="site-footer-social">
-        <a id="footerInstagramLink" href="https://www.instagram.com/blockagency.eg" target="_blank" rel="noopener" class="site-footer-instagram" aria-label="Instagram">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
-          <span id="footerInstagramLabel">Instagram</span>
-        </a>
-        <span class="site-footer-copy" id="footerCopyright">© BLOCK</span>
+  <div id="rulesOverlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <div class="modal-rules">
+      <div class="modal-rules-header">
+        <h3 id="rulesTitle"><span aria-hidden="true">&#9888;</span> Terms of entry</h3>
       </div>
+      <div class="modal-rules-body" id="rulesBody"></div>
+      <div class="modal-rules-footer">
+        <button type="button" class="btn-accept" id="btnAcceptRules">Accept</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-chrome-footer">
+    <div class="site-chrome-footer__inner">
+      <a href="/" class="site-chrome-footer__logo-wrap" aria-label="BLOCK Home">
+        <img src="/block-logo.png" alt="" class="site-chrome-footer__logo-img" width="100" height="22">
+      </a>
+      <nav class="site-chrome-nav site-chrome-nav--footer" aria-label="Footer">
+        <a href="/" data-nav-match="/">Home</a>
+        <a href="/events" data-nav-match="/events">Events</a>
+        <a href="/my-tickets" data-nav-match="/my-tickets">My Tickets</a>
+        <a href="/contact" data-nav-match="/contact">Contact Us</a>
+        <a href="/about-us" data-nav-match="/about-us">About</a>
+      </nav>
+      <span class="site-chrome-footer__copy" id="siteChromeCopyright">© BLOCK</span>
     </div>
   </footer>
 
+  <script src="/site-chrome.js" defer></script>
   <script>
-    const container = document.getElementById('eventsContainer');
-    const countEl = document.getElementById('eventsCount');
-    const emptyMsg = document.getElementById('emptyMsg');
-    const searchInput = document.getElementById('searchInput');
-    const filterDate = document.getElementById('filterDate');
-    const filterVenue = document.getElementById('filterVenue');
-    const filterCategory = document.getElementById('filterCategory');
-    let allEvents = [];
+    var allEvents = [];
+    var pendingBuyEventId = null;
 
-    function applySearchRedirect() {
-      if (!searchInput) return;
-      searchInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-          const q = searchInput.value.trim();
-          let url = '/events';
-          if (q) url += '?q=' + encodeURIComponent(q);
-          window.location.href = url;
-        }
-      });
+    function moneyMin(events) {
+      var prices = events.map(function (e) { return Number(e.price || 0); }).filter(function (p) { return p > 0; });
+      if (!prices.length) return 0;
+      return Math.min.apply(null, prices);
+    }
+
+    function escapeHtml(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function mapsLink(venue) {
+      if (!venue) return '#';
+      return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(venue);
     }
 
     function renderEvents(events) {
-      if (!Array.isArray(events) || events.length === 0) {
+      var container = document.getElementById('eventsContainer');
+      var emptyMsg = document.getElementById('emptyMsg');
+      var countEl = document.getElementById('eventsCount');
+      if (!events.length) {
         container.innerHTML = '';
         emptyMsg.style.display = 'block';
         countEl.textContent = '0 events';
@@ -333,115 +563,140 @@
       }
       emptyMsg.style.display = 'none';
       countEl.textContent = events.length + (events.length === 1 ? ' event' : ' events');
-      const base = window.location.origin || 'http://localhost:3001';
       container.innerHTML = events.map(function (event) {
-        return '<article class="event-card">' +
-          '<img src="' + (event.image || '/block-logo.png') + '" alt="' + (event.name || '').replace(/"/g, '&quot;') + '">' +
-          '<div class="event-card-body">' +
-          '<h3 class="event-card-title">' + event.name + '</h3>' +
-          '<div class="event-card-meta">' + event.date + (event.time ? ' | ' + event.time : '') + '</div>' +
-          '<div class="event-card-venue">' + (event.venue || '') + '</div>' +
-          '<a class="btn-register" href="' + base + '/event/' + encodeURIComponent(event.id) + '">Book Now</a>' +
-          '</div></article>';
+        var minP = Number(event.price || 0);
+        var priceLabel = minP > 0 ? '<strong>' + minP.toFixed(0) + ' EGP</strong>' : '<strong>FREE</strong>';
+        return (
+          '<article class="event-row">' +
+            '<div class="event-row-image-wrap">' +
+              '<img src="' + escapeHtml(event.imageCard || event.image || '/block-logo.png') + '" alt="">' +
+              '<span class="badge-tickets">Tickets available at BLOCK</span>' +
+            '</div>' +
+            '<div class="event-row-body">' +
+              '<h2>' + escapeHtml(event.name) + '</h2>' +
+              '<div class="shows">No. of shows: 1</div>' +
+              '<a class="loc" href="' + escapeHtml(mapsLink(event.venue)) + '" target="_blank" rel="noopener">&#128205; ' + escapeHtml(event.venue || 'Venue TBA') + '</a>' +
+              '<div class="date-line">' + escapeHtml([event.date, event.time].filter(Boolean).join(' · ')) + '</div>' +
+              '<div class="price-from">Prices from: ' + priceLabel + '</div>' +
+              '<button type="button" class="btn-buy" data-buy="' + escapeHtml(event.id) + '">Buy Tickets</button>' +
+            '</div>' +
+          '</article>'
+        );
       }).join('');
-    }
 
-    function buildFilterOptions(events) {
-      const dates = [], venues = [], categories = [];
-      events.forEach(function (e) {
-        if (e.date && dates.indexOf(e.date) === -1) dates.push(e.date);
-        if (e.venue && venues.indexOf(e.venue) === -1) venues.push(e.venue);
-        if (e.category && categories.indexOf(e.category) === -1) categories.push(e.category);
-      });
-      dates.sort(); venues.sort(); categories.sort();
-      function addOptions(sel, list) {
-        if (!sel) return;
-        const firstText = sel.options[0] ? sel.options[0].text : 'All';
-        const current = sel.value;
-        sel.innerHTML = '<option value="">' + firstText + '</option>';
-        list.forEach(function (v) {
-          const opt = document.createElement('option');
-          opt.value = v;
-          opt.textContent = v;
-          if (v === current) opt.selected = true;
-          sel.appendChild(opt);
+      container.querySelectorAll('[data-buy]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          pendingBuyEventId = btn.getAttribute('data-buy');
+          openRulesForEvent(pendingBuyEventId);
         });
-      }
-      addOptions(filterDate, dates);
-      addOptions(filterVenue, venues);
-      addOptions(filterCategory, categories);
+      });
     }
 
-    function getFilteredEvents() {
-      const dateVal = filterDate ? filterDate.value : '';
-      const venueVal = filterVenue ? filterVenue.value : '';
-      const categoryVal = filterCategory ? filterCategory.value : '';
-      return allEvents.filter(function (e) {
-        if (dateVal && e.date !== dateVal) return false;
-        if (venueVal && e.venue !== venueVal) return false;
-        if (categoryVal && e.category !== categoryVal) return false;
+    function openRulesForEvent(eventId) {
+      var overlay = document.getElementById('rulesOverlay');
+      var body = document.getElementById('rulesBody');
+      body.innerHTML = '<p>Loading…</p>';
+      overlay.classList.add('show');
+      fetch('/api/booking-event/' + encodeURIComponent(eventId))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data || data.error) throw new Error(data.error || 'Could not load rules.');
+          var rules = data.rules || {};
+          var terms = String(rules.termsText || '').trim();
+          var bullets = terms ? terms.split(/\n+/).map(function (l) { return l.replace(/^[-•]\s*/, '').trim(); }).filter(Boolean) : [];
+          if (!bullets.length) {
+            bullets = [
+              'Tickets are non-refundable unless the event is cancelled.',
+              'Follow venue rules and staff instructions.',
+              'Prohibited items may be refused at entry.',
+            ];
+          }
+          body.innerHTML = '<ul>' + bullets.map(function (b) { return '<li>' + escapeHtml(b) + '</li>'; }).join('') + '</ul>';
+        })
+        .catch(function (e) {
+          body.innerHTML = '<p>' + escapeHtml(e.message || 'Could not load terms.') + '</p>';
+        });
+    }
+
+    document.getElementById('btnAcceptRules').addEventListener('click', function () {
+      if (!pendingBuyEventId) return;
+      try {
+        sessionStorage.setItem('block_rules_ok_' + pendingBuyEventId, '1');
+      } catch (e) {}
+      location.href = '/event/' + encodeURIComponent(pendingBuyEventId) + '?rules=1';
+    });
+
+    document.getElementById('rulesOverlay').addEventListener('click', function (e) {
+      if (e.target === this) this.classList.remove('show');
+    });
+
+    function buildCategoryOptions(events) {
+      var sel = document.getElementById('filterCategory');
+      var cats = [];
+      events.forEach(function (e) {
+        if (e.category && cats.indexOf(e.category) === -1) cats.push(e.category);
+      });
+      cats.sort();
+      var cur = sel.value;
+      sel.innerHTML = '<option value="">All categories</option>';
+      cats.forEach(function (c) {
+        var o = document.createElement('option');
+        o.value = c;
+        o.textContent = c;
+        if (c === cur) o.selected = true;
+        sel.appendChild(o);
+      });
+    }
+
+    function applyFilters() {
+      var nameQ = (document.getElementById('filterName').value || '').toLowerCase().trim();
+      var cat = document.getElementById('filterCategory').value;
+      var dateQ = (document.getElementById('filterDate').value || '').toLowerCase().trim();
+      var list = allEvents.filter(function (e) {
+        if (nameQ && (!e.name || e.name.toLowerCase().indexOf(nameQ) === -1)) return false;
+        if (cat && e.category !== cat) return false;
+        if (dateQ) {
+          var d = (e.date || '') + ' ' + (e.time || '');
+          if (d.toLowerCase().indexOf(dateQ) === -1) return false;
+        }
         return true;
       });
+      renderEvents(list);
     }
 
-    function applyFiltersAndRender() {
-      const filtered = getFilteredEvents();
-      renderEvents(filtered);
-    }
+    document.getElementById('btnSearch').addEventListener('click', applyFilters);
+    document.getElementById('btnClearSearch').addEventListener('click', function () {
+      document.getElementById('filterName').value = '';
+      document.getElementById('filterCategory').value = '';
+      document.getElementById('filterDate').value = '';
+      applyFilters();
+    });
 
-    async function loadEvents() {
-      try {
-        const base = window.location.origin || 'http://localhost:3001';
-        const res = await fetch(base + '/api/events');
-        let events = await res.json();
-        if (!Array.isArray(events)) events = [];
-        const params = new URLSearchParams(window.location.search);
-        const q = (params.get('q') || '').toLowerCase().trim();
-        if (q) {
-          if (searchInput) searchInput.value = q;
-          events = events.filter(function (e) {
-            return (e.name && e.name.toLowerCase().includes(q)) ||
-                   (e.venue && e.venue.toLowerCase().includes(q)) ||
-                   (e.description && e.description.toLowerCase().includes(q));
-          });
-        }
-        allEvents = events;
-        buildFilterOptions(events);
-        if (filterDate) filterDate.value = params.get('date') || '';
-        if (filterVenue) filterVenue.value = params.get('venue') || '';
-        if (filterCategory) filterCategory.value = params.get('category') || '';
-        applyFiltersAndRender();
-
-        [document.getElementById('applyDate'), document.getElementById('applyVenue'), document.getElementById('applyCategory')].forEach(function (btn) {
-          if (btn) btn.addEventListener('click', applyFiltersAndRender);
+    function loadEvents() {
+      fetch('/api/events')
+        .then(function (r) { return r.json(); })
+        .then(function (events) {
+          if (!Array.isArray(events)) events = [];
+          var params = new URLSearchParams(location.search);
+          var q = (params.get('q') || '').toLowerCase().trim();
+          if (q) {
+            events = events.filter(function (e) {
+              return (e.name && e.name.toLowerCase().indexOf(q) !== -1) ||
+                (e.venue && e.venue.toLowerCase().indexOf(q) !== -1);
+            });
+            document.getElementById('filterName').value = q;
+          }
+          allEvents = events;
+          buildCategoryOptions(events);
+          applyFilters();
+        })
+        .catch(function () {
+          document.getElementById('emptyMsg').textContent = 'Could not load events.';
+          document.getElementById('emptyMsg').style.display = 'block';
         });
-        [filterDate, filterVenue, filterCategory].forEach(function (sel) {
-          if (sel) sel.addEventListener('change', applyFiltersAndRender);
-        });
-      } catch (e) {
-        emptyMsg.textContent = 'Could not load events. Try again later.';
-        emptyMsg.style.display = 'block';
-      }
     }
 
-    applySearchRedirect();
     loadEvents();
-
-    (function loadFooterConfig() {
-      fetch('/api/site-config').then(function(r){ return r.json(); }).then(function(cfg){
-        var copy = document.getElementById('footerCopyright');
-        var igLink = document.getElementById('footerInstagramLink');
-        var igLabel = document.getElementById('footerInstagramLabel');
-        var nav = document.getElementById('footerLinksNav');
-        if (copy) copy.textContent = cfg.copyright || '© BLOCK';
-        if (igLink) igLink.href = cfg.instagramUrl || 'https://www.instagram.com/blockagency.eg';
-        if (igLabel) igLabel.textContent = cfg.instagramLabel || 'Instagram';
-        if (nav && Array.isArray(cfg.links) && cfg.links.length) {
-          nav.innerHTML = cfg.links.map(function(l){ return '<a href="' + (l.url||'#') + '">' + (l.label||'') + '</a>'; }).join('');
-        }
-      }).catch(function(){});
-    })();
   </script>
 </body>
 </html>
-

@@ -29,6 +29,7 @@ const { google } = require('googleapis');
 const { createClient } = require('@supabase/supabase-js');
 
 const fs = require('fs');
+const multer = require('multer');
 
 const app = express();
 // Use 3001 by default to avoid conflicts with other apps on 3000
@@ -41,6 +42,7 @@ if (!JWT_SECRET) {
 }
 // Scanner profile auth (separate env var optional; defaults to JWT_SECRET).
 const SCANNER_JWT_SECRET = process.env.SCANNER_JWT_SECRET || JWT_SECRET || '';
+const MAX_SCANNER_PROFILES = 50;
 
 // ----- Supabase (for saving attendees) -----
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -53,9 +55,19 @@ if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
   console.warn('Supabase env vars not set – running without Supabase (only sheet/email).');
 }
 
-async function saveAttendeeToSupabase({ name, email, phone, ticketId, eventId, eventName, ticketCategory, ticketNumber }) {
+async function saveAttendeeToSupabase({
+  name,
+  email,
+  phone,
+  ticketId,
+  eventId,
+  eventName,
+  ticketCategory,
+  ticketNumber,
+  bookingId,
+}) {
   if (!supabase) return;
-  const { error } = await supabase.from('attendees').insert({
+  const row = {
     name,
     email,
     phone: phone || null,
@@ -64,7 +76,9 @@ async function saveAttendeeToSupabase({ name, email, phone, ticketId, eventId, e
     ticket_number: ticketNumber || null,
     event_id: eventId || null,
     event_name: eventName || null,
-  });
+  };
+  if (bookingId) row.booking_id = bookingId;
+  const { error } = await supabase.from('attendees').insert(row);
   if (error) {
     console.error('Supabase insert error:', error.message);
   }
@@ -102,7 +116,14 @@ async function findExistingRegistration(email, phone, eventId, eventName) {
   if (!e && !p) return null;
   let query = supabase.from('attendees').select('id, email, phone');
   if (eventId) {
-    query = query.eq('event_id', eventId);
+    const ev = await resolveEventRowByIdOrSlug(String(eventId));
+    if (ev) {
+      const parts = [`event_id.eq.${ev.id}`];
+      if (ev.slug) parts.push(`event_id.eq.${ev.slug}`);
+      query = query.or(parts.join(','));
+    } else {
+      query = query.eq('event_id', eventId);
+    }
   } else {
     query = query.eq('event_name', eventName || 'Event');
   }
@@ -159,8 +180,11 @@ function signSessionToken(user) {
   return jwt.sign(payload, JWT_SECRET || 'dev-insecure-secret', { expiresIn: '30d' });
 }
 
-function signScannerSessionToken({ scannerId, deviceId }) {
-  const payload = { sub: scannerId, did: deviceId };
+function signScannerSessionToken({ scannerId, deviceId, operatorName }) {
+  const opn = String(operatorName || '')
+    .trim()
+    .slice(0, 120);
+  const payload = { sub: scannerId, did: deviceId, opn };
   return jwt.sign(payload, SCANNER_JWT_SECRET || 'dev-insecure-secret', { expiresIn: '8h' });
 }
 
@@ -199,6 +223,10 @@ async function getScannerFromRequest(req) {
     const decoded = jwt.verify(token, SCANNER_JWT_SECRET || 'dev-insecure-secret');
     const scannerId = decoded?.sub;
     const deviceId = decoded?.did;
+    const operatorName =
+      typeof decoded?.opn === 'string' ? decoded.opn.trim().slice(0, 120) : '';
+    // Require staff name in token (older cookies without opn must sign in again).
+    if (!operatorName) return null;
     if (!scannerId || !deviceId || !supabase) return null;
     const { data: scanner, error } = await supabase
       .from('scanners')
@@ -206,7 +234,7 @@ async function getScannerFromRequest(req) {
       .eq('id', scannerId)
       .maybeSingle();
     if (error || !scanner || !scanner.active) return null;
-    return { scannerId, deviceId, scanner };
+    return { scannerId, deviceId, scanner, operatorName };
   } catch {
     return null;
   }
@@ -258,6 +286,64 @@ async function requireAuth(req, res) {
   return user;
 }
 
+const AVATAR_MAX_BYTES = 2 * 1024 * 1024 + 1; // +1 avoids multer edge case at exact limit
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: AVATAR_MAX_BYTES },
+});
+
+/** Save avatar bytes; Supabase Storage bucket (public) if configured, else local public/uploads/avatars. */
+async function persistAvatarAndUrl(userId, buffer, mimetype) {
+  const extMap = {
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/pjpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+    'image/avif': 'avif',
+  };
+  const mime = String(mimetype || '').toLowerCase();
+  const ext = extMap[mime] || 'jpg';
+  const objectPath = `${userId}/avatar.${ext}`;
+
+  if (supabase) {
+    const bucket = String(process.env.SUPABASE_AVATARS_BUCKET || 'avatars').trim() || 'avatars';
+    const { error: upErr } = await supabase.storage.from(bucket).upload(objectPath, buffer, {
+      contentType: mime || mimetype || 'image/jpeg',
+      upsert: true,
+    });
+    if (!upErr) {
+      const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
+      if (data?.publicUrl) return data.publicUrl;
+    } else {
+      console.warn('Avatar Storage upload failed (local fallback):', upErr.message);
+    }
+  }
+
+  const dir = path.join(__dirname, 'public', 'uploads', 'avatars');
+  const localName = `${userId}.${ext}`;
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, localName), buffer);
+  } catch (diskErr) {
+    console.error('Avatar local save failed:', diskErr.message);
+    throw new Error('Could not write file on server (check disk permissions or folder sync).');
+  }
+  const base = BASE_URL.replace(/\/$/, '');
+  return `${base}/uploads/avatars/${localName}`;
+}
+
+/** When Supabase auth is enabled, HTML pages that expose the catalog require a session (Tazkarti-style gateway). */
+async function redirectIfNotLoggedIn(req, res) {
+  if (!supabase) return false;
+  const user = await getAuthUserFromRequest(req);
+  if (user) return false;
+  const next = encodeURIComponent(req.originalUrl || '/events');
+  res.redirect(302, `/auth?next=${next}`);
+  return true;
+}
+
 // Load about-us page at startup (avoids sendFile issues on Windows/OneDrive)
 let aboutUsHtml = null;
 try {
@@ -268,22 +354,62 @@ try {
 
 // Page routes (before static so /events, /contact, /my-tickets don't 404)
 app.get('/events', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'events.html'));
+  redirectIfNotLoggedIn(req, res)
+    .then((redirected) => {
+      if (redirected) return;
+      res.sendFile(path.join(__dirname, 'public', 'events.html'));
+    })
+    .catch((e) => {
+      console.error(e);
+      if (!res.headersSent) res.status(500).send('Could not load page.');
+    });
 });
 app.get('/auth', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'auth.html'));
 });
 app.get('/profile', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'profile.html'));
+  redirectIfNotLoggedIn(req, res)
+    .then((redirected) => {
+      if (redirected) return;
+      res.sendFile(path.join(__dirname, 'public', 'profile.html'));
+    })
+    .catch((e) => {
+      console.error(e);
+      if (!res.headersSent) res.status(500).send('Could not load page.');
+    });
 });
 app.get('/cart', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'cart.html'));
+  redirectIfNotLoggedIn(req, res)
+    .then((redirected) => {
+      if (redirected) return;
+      res.sendFile(path.join(__dirname, 'public', 'cart.html'));
+    })
+    .catch((e) => {
+      console.error(e);
+      if (!res.headersSent) res.status(500).send('Could not load page.');
+    });
 });
 app.get('/checkout', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
+  redirectIfNotLoggedIn(req, res)
+    .then((redirected) => {
+      if (redirected) return;
+      res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
+    })
+    .catch((e) => {
+      console.error(e);
+      if (!res.headersSent) res.status(500).send('Could not load page.');
+    });
 });
 app.get('/payment', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'payment.html'));
+  redirectIfNotLoggedIn(req, res)
+    .then((redirected) => {
+      if (redirected) return;
+      res.sendFile(path.join(__dirname, 'public', 'payment.html'));
+    })
+    .catch((e) => {
+      console.error(e);
+      if (!res.headersSent) res.status(500).send('Could not load page.');
+    });
 });
 app.get('/instapay-success', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'instapay-success.html'));
@@ -298,10 +424,21 @@ app.get('/about-us', (req, res) => {
     res.status(500).send('About Us page not available.');
   }
 });
+app.get('/faq', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'faq.html'));
+});
 app.get('/who-we-are', (req, res) => res.redirect(301, '/about-us'));
 app.get('/what-we-do', (req, res) => res.redirect(301, '/about-us'));
 app.get('/my-tickets', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'my-tickets.html'));
+  redirectIfNotLoggedIn(req, res)
+    .then((redirected) => {
+      if (redirected) return;
+      res.sendFile(path.join(__dirname, 'public', 'my-tickets.html'));
+    })
+    .catch((e) => {
+      console.error(e);
+      if (!res.headersSent) res.status(500).send('Could not load page.');
+    });
 });
 app.get('/scan', (req, res) => {
   const filePath = path.resolve(__dirname, 'public', 'scan.html');
@@ -321,7 +458,8 @@ app.get('/scan/:scannerId', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'scan.html'));
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Static files are registered after all API routes (see bottom of file) so POST /api/*
+// and other API calls are never shadowed and behave the same locally and on Vercel.
 
 // Events from local JSON (fallback if Supabase/events table not used)
 function getEventsFromFile() {
@@ -377,6 +515,7 @@ function getDefaultEventRules() {
     accompaniedByAdultUnderAge: 15,
     termsText:
       'By purchasing these tickets, you confirm your acceptance of all terms and conditions of Ticketsmarche.com and/or any affiliated sites using the Ticketsmarche.com domain and/or technology, including but not limited to, the no refunds and no exchange policy.',
+    maxTicketsPerOrder: 10,
   };
 }
 
@@ -392,13 +531,97 @@ function normalizeEventRules(input) {
       ? Number(input.accompaniedByAdultUnderAge)
       : d.accompaniedByAdultUnderAge,
     termsText: input.termsText || d.termsText,
+    maxTicketsPerOrder: Number.isFinite(Number(input.maxTicketsPerOrder))
+      ? Math.min(100, Math.max(1, Number(input.maxTicketsPerOrder)))
+      : d.maxTicketsPerOrder,
   };
+}
+
+function parseEventExtra(raw) {
+  if (!raw || typeof raw !== 'object') return {};
+  const out = {};
+  if (Array.isArray(raw.tickets)) {
+    out.tickets = raw.tickets.map((t, i) => ({
+      ticketId: String((t && (t.ticketId || t.id)) || `t${i + 1}`),
+      ticketName: String((t && (t.ticketName || t.name)) || `Category ${i + 1}`),
+      ticketCategory: t && t.ticketCategory != null ? String(t.ticketCategory) : null,
+      price: Number(t && t.price) || 0,
+      available:
+        t && t.available != null && t.available !== ''
+          ? Math.max(0, parseInt(t.available, 10))
+          : t && t.available_tickets != null && t.available_tickets !== ''
+          ? Math.max(0, parseInt(t.available_tickets, 10))
+          : null,
+      soldOut: Boolean(t && t.soldOut),
+    }));
+  }
+  if (Array.isArray(raw.gallery)) {
+    out.gallery = raw.gallery.map((u) => String(u || '').trim()).filter(Boolean);
+  }
+  if (raw.location && typeof raw.location === 'object') {
+    out.location = {
+      address: raw.location.address != null ? String(raw.location.address) : '',
+      mapEmbedUrl: raw.location.mapEmbedUrl ? String(raw.location.mapEmbedUrl).trim() : null,
+    };
+  }
+  if (Array.isArray(raw.facilities)) {
+    out.facilities = raw.facilities.map((f) => String(f || '').trim()).filter(Boolean);
+  }
+  if (raw.published === false || raw.published === 'false' || raw.published === 0 || raw.published === '0') {
+    out.published = false;
+  }
+  return out;
+}
+
+function buildExtraFromAdminBody(body) {
+  const b = body || {};
+  const ex = {};
+  if (Array.isArray(b.tickets)) {
+    ex.tickets = b.tickets.map((t, i) => ({
+      ticketId: String((t && (t.ticketId || t.id)) || `t${i + 1}`),
+      ticketName: String((t && (t.ticketName || t.name)) || `Category ${i + 1}`),
+      ticketCategory: t && t.ticketCategory != null ? String(t.ticketCategory) : null,
+      price: Number(t && t.price) || 0,
+      available:
+        t && t.available != null && t.available !== ''
+          ? Math.max(0, parseInt(t.available, 10))
+          : null,
+      soldOut: Boolean(t && t.soldOut),
+    }));
+  }
+  if (Array.isArray(b.gallery)) {
+    ex.gallery = b.gallery.map((u) => String(u || '').trim()).filter(Boolean);
+  }
+  if (b.location && typeof b.location === 'object') {
+    ex.location = {
+      address: b.location.address != null ? String(b.location.address) : '',
+      mapEmbedUrl: b.location.mapEmbedUrl ? String(b.location.mapEmbedUrl).trim() : null,
+    };
+  }
+  if (Array.isArray(b.facilities)) {
+    ex.facilities = b.facilities.map((f) => String(f || '').trim()).filter(Boolean);
+  }
+  const pub = b && b.published;
+  ex.published = !(pub === false || pub === 'false' || pub === 0 || pub === '0');
+  return ex;
+}
+
+function mergePublicEventExtras(base, extraRaw, legacyFileEvent) {
+  const ex = parseEventExtra(extraRaw);
+  const leg = legacyFileEvent || {};
+  const merged = { ...base, ...ex };
+  if (!merged.tickets && Array.isArray(leg.tickets)) merged.tickets = leg.tickets;
+  if (!merged.gallery && Array.isArray(leg.gallery)) merged.gallery = leg.gallery;
+  if (!merged.location && leg.location && typeof leg.location === 'object') merged.location = leg.location;
+  if (!merged.facilities && Array.isArray(leg.facilities)) merged.facilities = leg.facilities;
+  if (merged.published !== false && leg && leg.published === false) merged.published = false;
+  return merged;
 }
 
 function normalizeAdminEventFromFile(event, sortOrderIndex) {
   const price = event && event.price != null && event.price !== '' ? Number(event.price) : 0;
   const availableTickets = event && event.available_tickets != null ? Number(event.available_tickets) : null;
-  return {
+  const base = {
     id: event.id,
     slug: event.slug || null,
     name: event.name || '',
@@ -407,11 +630,14 @@ function normalizeAdminEventFromFile(event, sortOrderIndex) {
     venue: event.venue || null,
     category: event.category || null,
     image: event.image || null,
+    image_card: event.image_card || null,
+    image_detail: event.image_detail || null,
     description: event.description || null,
     price: Number.isFinite(price) ? price : 0,
     available_tickets: availableTickets != null && Number.isFinite(availableTickets) ? availableTickets : null,
     sort_order: sortOrderIndex != null ? sortOrderIndex : null,
   };
+  return mergePublicEventExtras(base, event.extra, event);
 }
 
 function loadAdminEventsFromFile() {
@@ -419,23 +645,84 @@ function loadAdminEventsFromFile() {
   return events.map((e, idx) => normalizeAdminEventFromFile(e, idx + 1));
 }
 
+function mapSupabaseEventRowToAdmin(row) {
+  if (!row) return null;
+  const { extra: _ex, ...rest } = row;
+  const flat = parseEventExtra(row.extra);
+  return { ...rest, ...flat };
+}
+
+/** Public API + file rows: list/cards use imageCard, detail hero uses imageHero; `image` stays as legacy fallback URL. */
+function eventImageFields(row) {
+  const r = row || {};
+  const legacyRaw = r.image != null && String(r.image).trim() ? String(r.image).trim() : '';
+  const def = legacyRaw || '/block-logo.png';
+  const icRaw = r.image_card != null && String(r.image_card).trim() ? String(r.image_card).trim() : '';
+  const idRaw = r.image_detail != null && String(r.image_detail).trim() ? String(r.image_detail).trim() : '';
+  return {
+    image: def,
+    imageCard: icRaw || def,
+    imageHero: idRaw || def,
+  };
+}
+
+function deriveEventImagesFromAdminBody(body) {
+  const b = body || {};
+  const rawCard = b.image_card != null ? String(b.image_card).trim() : '';
+  const rawDetail = b.image_detail != null ? String(b.image_detail).trim() : '';
+  const rawLegacy = b.image != null ? String(b.image).trim() : '';
+  let image_card = rawCard || null;
+  let image_detail = rawDetail || null;
+  const image_legacy = rawLegacy || null;
+  if (!image_card && image_legacy) image_card = image_legacy;
+  if (!image_detail && image_legacy) image_detail = image_legacy;
+  const image = image_detail || image_card || image_legacy || null;
+  return { image, image_card, image_detail };
+}
+
 // Map Supabase events rows into the public event shape
 function mapEventRowToPublic(row) {
   if (!row) return null;
   const id = row.slug || row.id;
   const price = row.price != null && row.price !== '' ? Number(row.price) : 0;
-  return {
+  const imgs = eventImageFields(row);
+  const base = {
     id,
     name: row.name,
     date: row.date,
     time: row.time,
     venue: row.venue,
     category: row.category,
-    image: row.image || '/block-logo.png',
+    image: imgs.image,
+    imageCard: imgs.imageCard,
+    imageHero: imgs.imageHero,
     description: row.description,
     price,
     type: price > 0 ? 'paid' : 'free',
   };
+  return mergePublicEventExtras(base, row.extra, null);
+}
+
+function mapFileEventToPublic(e) {
+  if (!e) return null;
+  const id = e.slug || e.id;
+  const price = e.price != null && e.price !== '' ? Number(e.price) : 0;
+  const imgs = eventImageFields(e);
+  const base = {
+    id,
+    name: e.name,
+    date: e.date,
+    time: e.time,
+    venue: e.venue,
+    category: e.category,
+    image: imgs.image,
+    imageCard: imgs.imageCard,
+    imageHero: imgs.imageHero,
+    description: e.description,
+    price,
+    type: price > 0 ? 'paid' : 'free',
+  };
+  return mergePublicEventExtras(base, e.extra, e);
 }
 
 // Prefer Supabase events table; fall back to JSON file
@@ -444,11 +731,13 @@ async function listEventsForPublic() {
     try {
       const { data, error } = await supabase
         .from('events')
-        .select('id, slug, name, date, time, venue, category, image, description, price, sort_order, created_at')
+        .select('id, slug, name, date, time, venue, category, image, image_card, image_detail, description, price, sort_order, created_at, extra')
         .order('sort_order', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: false });
       if (!error && data && data.length) {
-        return data.map(mapEventRowToPublic);
+        return data
+          .filter((row) => parseEventExtra(row.extra).published !== false)
+          .map(mapEventRowToPublic);
       }
       if (error) {
         console.error('Supabase events error:', error.message);
@@ -457,7 +746,8 @@ async function listEventsForPublic() {
       console.error('Supabase events exception:', e.message);
     }
   }
-  return getEventsFromFile();
+  const fileList = getEventsFromFile() || [];
+  return fileList.map(mapFileEventToPublic).filter((ev) => ev && ev.published !== false);
 }
 
 async function getEventById(id) {
@@ -466,7 +756,7 @@ async function getEventById(id) {
     try {
       const { data, error } = await supabase
         .from('events')
-        .select('id, slug, name, date, time, venue, category, image, description, price')
+        .select('id, slug, name, date, time, venue, category, image, image_card, image_detail, description, price, extra')
         .or(`id.eq.${id},slug.eq.${id}`)
         .limit(1)
         .maybeSingle();
@@ -486,7 +776,7 @@ async function getEventById(id) {
       for (const v of slugVariants) {
         const { data: data2, error: error2 } = await supabase
           .from('events')
-          .select('id, slug, name, date, time, venue, category, image, description, price')
+          .select('id, slug, name, date, time, venue, category, image, image_card, image_detail, description, price, extra')
           .ilike('slug', v)
           .limit(1)
           .maybeSingle();
@@ -496,7 +786,9 @@ async function getEventById(id) {
       console.error('Supabase getEventById exception:', e.message);
     }
   }
-  return getEventsFromFile().find((e) => e.id === id) || null;
+  const fileList = getEventsFromFile() || [];
+  const fileHit = fileList.find((e) => e && (e.id === id || e.slug === id));
+  return mapFileEventToPublic(fileHit) || null;
 }
 
 // Resolve event to its canonical UUID row (used for cart/bookings FK columns)
@@ -506,7 +798,7 @@ async function resolveEventRowByIdOrSlug(idOrSlug) {
   try {
     const { data, error } = await supabase
       .from('events')
-      .select('id, slug, name, date, time, venue, category, image, description, price')
+      .select('id, slug, name, date, time, venue, category, image, image_card, image_detail, description, price, extra')
       .or(`id.eq.${id},slug.eq.${id}`)
       .limit(1)
       .maybeSingle();
@@ -524,7 +816,7 @@ async function resolveEventRowByIdOrSlug(idOrSlug) {
     for (const v of slugVariants) {
       const { data: data2, error: error2 } = await supabase
         .from('events')
-        .select('id, slug, name, date, time, venue, category, image, description, price')
+        .select('id, slug, name, date, time, venue, category, image, image_card, image_detail, description, price, extra')
         .ilike('slug', v)
         .limit(1)
         .maybeSingle();
@@ -708,6 +1000,51 @@ function getTransporter() {
       pass: process.env.EMAIL_APP_PASSWORD,
     },
   });
+}
+
+async function sendPasswordResetEmail({ toEmail, resetUrl }) {
+  const transporter = getTransporter();
+  if (!transporter) {
+    return { ok: false, skipped: true };
+  }
+  const safe = (s) =>
+    String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  const safeUrl = safe(resetUrl);
+  const html = `<!DOCTYPE html>
+<html>
+  <head><meta charset="utf-8" /></head>
+  <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#f5f5f5;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5;padding:24px 16px;">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;padding:28px 24px;box-shadow:0 4px 18px rgba(15,23,42,0.12);">
+          <tr><td>
+            <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#374151;">Hi,</p>
+            <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;">We received a request to reset the password for your BLOCK account. Use the button below to choose a new password.</p>
+            <p style="margin:0 0 20px;">
+              <a href="${safeUrl}" style="display:inline-block;padding:12px 22px;background:#599151;color:#ffffff;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">Reset password</a>
+            </p>
+            <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#6b7280;">If the button does not work, copy and paste this link into your browser:</p>
+            <p style="margin:0 0 18px;font-size:12px;line-height:1.5;color:#4b5563;word-break:break-all;">${safeUrl}</p>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#9ca3af;">If you did not ask for this, you can ignore this email. Your password will stay the same.</p>
+            <p style="margin:16px 0 0;font-size:13px;line-height:1.5;color:#111827;font-weight:600;">— BLOCK</p>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>
+</html>`;
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to: String(toEmail || '').trim(),
+    subject: 'Reset your BLOCK password',
+    html,
+  });
+  return { ok: true, skipped: false };
 }
 
 // Logo as base64 for email (works even when BASE_URL is localhost)
@@ -997,7 +1334,7 @@ async function sendTicketsEmailToUserMulti({ toEmail, name, eventName, tickets }
   return { ok: true, skipped: false };
 }
 
-async function insertAttendeeForBooking({ name, email, eventId, eventName, ticketId, ticketCategory, ticketNumber }) {
+async function insertAttendeeForBooking({ name, email, eventId, eventName, ticketId, ticketCategory, ticketNumber, bookingId }) {
   // Also append to Google Sheet (if configured) for check-in + operational tracking.
   try {
     await appendAttendee(name, email, '', ticketId, eventName);
@@ -1014,12 +1351,170 @@ async function insertAttendeeForBooking({ name, email, eventId, eventName, ticke
     eventName,
     ticketCategory,
     ticketNumber,
+    bookingId,
   });
+}
+
+function bookingTicketSlotCount(booking) {
+  if (!booking) return 0;
+  const sel = booking.ticket_selections;
+  if (!Array.isArray(sel) || sel.length === 0) return 1;
+  const n = sel.reduce((sum, s) => sum + Math.max(0, Number(s.quantity || 0)), 0);
+  return n > 0 ? n : 1;
+}
+
+function paymentMethodLabel(m) {
+  const x = String(m || '').toLowerCase();
+  if (x === 'instapay') return 'InstaPay';
+  if (x === 'visa' || x === 'card') return 'Card';
+  if (x === 'applepay') return 'Apple Pay';
+  if (x === 'fawry') return 'Fawry';
+  if (x === 'free') return 'Free';
+  return m ? String(m) : '—';
+}
+
+function paymentStatusLabel(status) {
+  const s = String(status || '').toLowerCase();
+  if (s === 'paid' || s === 'confirmed') return 'Paid';
+  if (s === 'pending_payment') return 'Pending payment';
+  if (s === 'cancelled') return 'Cancelled';
+  if (s === 'refunded') return 'Refunded';
+  return status ? String(status) : '—';
+}
+
+/** Attach booking/payment fields for admin table; uses booking_id when set, else matches by email+event order. */
+async function enrichAttendeeRowsForAdmin(rawRows) {
+  if (!supabase || !Array.isArray(rawRows) || rawRows.length === 0) return rawRows || [];
+  const rows = rawRows.map((r) => ({ ...r }));
+  const bookingById = new Map();
+
+  const explicitIds = [...new Set(rows.map((r) => r.booking_id).filter(Boolean).map((id) => String(id)))];
+  if (explicitIds.length) {
+    const { data: bs } = await supabase
+      .from('bookings')
+      .select('id, status, payment_method, price_paid, created_at, user_id, event_id, ticket_selections')
+      .in('id', explicitIds);
+    for (const b of bs || []) bookingById.set(String(b.id), b);
+  }
+
+  const needsHeuristic = rows.filter((r) => !r.booking_id);
+  if (needsHeuristic.length) {
+    const uniqueRawEids = [
+      ...new Set(needsHeuristic.map((r) => String(r.event_id || '').trim()).filter(Boolean)),
+    ];
+    const canonByRaw = new Map();
+    for (const rid of uniqueRawEids) {
+      const ev = await resolveEventRowByIdOrSlug(rid);
+      canonByRaw.set(rid, ev ? String(ev.id) : rid);
+    }
+
+    const emails = [...new Set(needsHeuristic.map((r) => String(r.email || '').trim().toLowerCase()).filter(Boolean))];
+    const emailToUserId = new Map();
+    if (emails.length) {
+      const { data: users } = await supabase.from('app_users').select('id, email');
+      for (const u of users || []) {
+        const low = String(u.email || '').trim().toLowerCase();
+        if (low) emailToUserId.set(low, u.id);
+      }
+    }
+
+    const attByPair = new Map();
+    for (const r of needsHeuristic) {
+      const em = String(r.email || '').trim().toLowerCase();
+      const uid = emailToUserId.get(em);
+      const rawEid = String(r.event_id || '').trim();
+      const canonEid = rawEid ? canonByRaw.get(rawEid) || rawEid : '';
+      if (!uid || !canonEid) continue;
+      const k = `${String(uid)}|${String(canonEid)}`;
+      if (!attByPair.has(k)) attByPair.set(k, []);
+      attByPair.get(k).push(r);
+    }
+    for (const arr of attByPair.values()) arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+    const userIds = [...new Set([...attByPair.keys()].map((k) => k.split('|')[0]))];
+    const eventIds = [...new Set([...attByPair.keys()].map((k) => k.split('|')[1]))];
+    let candBookings = [];
+    if (userIds.length && eventIds.length) {
+      const { data: bs } = await supabase
+        .from('bookings')
+        .select('id, status, payment_method, price_paid, created_at, user_id, event_id, ticket_selections')
+        .in('user_id', userIds)
+        .in('event_id', eventIds);
+      candBookings = bs || [];
+    }
+    const byPair = new Map();
+    for (const b of candBookings) {
+      const k = `${String(b.user_id)}|${String(b.event_id)}`;
+      if (!byPair.has(k)) byPair.set(k, []);
+      byPair.get(k).push(b);
+    }
+    for (const arr of byPair.values()) arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+    for (const [k, attendees] of attByPair) {
+      const bookings = byPair.get(k) || [];
+      let bi = 0;
+      let slotsLeft = 0;
+      let curBooking = null;
+      for (const att of attendees) {
+        while (bi < bookings.length && slotsLeft === 0) {
+          curBooking = bookings[bi++];
+          slotsLeft = bookingTicketSlotCount(curBooking);
+        }
+        if (curBooking && slotsLeft > 0) {
+          bookingById.set(String(curBooking.id), curBooking);
+          att._resolved_booking_id = String(curBooking.id);
+          slotsLeft--;
+        }
+      }
+    }
+  }
+
+  return rows.map((r) => {
+    const bidRaw = r.booking_id || r._resolved_booking_id;
+    const bid = bidRaw != null && bidRaw !== '' ? String(bidRaw) : '';
+    const b = bid ? bookingById.get(bid) : null;
+    const slots = b ? bookingTicketSlotCount(b) : 0;
+    const amt = b != null ? Number(b.price_paid || 0) : null;
+    const perTicket = b && slots > 0 ? Math.round((amt / slots) * 100) / 100 : null;
+    const out = { ...r };
+    delete out._resolved_booking_id;
+    return {
+      ...out,
+      payment_status: b ? paymentStatusLabel(b.status) : '—',
+      payment_method: b ? paymentMethodLabel(b.payment_method) : '—',
+      payment_amount_total: amt,
+      payment_amount_ticket: perTicket,
+      booking_time: b ? b.created_at : null,
+    };
+  });
+}
+
+async function queryAdminAttendeesRows(eventId, eventName) {
+  let query = supabase.from('attendees').select('*').order('created_at', { ascending: false });
+  if (eventId) {
+    const ev = await resolveEventRowByIdOrSlug(eventId);
+    if (ev) {
+      const parts = [`event_id.eq.${ev.id}`];
+      if (ev.slug) parts.push(`event_id.eq.${ev.slug}`);
+      query = query.or(parts.join(','));
+    } else {
+      query = query.eq('event_id', eventId);
+    }
+  } else if (eventName) {
+    query = query.ilike('event_name', eventName);
+  }
+  return await query;
 }
 
 // ----- Routes -----
 
 app.get('/api/events', async (req, res) => {
+  if (supabase) {
+    const user = await getAuthUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ error: 'Sign in required.', code: 'AUTH_REQUIRED' });
+    }
+  }
   const events = await listEventsForPublic();
   res.json(events || []);
 });
@@ -1064,6 +1559,13 @@ app.get('/api/booking-event/:id', async (req, res) => {
       name: t.ticketName || t.name,
       category: t.ticketCategory || t.category || null,
       price: Number(t.price || 0),
+      soldOut: Boolean(t.soldOut),
+      available:
+        t.available != null && t.available !== ''
+          ? Math.max(0, parseInt(t.available, 10))
+          : t.available_tickets != null && t.available_tickets !== ''
+          ? Math.max(0, parseInt(t.available_tickets, 10))
+          : null,
     })),
     rules,
   });
@@ -1115,7 +1617,7 @@ app.get('/api/auth/me', async (req, res) => {
 
   const { data: bookings } = await supabase
     .from('bookings')
-    .select('id, created_at, payment_method, price_paid, status, event_id, events(name, date, time, venue, image, description, price)')
+    .select('id, created_at, payment_method, price_paid, status, event_id, events(name, date, time, venue, image, image_card, image_detail, description, price)')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
@@ -1159,17 +1661,22 @@ app.get('/api/auth/me', async (req, res) => {
     user,
     bookedEvents: safeBookings.map((b) => {
       const event = b.events
-        ? {
-            id: b.event_id,
-            name: b.events.name,
-            date: b.events.date,
-            time: b.events.time,
-            venue: b.events.venue,
-            image: b.events.image,
-            description: b.events.description,
-            price: Number(b.events.price || 0),
-            type: Number(b.events.price || 0) > 0 ? 'paid' : 'free',
-          }
+        ? (() => {
+            const im = eventImageFields(b.events);
+            return {
+              id: b.event_id,
+              name: b.events.name,
+              date: b.events.date,
+              time: b.events.time,
+              venue: b.events.venue,
+              image: im.image,
+              imageCard: im.imageCard,
+              imageHero: im.imageHero,
+              description: b.events.description,
+              price: Number(b.events.price || 0),
+              type: Number(b.events.price || 0) > 0 ? 'paid' : 'free',
+            };
+          })()
         : null;
 
       const paymentStatus =
@@ -1198,10 +1705,30 @@ app.get('/api/auth/me', async (req, res) => {
 
 app.post('/api/auth/signup', async (req, res) => {
   if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
-  const name = String(req.body?.name || '').trim();
+  const firstName = String(req.body?.firstName || '').trim();
+  const lastName = String(req.body?.lastName || '').trim();
+  const combinedName = [firstName, lastName].filter(Boolean).join(' ').trim();
+  const name = String(req.body?.name || '').trim() || combinedName || null;
   const email = String(req.body?.email || '').trim().toLowerCase();
   const password = String(req.body?.password || '');
   const profilePictureUrl = String(req.body?.profilePictureUrl || '').trim() || null;
+  const phoneIn = String(req.body?.phone || '').trim();
+  let phone = null;
+  if (phoneIn) {
+    const compact = phoneIn.replace(/[^\d+]/g, '');
+    const withPlus = compact.startsWith('+')
+      ? compact
+      : `+${compact.replace(/\D/g, '')}`;
+    const digits = withPlus.slice(1).replace(/\D/g, '');
+    if (digits.length < 8 || digits.length > 15) {
+      return res.status(400).json({ error: 'Please enter a valid international phone number.' });
+    }
+    phone = `+${digits}`;
+  }
+  const birthdateRaw = String(req.body?.birthdate || '').trim();
+  const birthdate =
+    /^\d{4}-\d{2}-\d{2}$/.test(birthdateRaw) ? birthdateRaw : null;
+  const gender = String(req.body?.gender || '').trim().slice(0, 32) || null;
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Please enter a valid email.' });
@@ -1211,11 +1738,36 @@ app.post('/api/auth/signup', async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const { data, error } = await supabase
+  const insertRow = {
+    name,
+    email,
+    password_hash: passwordHash,
+    profile_picture_url: profilePictureUrl,
+    phone,
+    birthdate,
+    gender,
+  };
+  let { data, error } = await supabase
     .from('app_users')
-    .insert({ name: name || null, email, password_hash: passwordHash, profile_picture_url: profilePictureUrl })
+    .insert(insertRow)
     .select('id, name, email, profile_picture_url, created_at')
     .single();
+
+  if (
+    error &&
+    /phone|birthdate|gender|column|schema/i.test(String(error.message || error.details || ''))
+  ) {
+    ({ data, error } = await supabase
+      .from('app_users')
+      .insert({
+        name,
+        email,
+        password_hash: passwordHash,
+        profile_picture_url: profilePictureUrl,
+      })
+      .select('id, name, email, profile_picture_url, created_at')
+      .single());
+  }
 
   if (error) {
     console.error('Supabase signup insert error:', error.message);
@@ -1256,6 +1808,110 @@ app.post('/api/auth/login', async (req, res) => {
   res.json({ user: safeUser });
 });
 
+const FORGOT_PASSWORD_OK =
+  'If an account exists for that email, we sent a link to reset your password. Check your inbox and spam folder.';
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Password reset is not available (database not configured).' });
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Please enter a valid email.' });
+  }
+
+  const generic = { ok: true, message: FORGOT_PASSWORD_OK };
+
+  try {
+    const { data: user, error: findErr } = await supabase
+      .from('app_users')
+      .select('id, email')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (findErr) {
+      console.error('forgot-password lookup:', findErr.message);
+      return res.json(generic);
+    }
+
+    if (user) {
+      const rawToken = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+      const { error: updErr } = await supabase
+        .from('app_users')
+        .update({
+          password_reset_token_hash: tokenHash,
+          password_reset_expires_at: expiresAt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+
+      if (updErr) {
+        console.error('forgot-password token save:', updErr.message);
+      } else {
+        const resetUrl = `${BASE_URL}/reset-password.html?token=${encodeURIComponent(rawToken)}`;
+        const sent = await sendPasswordResetEmail({ toEmail: email, resetUrl });
+        if (sent.skipped) {
+          console.warn('Password reset email skipped (set EMAIL_USER / EMAIL_APP_PASSWORD). Dev link:', resetUrl);
+        } else if (!sent.ok) {
+          console.error('Password reset email failed to send.');
+        }
+      }
+    }
+
+    return res.json(generic);
+  } catch (e) {
+    console.error('forgot-password:', e.message);
+    return res.json(generic);
+  }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Password reset is not available.' });
+  const rawToken = String(req.body?.token || '').trim();
+  const password = String(req.body?.password || '');
+  if (!rawToken || rawToken.length < 32) {
+    return res.status(400).json({ error: 'Invalid or expired reset link. Request a new one from the sign-in page.' });
+  }
+  if (!password || password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+  }
+
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  const { data: user, error: findErr } = await supabase
+    .from('app_users')
+    .select('id, password_reset_expires_at')
+    .eq('password_reset_token_hash', tokenHash)
+    .maybeSingle();
+
+  if (findErr || !user) {
+    return res.status(400).json({ error: 'Invalid or expired reset link. Request a new one from the sign-in page.' });
+  }
+
+  const exp = user.password_reset_expires_at ? new Date(user.password_reset_expires_at) : null;
+  if (!exp || Number.isNaN(exp.getTime()) || exp < new Date()) {
+    return res.status(400).json({ error: 'This reset link has expired. Request a new one from the sign-in page.' });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const { error: upErr } = await supabase
+    .from('app_users')
+    .update({
+      password_hash: passwordHash,
+      password_reset_token_hash: null,
+      password_reset_expires_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', user.id);
+
+  if (upErr) {
+    console.error('reset-password update:', upErr.message);
+    return res.status(500).json({ error: 'Could not update password. Try again.' });
+  }
+
+  res.json({ ok: true });
+});
+
 app.post('/api/auth/logout', (req, res) => {
   clearSessionCookie(res);
   res.json({ ok: true });
@@ -1265,15 +1921,66 @@ app.patch('/api/auth/profile', async (req, res) => {
   const user = await requireAuth(req, res);
   if (!user) return;
   const name = String(req.body?.name ?? '').trim() || null;
-  const profilePictureUrl = String(req.body?.profilePictureUrl ?? '').trim() || null;
   const { data, error } = await supabase
     .from('app_users')
-    .update({ name, profile_picture_url: profilePictureUrl, updated_at: new Date().toISOString() })
+    .update({ name, updated_at: new Date().toISOString() })
     .eq('id', user.id)
     .select('id, name, email, profile_picture_url, created_at')
     .single();
   if (error) return res.status(500).json({ error: 'Could not update profile.' });
   res.json({ user: data });
+});
+
+app.post('/api/auth/profile/avatar', (req, res) => {
+  avatarUpload.single('avatar')(req, res, (multerErr) => {
+    void (async () => {
+      try {
+        if (multerErr) {
+          const code = multerErr.code;
+          if (code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({ error: 'Image must be 2MB or smaller.' });
+          }
+          if (multerErr instanceof multer.MulterError) {
+            return res.status(400).json({ error: multerErr.message || 'Upload could not be read.' });
+          }
+          return res.status(400).json({ error: String(multerErr.message || multerErr) || 'Upload could not be read.' });
+        }
+
+        const user = await requireAuth(req, res);
+        if (!user) return;
+        if (!req.file?.buffer) {
+          return res.status(400).json({ error: 'Choose an image file.' });
+        }
+        const mt = String(req.file.mimetype || '').toLowerCase();
+        if (!/^image\/(jpeg|jpg|pjpeg|png|webp|gif|avif)$/.test(mt)) {
+          return res.status(400).json({
+            error:
+              'Use JPEG, PNG, WebP, AVIF, or GIF. (iPhone HEIC is not supported — choose “Most Compatible” or convert to JPEG.)',
+          });
+        }
+
+        const publicUrl = await persistAvatarAndUrl(user.id, req.file.buffer, mt);
+        const { data, error } = await supabase
+          .from('app_users')
+          .update({ profile_picture_url: publicUrl, updated_at: new Date().toISOString() })
+          .eq('id', user.id)
+          .select('id, name, email, profile_picture_url, created_at')
+          .single();
+        if (error) {
+          console.error('Avatar DB update:', error.message, error.details || '');
+          return res.status(500).json({
+            error: error.message ? `Could not save profile photo: ${error.message}` : 'Could not save profile photo.',
+          });
+        }
+        res.json({ user: data });
+      } catch (e) {
+        console.error('Avatar upload:', e);
+        if (!res.headersSent) {
+          res.status(500).json({ error: e.message ? `Could not upload image: ${e.message}` : 'Could not upload image.' });
+        }
+      }
+    })();
+  });
 });
 
 // Google OAuth (redirect + callback)
@@ -1286,7 +1993,7 @@ app.get('/api/auth/google/start', async (req, res) => {
   const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
   const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI;
 
-  const next = String(req.query.next || '/profile');
+  const next = String(req.query.next || '/');
 
   if (!clientId || !clientSecret || !redirectUri) {
     // Redirect back to auth page with a friendly message.
@@ -1337,7 +2044,7 @@ app.get('/api/auth/google/callback', async (req, res) => {
     return res.redirect('/auth?error=google_state_invalid');
   }
 
-  const next = req.cookies?.google_oauth_next || '/profile';
+  const next = req.cookies?.google_oauth_next || '/';
 
   const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
   const { tokens } = await oauth2Client.getToken(code);
@@ -1413,7 +2120,7 @@ app.get('/api/auth/google/callback', async (req, res) => {
 async function getCartForUser(userId) {
   let { data, error } = await supabase
     .from('cart_items')
-    .select('event_id, created_at, ticket_selections, events(id, name, date, time, venue, image, description, price)')
+    .select('event_id, created_at, ticket_selections, events(id, name, date, time, venue, image, image_card, image_detail, description, price)')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -1421,7 +2128,7 @@ async function getCartForUser(userId) {
   if (error && String(error.message || '').toLowerCase().includes('ticket_selections')) {
     ({ data, error } = await supabase
       .from('cart_items')
-      .select('event_id, created_at, events(id, name, date, time, venue, image, description, price)')
+      .select('event_id, created_at, events(id, name, date, time, venue, image, image_card, image_detail, description, price)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false }));
   }
@@ -1469,17 +2176,22 @@ async function getCartForUser(userId) {
         eventId: row.event_id,
         addedAt: row.created_at,
         event: row.events
-          ? {
-              id: row.events.id,
-              name: row.events.name,
-              date: row.events.date,
-              time: row.events.time,
-              venue: row.events.venue,
-              image: row.events.image,
-              description: row.events.description,
-              price: unitEventPrice,
-              type: unitEventPrice > 0 ? 'paid' : 'free',
-            }
+          ? (() => {
+              const im = eventImageFields(row.events);
+              return {
+                id: row.events.id,
+                name: row.events.name,
+                date: row.events.date,
+                time: row.events.time,
+                venue: row.events.venue,
+                image: im.image,
+                imageCard: im.imageCard,
+                imageHero: im.imageHero,
+                description: row.events.description,
+                price: unitEventPrice,
+                type: unitEventPrice > 0 ? 'paid' : 'free',
+              };
+            })()
           : null,
         ticketSelections: effectiveSelections,
         selectionsTotal,
@@ -1630,25 +2342,28 @@ app.post('/api/cart/clear', async (req, res) => {
 });
 
 // ----- Checkout + mocked payments -----
-async function findAlreadyBookedEventIds(userId, eventIds) {
-  if (!eventIds.length) return [];
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('event_id')
-    .eq('user_id', userId)
-    .in('event_id', eventIds);
-  if (error) throw error;
-  return (data || []).map((r) => r.event_id);
+function bookingDuplicatePolicyMessage() {
+  return (
+    'This project allows multiple purchases per event, but your Supabase database still has an old rule ' +
+    '(one booking per user per event). Open Supabase → SQL → run the block under ' +
+    '"allow multiple bookings per user for the same event" in supabase-production-deltas.sql, then try again.'
+  );
+}
+
+function isBookingsUniqueViolation(error) {
+  if (!error) return false;
+  if (String(error.code || '') === '23505') return true;
+  const msg = String(error.message || '').toLowerCase();
+  return (
+    msg.includes('duplicate') ||
+    msg.includes('unique constraint') ||
+    msg.includes('idx_bookings') ||
+    (msg.includes('bookings') && msg.includes('unique'))
+  );
 }
 
 async function confirmBookingsFromCart(userId, paymentMethod, pricePaidByEventId) {
   const cart = await getCartForUser(userId);
-  const eventIds = cart.items.map((i) => i.eventId);
-  const alreadyBooked = await findAlreadyBookedEventIds(userId, eventIds);
-  if (alreadyBooked.length) {
-    return { error: 'Some events in your cart are already booked.', alreadyBooked };
-  }
-
   const rows = cart.items.map((i) => ({
     user_id: userId,
     event_id: i.eventId,
@@ -1660,8 +2375,8 @@ async function confirmBookingsFromCart(userId, paymentMethod, pricePaidByEventId
 
   const { error } = await supabase.from('bookings').insert(rows);
   if (error) {
-    if (String(error.message || '').toLowerCase().includes('duplicate')) {
-      return { error: 'You already booked one of these events.' };
+    if (isBookingsUniqueViolation(error)) {
+      return { error: bookingDuplicatePolicyMessage() };
     }
     console.error('Booking insert error:', error.message);
     return { error: 'Could not confirm booking.' };
@@ -1723,12 +2438,6 @@ app.post('/api/checkout/confirm', async (req, res) => {
   const cart = await getCartForUser(user.id);
   if (!cart.items.length) return res.status(400).json({ error: 'Cart is empty.' });
 
-  const eventIds = cart.items.map((i) => i.eventId);
-  const alreadyBooked = await findAlreadyBookedEventIds(user.id, eventIds);
-  if (alreadyBooked.length) {
-    return res.status(400).json({ error: 'You already booked one or more events.', alreadyBooked });
-  }
-
   // Free checkout
   if (cart.total <= 0) {
     const rows = cart.items.map((i) => ({
@@ -1741,7 +2450,12 @@ app.post('/api/checkout/confirm', async (req, res) => {
     }));
 
     const { data: inserted, error } = await supabase.from('bookings').insert(rows).select('id, event_id');
-    if (error) return res.status(400).json({ error: 'Could not confirm booking.' });
+    if (error) {
+      if (isBookingsUniqueViolation(error)) {
+        return res.status(400).json({ error: bookingDuplicatePolicyMessage() });
+      }
+      return res.status(400).json({ error: 'Could not confirm booking.' });
+    }
 
     await supabase.from('cart_items').delete().eq('user_id', user.id);
 
@@ -1770,6 +2484,7 @@ app.post('/api/checkout/confirm', async (req, res) => {
             ticketId,
             ticketCategory,
             ticketNumber,
+            bookingId: b.id,
           });
 
           ticketsForEmail.push({
@@ -1793,12 +2508,21 @@ app.post('/api/checkout/confirm', async (req, res) => {
     return res.json({ status: 'paid', paymentMethod: 'free', booked: insertedRows.map((r) => r.id) });
   }
 
-  if (method !== 'instapay' && method !== 'visa' && method !== 'card' && method !== 'applepay' && method !== 'credit' && method !== 'debit') {
+  if (
+    method !== 'instapay' &&
+    method !== 'visa' &&
+    method !== 'card' &&
+    method !== 'applepay' &&
+    method !== 'credit' &&
+    method !== 'debit' &&
+    method !== 'fawry'
+  ) {
     return res.status(400).json({ error: 'Invalid payment method.' });
   }
 
   // Normalize method to the values used by the UI + admin
-  const normalizedMethod = method === 'applepay' ? 'applepay' : method === 'instapay' ? 'instapay' : 'card';
+  const normalizedMethod =
+    method === 'applepay' ? 'applepay' : method === 'instapay' ? 'instapay' : method === 'fawry' ? 'fawry' : 'card';
   const isInsta = normalizedMethod === 'instapay';
 
   const rows = cart.items.map((i) => ({
@@ -1811,7 +2535,12 @@ app.post('/api/checkout/confirm', async (req, res) => {
   }));
 
   const { data: inserted, error } = await supabase.from('bookings').insert(rows).select('id, event_id');
-  if (error) return res.status(400).json({ error: 'Could not process checkout.' });
+  if (error) {
+    if (isBookingsUniqueViolation(error)) {
+      return res.status(400).json({ error: bookingDuplicatePolicyMessage() });
+    }
+    return res.status(400).json({ error: 'Could not process checkout.' });
+  }
 
   // Clear cart regardless of payment method: tickets will be created on payment confirmation for InstaPay.
   await supabase.from('cart_items').delete().eq('user_id', user.id);
@@ -1845,6 +2574,7 @@ app.post('/api/checkout/confirm', async (req, res) => {
           ticketId,
           ticketCategory,
           ticketNumber,
+          bookingId: b.id,
         });
 
         ticketsForEmail.push({
@@ -1960,7 +2690,10 @@ app.get('/api/admin/instapay-bookings', async (req, res) => {
     .select('id, user_id, event_id, status, payment_method, price_paid, ticket_selections, created_at')
     .eq('payment_method', 'instapay');
 
-  if (error) return res.status(500).json({ error: 'Could not load InstaPay bookings.' });
+  if (error) {
+    console.error('InstaPay bookings list error:', error.message);
+    return res.json([]);
+  }
 
   const filtered = status ? (bookings || []).filter((b) => b.status === status) : bookings || [];
   const userIds = [...new Set(filtered.map((b) => b.user_id).filter(Boolean))];
@@ -1970,7 +2703,10 @@ app.get('/api/admin/instapay-bookings', async (req, res) => {
     ? await supabase.from('app_users').select('id, name, email, profile_picture_url').in('id', userIds)
     : { data: [] };
   const { data: events } = eventIds.length
-    ? await supabase.from('events').select('id, name, date, time, venue, image, description, price').in('id', eventIds)
+    ? await supabase
+        .from('events')
+        .select('id, name, date, time, venue, image, image_card, image_detail, description, price')
+        .in('id', eventIds)
     : { data: [] };
 
   const userById = new Map((users || []).map((u) => [u.id, u]));
@@ -2046,6 +2782,7 @@ app.post('/api/admin/instapay-bookings/:bookingId/confirm', async (req, res) => 
         ticketId,
         ticketCategory,
         ticketNumber,
+        bookingId,
       });
 
       ticketsForEmail.push({
@@ -2096,11 +2833,27 @@ app.get('/admin-scanners', (req, res) => {
 
 // TicketsMarche-style routes
 app.get('/event/checkout', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
+  redirectIfNotLoggedIn(req, res)
+    .then((redirected) => {
+      if (redirected) return;
+      res.sendFile(path.join(__dirname, 'public', 'checkout.html'));
+    })
+    .catch((e) => {
+      console.error(e);
+      if (!res.headersSent) res.status(500).send('Could not load page.');
+    });
 });
 
 app.get('/event/:id', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'event-details.html'));
+  redirectIfNotLoggedIn(req, res)
+    .then((redirected) => {
+      if (redirected) return;
+      res.sendFile(path.join(__dirname, 'public', 'event-details.html'));
+    })
+    .catch((e) => {
+      console.error(e);
+      if (!res.headersSent) res.status(500).send('Could not load page.');
+    });
 });
 
 app.get('/', (req, res) => {
@@ -2108,11 +2861,27 @@ app.get('/', (req, res) => {
 });
 
 app.get('/event', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'event.html'));
+  redirectIfNotLoggedIn(req, res)
+    .then((redirected) => {
+      if (redirected) return;
+      res.sendFile(path.join(__dirname, 'public', 'event.html'));
+    })
+    .catch((e) => {
+      console.error(e);
+      if (!res.headersSent) res.status(500).send('Could not load page.');
+    });
 });
 
 app.get('/register', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'register.html'));
+  redirectIfNotLoggedIn(req, res)
+    .then((redirected) => {
+      if (redirected) return;
+      res.sendFile(path.join(__dirname, 'public', 'register.html'));
+    })
+    .catch((e) => {
+      console.error(e);
+      if (!res.headersSent) res.status(500).send('Could not load page.');
+    });
 });
 
 app.post('/api/register', async (req, res) => {
@@ -2120,13 +2889,15 @@ app.post('/api/register', async (req, res) => {
   if (!name || !email) {
     return res.status(400).json({ error: 'Name and email are required.' });
   }
+  const eventRow = eventId && supabase ? await resolveEventRowByIdOrSlug(String(eventId)) : null;
   const event = eventId ? await getEventById(eventId) : null;
-  const eventName = event ? event.name : (process.env.EVENT_NAME || 'Event');
+  const eventName = eventRow ? eventRow.name : event ? event.name : (process.env.EVENT_NAME || 'Event');
+  const attendeeEventId = eventRow ? eventRow.id : eventId || null;
   const blocked = await isUserBlocked(email.trim(), (phone || '').trim());
   if (blocked) {
     return res.status(403).json({ error: 'This email or phone is blocked from registering.' });
   }
-  const existing = await findExistingRegistration(email.trim(), (phone || '').trim(), eventId || null, eventName);
+  const existing = await findExistingRegistration(email.trim(), (phone || '').trim(), attendeeEventId || eventId || null, eventName);
   if (existing) {
     if (existing.type === 'email') {
       return res.status(400).json({ error: 'This email is already registered for this event.' });
@@ -2148,7 +2919,7 @@ app.post('/api/register', async (req, res) => {
       email: email.trim(),
       phone: (phone || '').trim(),
       ticketId,
-      eventId,
+      eventId: attendeeEventId,
       eventName,
     });
   } catch (e) {
@@ -2220,20 +2991,131 @@ app.post('/api/register', async (req, res) => {
 // ----- Site config (footer, etc.) – file-based -----
 const SITE_CONFIG_PATH = path.join(__dirname, 'public', 'site-config.json');
 
+function isHomeNavUrl(u) {
+  const s = String(u || '').trim();
+  if (!s || s === '/') return true;
+  try {
+    if (/^https?:\/\//i.test(s)) {
+      const p = new URL(s, 'http://localhost').pathname.replace(/\/$/, '') || '/';
+      return p === '/';
+    }
+  } catch (_) {
+    /* ignore */
+  }
+  const p = s.split('?')[0].replace(/\/$/, '') || '/';
+  return p === '/';
+}
+
+/** Keep a single Home (/) link first in nav lists (Tazkarti-style). */
+function ensureHomeFirst(links) {
+  const arr = Array.isArray(links)
+    ? links.filter((l) => l && (l.label || l.url)).map((l) => ({ ...l }))
+    : [];
+  const i = arr.findIndex((l) => l && isHomeNavUrl(l.url));
+  if (i === -1) return [{ label: 'Home', url: '/' }, ...arr];
+  if (i === 0) return arr;
+  const home = arr[i];
+  const rest = arr.filter((_, j) => j !== i);
+  return [home, ...rest];
+}
+
+const SOCIAL_NETWORK_IDS = ['facebook', 'instagram', 'linkedin', 'twitter', 'youtube', 'tiktok'];
+
+function defaultSocialLinkRows() {
+  return SOCIAL_NETWORK_IDS.map((id) => ({
+    id,
+    url: '',
+    label: id.charAt(0).toUpperCase() + id.slice(1),
+    visible: true,
+  }));
+}
+
+function socialLinkRowVisible(item) {
+  if (!item || typeof item !== 'object') return true;
+  const v = item.visible;
+  if (v === false || v === 'false' || v === 0 || v === '0') return false;
+  return true;
+}
+
+/** Merge file + legacy instagram fields into a fixed-order social link list for the API and UI. */
+function normalizeSocialLinks(parsed) {
+  const byId = new Map(defaultSocialLinkRows().map((row) => [row.id, { ...row }]));
+  if (parsed && Array.isArray(parsed.socialLinks)) {
+    for (const item of parsed.socialLinks) {
+      if (!item || !item.id) continue;
+      const id = String(item.id).trim().toLowerCase();
+      if (!byId.has(id)) continue;
+      const cur = byId.get(id);
+      cur.url = String(item.url || '').trim();
+      if (item.label != null && String(item.label).trim()) cur.label = String(item.label).trim();
+      cur.visible = socialLinkRowVisible(item);
+    }
+  }
+  const igUrl = parsed && String(parsed.instagramUrl || '').trim();
+  const igLabel = parsed && String(parsed.instagramLabel || '').trim();
+  const igRow = byId.get('instagram');
+  if (igUrl && igRow && igRow.visible !== false) {
+    if (!igRow.url) igRow.url = igUrl;
+    if (igLabel) igRow.label = igLabel;
+  }
+  return SOCIAL_NETWORK_IDS.map((id) => {
+    const row = byId.get(id);
+    return { ...row, visible: row.visible !== false };
+  });
+}
+
+function defaultPaymentMethodsConfig() {
+  return [
+    { id: 'card', label: 'Card', enabled: true, description: 'Visa, Mastercard (configure gateway later).' },
+    { id: 'fawry', label: 'Fawry', enabled: true, description: 'Fawry payments (configure merchant later).' },
+    { id: 'instapay', label: 'InstaPay', enabled: true, description: 'Bank transfer / QR approval flow.' },
+  ];
+}
+
 function getSiteConfig() {
   try {
     const raw = fs.readFileSync(SITE_CONFIG_PATH, 'utf8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed.paymentMethods) || !parsed.paymentMethods.length) {
+      parsed.paymentMethods = defaultPaymentMethodsConfig();
+    }
+    parsed.links = ensureHomeFirst(Array.isArray(parsed.links) ? parsed.links : []);
+    const headerFromFile = Array.isArray(parsed.headerLinks) && parsed.headerLinks.length;
+    const footerFromFile = Array.isArray(parsed.footerLinks) && parsed.footerLinks.length;
+    if (!headerFromFile) parsed.headerLinks = parsed.links.slice();
+    else parsed.headerLinks = ensureHomeFirst(parsed.headerLinks);
+    if (!footerFromFile) parsed.footerLinks = parsed.links.slice();
+    else parsed.footerLinks = ensureHomeFirst(parsed.footerLinks);
+    parsed.socialLinks = normalizeSocialLinks(parsed);
+    const ig = parsed.socialLinks.find((s) => s.id === 'instagram');
+    const igShown = ig && ig.visible !== false;
+    parsed.instagramUrl = igShown && ig.url ? ig.url : '';
+    parsed.instagramLabel =
+      igShown && ig.label ? ig.label : String(parsed.instagramLabel || 'Instagram').trim() || 'Instagram';
+    return parsed;
   } catch (e) {
-    return {
-      copyright: '© BLOCK',
+    const links = [
+      { label: 'Home', url: '/' },
+      { label: 'Events', url: '/events' },
+      { label: 'My tickets', url: '/my-tickets' },
+      { label: 'Contact Us', url: '/contact' },
+      { label: 'About', url: '/about-us' },
+    ];
+    const nav = ensureHomeFirst(links);
+    const socialFallback = normalizeSocialLinks({
       instagramUrl: 'https://www.instagram.com/blockagency.eg',
       instagramLabel: 'Instagram',
-      links: [
-        { label: 'My tickets', url: '/my-tickets' },
-        { label: 'Events', url: '/events' },
-        { label: 'Contact', url: '/contact' },
-      ],
+    });
+    const ig0 = socialFallback.find((s) => s.id === 'instagram');
+    return {
+      copyright: '© BLOCK',
+      instagramUrl: ig0 && ig0.url ? ig0.url : '',
+      instagramLabel: ig0 && ig0.label ? ig0.label : 'Instagram',
+      socialLinks: socialFallback,
+      paymentMethods: defaultPaymentMethodsConfig(),
+      links: nav,
+      headerLinks: nav.slice(),
+      footerLinks: nav.slice(),
     };
   }
 }
@@ -2253,15 +3135,42 @@ app.put('/api/admin/site-config', (req, res) => {
     }
   }
   const body = req.body || {};
+  const prev = getSiteConfig();
+  const mapLinks = (arr) =>
+    (Array.isArray(arr) ? arr : [])
+      .filter((l) => l && (l.label || l.url))
+      .map((l) => ({ label: String(l.label || '').trim(), url: String(l.url || '').trim() }));
+  const socialMerge = { ...prev };
+  if (Array.isArray(body.socialLinks)) socialMerge.socialLinks = body.socialLinks;
+  if (body.instagramUrl != null) socialMerge.instagramUrl = body.instagramUrl;
+  if (body.instagramLabel != null) socialMerge.instagramLabel = body.instagramLabel;
+  const socialLinks = normalizeSocialLinks(socialMerge);
+  const igRow = socialLinks.find((s) => s.id === 'instagram');
+  const igShown = igRow && igRow.visible !== false;
   const config = {
     copyright: (body.copyright || '© BLOCK').trim(),
-    instagramUrl: (body.instagramUrl || '').trim() || 'https://www.instagram.com/blockagency.eg',
-    instagramLabel: (body.instagramLabel || 'Instagram').trim(),
-    links: Array.isArray(body.links)
-      ? body.links
-          .filter((l) => l && (l.label || l.url))
-          .map((l) => ({ label: String(l.label || '').trim(), url: String(l.url || '').trim() }))
-      : getSiteConfig().links,
+    instagramUrl: igShown && igRow.url ? igRow.url : '',
+    instagramLabel: igShown && igRow.label ? igRow.label : 'Instagram',
+    socialLinks,
+    links: ensureHomeFirst(Array.isArray(body.links) ? mapLinks(body.links) : prev.links),
+    headerLinks: ensureHomeFirst(
+      Array.isArray(body.headerLinks) ? mapLinks(body.headerLinks) : (prev.headerLinks || prev.links).slice(),
+    ),
+    footerLinks: ensureHomeFirst(
+      Array.isArray(body.footerLinks) ? mapLinks(body.footerLinks) : (prev.footerLinks || prev.links).slice(),
+    ),
+    ctaText: body.ctaText != null ? String(body.ctaText).trim() : prev.ctaText,
+    ctaUrl: body.ctaUrl != null ? String(body.ctaUrl).trim() : prev.ctaUrl,
+    paymentMethods: Array.isArray(body.paymentMethods)
+      ? body.paymentMethods
+          .filter((m) => m && m.id)
+          .map((m) => ({
+            id: String(m.id || '').trim().toLowerCase(),
+            label: String(m.label || m.id || '').trim(),
+            enabled: m.enabled !== false,
+            description: String(m.description || '').trim(),
+          }))
+      : prev.paymentMethods || defaultPaymentMethodsConfig(),
   };
   try {
     fs.writeFileSync(SITE_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
@@ -2281,14 +3190,14 @@ app.get('/api/admin/events', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('events')
-      .select('id, slug, name, date, time, venue, category, image, description, price, sort_order, available_tickets, created_at')
+      .select('id, slug, name, date, time, venue, category, image, image_card, image_detail, description, price, sort_order, available_tickets, created_at, extra')
       .order('sort_order', { ascending: true, nullsFirst: false })
       .order('created_at', { ascending: false });
     if (error) {
       console.error('Supabase admin list events error:', error.message);
       return res.json(loadAdminEventsFromFile());
     }
-    res.json(data || []);
+    res.json((data || []).map((row) => mapSupabaseEventRowToAdmin(row)));
   } catch (e) {
     console.error('Supabase admin list events exception:', e.message);
     res.json(loadAdminEventsFromFile());
@@ -2298,10 +3207,12 @@ app.get('/api/admin/events', async (req, res) => {
 app.post('/api/admin/events', async (req, res) => {
   const authError = await requireAdmin(req, res);
   if (authError) return;
-  const { name, slug, date, time, venue, category, image, description, available_tickets, price } = req.body || {};
+  const { name, slug, date, time, venue, category, description, available_tickets, price } = req.body || {};
   if (!name) return res.status(400).json({ error: 'Name is required.' });
   const normalizedPrice = price != null && price !== '' ? Number(price) : 0;
   const normalizedAvailable = available_tickets != null && available_tickets !== '' ? parseInt(available_tickets, 10) : null;
+  const extraPayload = buildExtraFromAdminBody(req.body);
+  const imgs = deriveEventImagesFromAdminBody(req.body);
   if (!supabase) {
     const events = getEventsFromFile();
     const newEvent = {
@@ -2312,10 +3223,13 @@ app.post('/api/admin/events', async (req, res) => {
       time: time || null,
       venue: venue || null,
       category: category || null,
-      image: image || null,
+      image: imgs.image,
+      image_card: imgs.image_card,
+      image_detail: imgs.image_detail,
       description: description || null,
       price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
       available_tickets: normalizedAvailable,
+      extra: extraPayload,
     };
     events.push(newEvent);
     setEventsToFile(events);
@@ -2330,10 +3244,13 @@ app.post('/api/admin/events', async (req, res) => {
       time: time || null,
       venue: venue || null,
       category: category || null,
-      image: image || null,
+      image: imgs.image,
+      image_card: imgs.image_card,
+      image_detail: imgs.image_detail,
       description: description || null,
       price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
       available_tickets: normalizedAvailable,
+      extra: extraPayload,
     };
     const { data, error } = await supabase
       .from('events')
@@ -2351,10 +3268,13 @@ app.post('/api/admin/events', async (req, res) => {
         time: time || null,
         venue: venue || null,
         category: category || null,
-        image: image || null,
+        image: imgs.image,
+        image_card: imgs.image_card,
+        image_detail: imgs.image_detail,
         description: description || null,
         price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
         available_tickets: normalizedAvailable,
+        extra: extraPayload,
       };
       events.push(newEvent);
       setEventsToFile(events);
@@ -2372,10 +3292,13 @@ app.post('/api/admin/events', async (req, res) => {
       time: time || null,
       venue: venue || null,
       category: category || null,
-      image: image || null,
+      image: imgs.image,
+      image_card: imgs.image_card,
+      image_detail: imgs.image_detail,
       description: description || null,
       price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
       available_tickets: normalizedAvailable,
+      extra: extraPayload,
     };
     events.push(newEvent);
     setEventsToFile(events);
@@ -2387,10 +3310,12 @@ app.put('/api/admin/events/:id', async (req, res) => {
   const authError = await requireAdmin(req, res);
   if (authError) return;
   const { id } = req.params;
-  const { name, slug, date, time, venue, category, image, description, available_tickets, price } = req.body || {};
+  const { name, slug, date, time, venue, category, description, available_tickets, price } = req.body || {};
   if (!name) return res.status(400).json({ error: 'Name is required.' });
   const normalizedPrice = price != null && price !== '' ? Number(price) : 0;
   const normalizedAvailable = available_tickets != null && available_tickets !== '' ? parseInt(available_tickets, 10) : null;
+  const extraPayload = buildExtraFromAdminBody(req.body);
+  const imgs = deriveEventImagesFromAdminBody(req.body);
   if (!supabase) {
     const events = getEventsFromFile();
     const idx = events.findIndex((e) => e && e.id === id);
@@ -2403,10 +3328,13 @@ app.put('/api/admin/events/:id', async (req, res) => {
       time: time || null,
       venue: venue || null,
       category: category || null,
-      image: image || null,
+      image: imgs.image,
+      image_card: imgs.image_card,
+      image_detail: imgs.image_detail,
       description: description || null,
       price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
       available_tickets: normalizedAvailable,
+      extra: extraPayload,
     };
     setEventsToFile(events);
     return res.json({ id: events[idx].id, slug: events[idx].slug || null });
@@ -2420,10 +3348,13 @@ app.put('/api/admin/events/:id', async (req, res) => {
       time: time || null,
       venue: venue || null,
       category: category || null,
-      image: image || null,
+      image: imgs.image,
+      image_card: imgs.image_card,
+      image_detail: imgs.image_detail,
       description: description || null,
       price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
       available_tickets: normalizedAvailable,
+      extra: extraPayload,
     };
     const { data, error } = await supabase
       .from('events')
@@ -2444,10 +3375,13 @@ app.put('/api/admin/events/:id', async (req, res) => {
         time: time || null,
         venue: venue || null,
         category: category || null,
-        image: image || null,
+        image: imgs.image,
+        image_card: imgs.image_card,
+        image_detail: imgs.image_detail,
         description: description || null,
         price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
         available_tickets: normalizedAvailable,
+        extra: extraPayload,
       };
       setEventsToFile(events);
       return res.json({ id: events[idx].id, slug: events[idx].slug || null });
@@ -2466,10 +3400,13 @@ app.put('/api/admin/events/:id', async (req, res) => {
       time: time || null,
       venue: venue || null,
       category: category || null,
-      image: image || null,
+      image: imgs.image,
+      image_card: imgs.image_card,
+      image_detail: imgs.image_detail,
       description: description || null,
       price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
       available_tickets: normalizedAvailable,
+      extra: extraPayload,
     };
     setEventsToFile(events);
     res.json({ id: events[idx].id, slug: events[idx].slug || null });
@@ -2582,24 +3519,53 @@ app.get('/api/admin/attendees', async (req, res) => {
   const eventId = (req.query.eventId || '').toString().trim();
   const eventName = (req.query.eventName || '').toString().trim();
   try {
-    let query = supabase
-      .from('attendees')
-      .select('id, name, email, phone, event_id, event_name, attended, checkin_time, scanned_by_name, scanned_by_phone, created_at, ticket_id')
-      .order('created_at', { ascending: false });
-    if (eventId) {
-      query = query.eq('event_id', eventId);
-    } else if (eventName) {
-      query = query.eq('event_name', eventName);
-    }
-    const { data, error } = await query;
+    const { data, error } = await queryAdminAttendeesRows(eventId, eventName);
     if (error) {
-      console.error('Supabase admin attendees error:', error.message);
-      return res.status(500).json({ error: 'Could not load attendees.' });
+      console.error('Supabase admin attendees error:', error.message, error.code, error.details);
+      return res.status(500).json({
+        error: 'Could not load attendees.',
+        details: error.message || null,
+        code: error.code || null,
+      });
     }
     res.json(data || []);
   } catch (e) {
     console.error('Admin attendees exception:', e.message);
-    res.status(500).json({ error: 'Could not load attendees.' });
+    res.status(500).json({ error: 'Could not load attendees.', details: e.message || null });
+  }
+});
+
+// Ticket-level payment rows (same people as attendees; joins booking data for admin)
+app.get('/api/admin/payments', async (req, res) => {
+  const authError = await requireAdmin(req, res);
+  if (authError) return;
+  if (!supabase) {
+    return res.status(503).json({ error: 'Supabase not configured.' });
+  }
+  const eventId = (req.query.eventId || '').toString().trim();
+  const eventName = (req.query.eventName || '').toString().trim();
+  try {
+    const { data, error } = await queryAdminAttendeesRows(eventId, eventName);
+    if (error) {
+      console.error('Supabase admin payments error:', error.message, error.code, error.details);
+      return res.status(500).json({
+        error: 'Could not load payments.',
+        details: error.message || null,
+        code: error.code || null,
+      });
+    }
+    const enriched = await enrichAttendeeRowsForAdmin(data || []);
+    try {
+      res.type('application/json').send(
+        JSON.stringify(enriched, (_k, v) => (typeof v === 'bigint' ? v.toString() : v))
+      );
+    } catch (serErr) {
+      console.error('Admin payments JSON error:', serErr.message);
+      res.status(500).json({ error: 'Could not load payments.', details: serErr.message || null });
+    }
+  } catch (e) {
+    console.error('Admin payments exception:', e.message);
+    res.status(500).json({ error: 'Could not load payments.', details: e.message || null });
   }
 });
 
@@ -2735,60 +3701,194 @@ app.get('/api/checkin/:ticketId', async (req, res) => {
 });
 
 // ----- Scanner profile auth + server-side history -----
-app.post('/api/scanner/login', async (req, res) => {
+// Public: show scanner profile label on the login screen (no secrets).
+app.get('/api/scanner/public-info', async (req, res) => {
   if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
-  const scannerId = String(req.body?.scannerId || '').trim();
-  const password = String(req.body?.password || '');
-  const deviceId = String(req.body?.deviceId || '').trim();
+  const scannerId = String(req.query.scannerId || '').trim();
+  const uuidRe =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRe.test(scannerId)) return res.status(400).json({ error: 'Invalid scanner id.' });
 
-  if (!scannerId || !password) return res.status(400).json({ error: 'scannerId and password are required.' });
-  if (!deviceId) return res.status(400).json({ error: 'deviceId is required.' });
-
-  // Allow either UUID id or scanner "name" as scannerId.
-  const { data: byId, error: byIdErr } = await supabase
+  const { data, error } = await supabase
     .from('scanners')
-    .select('id, name, password_hash, active')
+    .select('id, name, active')
     .eq('id', scannerId)
     .maybeSingle();
+  if (error || !data || !data.active) return res.status(404).json({ error: 'Not found.' });
+  res.json({ ok: true, scanner: { id: data.id, name: data.name } });
+});
 
-  let scanner = byId;
-  if (!scanner) {
-    const { data: byName } = await supabase
-      .from('scanners')
-      .select('id, name, password_hash, active')
-      .eq('name', scannerId)
-      .maybeSingle();
-    scanner = byName;
+app.post('/api/scanner/logout', (req, res) => {
+  clearScannerCookie(res);
+  res.json({ ok: true });
+});
+
+// Scanner enters name only; admin must approve before this device can scan.
+app.post('/api/scanner/request-access', async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+  const scannerId = String(req.body?.scannerId || '').trim();
+  const deviceId = String(req.body?.deviceId || '').trim();
+  const requestedName = String(req.body?.requestedName || req.body?.operatorName || '').trim();
+
+  if (!scannerId || !deviceId) return res.status(400).json({ error: 'scannerId and deviceId are required.' });
+  if (requestedName.length < 2) {
+    return res.status(400).json({ error: 'Enter your name (at least 2 characters).' });
   }
 
-  if (!scanner || !scanner.active) return res.status(401).json({ error: 'Unauthorized.' });
+  const { data: scanner, error: scErr } = await supabase
+    .from('scanners')
+    .select('id, name, active')
+    .eq('id', scannerId)
+    .maybeSingle();
+  if (scErr || !scanner || !scanner.active) {
+    return res.status(404).json({ error: 'Scanner not found or inactive.' });
+  }
 
-  const ok = await bcrypt.compare(password, scanner.password_hash);
-  if (!ok) return res.status(401).json({ error: 'Unauthorized.' });
+  await supabase
+    .from('scanner_access_requests')
+    .delete()
+    .eq('scanner_id', scannerId)
+    .eq('device_id', deviceId)
+    .eq('status', 'pending');
 
-  const token = signScannerSessionToken({ scannerId: scanner.id, deviceId });
+  const { data: inserted, error: insErr } = await supabase
+    .from('scanner_access_requests')
+    .insert({
+      scanner_id: scannerId,
+      device_id: deviceId,
+      requested_name: requestedName,
+      status: 'pending',
+    })
+    .select('id')
+    .single();
+
+  if (insErr) {
+    return res.status(400).json({ error: insErr.message || 'Could not submit request.' });
+  }
+  res.json({ ok: true, requestId: inserted.id });
+});
+
+app.get('/api/scanner/access-status', async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+  const scannerId = String(req.query.scannerId || '').trim();
+  const deviceId = String(req.query.deviceId || '').trim();
+  if (!scannerId || !deviceId) return res.status(400).json({ error: 'scannerId and deviceId are required.' });
+
+  const { data: ready } = await supabase
+    .from('scanner_access_requests')
+    .select('id, approval_token, requested_name')
+    .eq('scanner_id', scannerId)
+    .eq('device_id', deviceId)
+    .eq('status', 'approved')
+    .is('consumed_at', null)
+    .not('approval_token', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (ready?.approval_token) {
+    return res.json({
+      ok: true,
+      phase: 'ready',
+      approvalToken: ready.approval_token,
+      requestedName: ready.requested_name,
+    });
+  }
+
+  const { data: pend } = await supabase
+    .from('scanner_access_requests')
+    .select('id, requested_name, created_at')
+    .eq('scanner_id', scannerId)
+    .eq('device_id', deviceId)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (pend) {
+    return res.json({
+      ok: true,
+      phase: 'pending',
+      requestId: pend.id,
+      requestedName: pend.requested_name,
+    });
+  }
+
+  return res.json({ ok: true, phase: 'idle' });
+});
+
+app.post('/api/scanner/complete-activation', async (req, res) => {
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+  const scannerId = String(req.body?.scannerId || '').trim();
+  const deviceId = String(req.body?.deviceId || '').trim();
+  const approvalToken = String(req.body?.approvalToken || '').trim();
+  if (!scannerId || !deviceId || !approvalToken) {
+    return res.status(400).json({ error: 'scannerId, deviceId, and approvalToken are required.' });
+  }
+
+  const { data: row, error: rowErr } = await supabase
+    .from('scanner_access_requests')
+    .select('id, requested_name, scanner_id')
+    .eq('scanner_id', scannerId)
+    .eq('device_id', deviceId)
+    .eq('approval_token', approvalToken)
+    .eq('status', 'approved')
+    .is('consumed_at', null)
+    .maybeSingle();
+
+  if (rowErr || !row) return res.status(401).json({ error: 'Invalid or expired activation.' });
+
+  const { data: scanner, error: scErr } = await supabase
+    .from('scanners')
+    .select('id, name, active')
+    .eq('id', scannerId)
+    .maybeSingle();
+  if (scErr || !scanner || !scanner.active) {
+    return res.status(403).json({ error: 'Scanner inactive.' });
+  }
+
+  const operatorName = String(row.requested_name || '').trim() || 'Scanner';
+  const token = signScannerSessionToken({ scannerId: scanner.id, deviceId, operatorName });
   setScannerCookie(res, token);
 
-  // Upsert device "online" signal.
   const { error: devErr } = await supabase.from('scanner_devices').upsert(
-    { scanner_id: scanner.id, device_id: deviceId, last_seen: new Date().toISOString() },
+    {
+      scanner_id: scanner.id,
+      device_id: deviceId,
+      last_seen: new Date().toISOString(),
+      operator_name: operatorName,
+    },
     { onConflict: 'scanner_id,device_id' }
   );
   if (devErr) {
     // non-fatal
   }
 
-  res.json({ ok: true, scanner: { id: scanner.id, name: scanner.name } });
+  await supabase
+    .from('scanner_access_requests')
+    .update({ approval_token: null, consumed_at: new Date().toISOString() })
+    .eq('id', row.id);
+
+  res.json({
+    ok: true,
+    scanner: { id: scanner.id, name: scanner.name },
+    operatorName,
+  });
 });
 
 app.post('/api/scanner/ping', async (req, res) => {
   const session = await requireScannerSession(req, res);
   if (!session) return;
-  const { scannerId, deviceId } = session;
+  const { scannerId, deviceId, operatorName } = session;
   if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
 
   const { error } = await supabase.from('scanner_devices').upsert(
-    { scanner_id: scannerId, device_id: deviceId, last_seen: new Date().toISOString() },
+    {
+      scanner_id: scannerId,
+      device_id: deviceId,
+      last_seen: new Date().toISOString(),
+      operator_name: operatorName || null,
+    },
     { onConflict: 'scanner_id,device_id' }
   );
   if (error) return res.status(500).json({ error: 'Ping failed.' });
@@ -2798,7 +3898,11 @@ app.post('/api/scanner/ping', async (req, res) => {
 app.get('/api/scanner/me', async (req, res) => {
   const session = await requireScannerSession(req, res);
   if (!session) return;
-  res.json({ ok: true, scanner: { id: session.scannerId, name: session.scanner?.name } });
+  res.json({
+    ok: true,
+    scanner: { id: session.scannerId, name: session.scanner?.name },
+    operatorName: session.operatorName,
+  });
 });
 
 app.get('/api/scanner/history', async (req, res) => {
@@ -2827,7 +3931,7 @@ app.post('/api/scanner/scan-ticket', async (req, res) => {
   if (!session) return;
   if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
 
-  const { scannerId, deviceId } = session;
+  const { scannerId, deviceId, operatorName } = session;
 
   const ticketId = String(req.body?.ticket_id || req.body?.ticketId || '').trim();
   if (!ticketId) return res.status(400).json({ status: 'invalid', message: 'Ticket not found' });
@@ -2850,6 +3954,7 @@ app.post('/api/scanner/scan-ticket', async (req, res) => {
       await supabase.from('scanner_scan_logs').insert({
         scanner_id: payload.scannerId,
         device_id: payload.deviceId,
+        operator_name: payload.operatorName || null,
         ticket_id: payload.ticketId,
         status: payload.status,
         user_name: payload.userName || null,
@@ -2867,6 +3972,7 @@ app.post('/api/scanner/scan-ticket', async (req, res) => {
     await insertLog({
       scannerId,
       deviceId,
+      operatorName,
       ticketId,
       status: 'success',
       userName: updatedRow.name,
@@ -2902,7 +4008,7 @@ app.post('/api/scanner/scan-ticket', async (req, res) => {
     .maybeSingle();
 
   if (!existing) {
-    await insertLog({ scannerId, deviceId, ticketId, status: 'invalid' });
+    await insertLog({ scannerId, deviceId, operatorName, ticketId, status: 'invalid' });
     return res.json({ status: 'invalid', message: 'Ticket not found' });
   }
 
@@ -2910,6 +4016,7 @@ app.post('/api/scanner/scan-ticket', async (req, res) => {
     await insertLog({
       scannerId,
       deviceId,
+      operatorName,
       ticketId,
       status: 'already_used',
       userName: existing.name,
@@ -2939,7 +4046,7 @@ app.post('/api/scanner/scan-ticket', async (req, res) => {
   }
 
   // Edge case: update failed for some other reason.
-  await insertLog({ scannerId, deviceId, ticketId, status: 'invalid' });
+  await insertLog({ scannerId, deviceId, operatorName, ticketId, status: 'invalid' });
   return res.status(500).json({ status: 'invalid', message: 'Invalid ticket' });
 });
 
@@ -2952,22 +4059,33 @@ app.get('/api/admin/scanners', async (req, res) => {
   const { data: scanners, error: scErr } = await supabase.from('scanners').select('id, name, active, created_at');
   if (scErr) return res.status(500).json({ error: 'Could not load scanners.' });
 
-  const { data: devices, error: devErr } = await supabase
+  let devices = [];
+  let devRes = await supabase
     .from('scanner_devices')
-    .select('scanner_id, device_id, last_seen')
+    .select('scanner_id, device_id, last_seen, operator_name')
     .order('last_seen', { ascending: false });
-  if (devErr) return res.status(500).json({ error: 'Could not load scanner devices.' });
+  if (devRes.error) {
+    const retry = await supabase
+      .from('scanner_devices')
+      .select('scanner_id, device_id, last_seen')
+      .order('last_seen', { ascending: false });
+    if (retry.error) return res.status(500).json({ error: 'Could not load scanner devices.' });
+    devices = (retry.data || []).map((d) => ({ ...d, operator_name: null }));
+  } else {
+    devices = devRes.data || [];
+  }
 
   const now = Date.now();
   const ONLINE_WINDOW_MS = 60 * 1000;
 
   const devicesByScanner = {};
-  (devices || []).forEach((d) => {
+  devices.forEach((d) => {
     const sid = d.scanner_id;
     devicesByScanner[sid] = devicesByScanner[sid] || [];
     devicesByScanner[sid].push({
       deviceId: d.device_id,
       lastSeen: d.last_seen,
+      operatorName: d.operator_name || null,
       online: d.last_seen ? now - new Date(d.last_seen).getTime() <= ONLINE_WINDOW_MS : false,
     });
   });
@@ -3007,19 +4125,156 @@ app.post('/api/admin/scanners', async (req, res) => {
   if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
 
   const name = String(req.body?.name || '').trim();
-  const password = String(req.body?.password || '');
   const active = req.body?.active == null ? true : Boolean(req.body.active);
-  if (!name || !password) return res.status(400).json({ error: 'name and password are required.' });
+  if (!name) return res.status(400).json({ error: 'name is required.' });
 
-  const passwordHash = await bcrypt.hash(password, 10);
-  const { data, error } = await supabase
+  const { count, error: cErr } = await supabase.from('scanners').select('*', { count: 'exact', head: true });
+  if (cErr) return res.status(500).json({ error: 'Could not count scanners.' });
+  if ((count ?? 0) >= MAX_SCANNER_PROFILES) {
+    return res.status(400).json({ error: `Maximum of ${MAX_SCANNER_PROFILES} scanner profiles reached.` });
+  }
+
+  let { data, error } = await supabase
     .from('scanners')
-    .insert({ name, password_hash: passwordHash, active })
+    .insert({ name, password_hash: null, active })
     .select('id, name, active')
     .single();
 
+  if (error) {
+    const placeholderHash = await bcrypt.hash(crypto.randomBytes(24).toString('hex'), 8);
+    const retry = await supabase
+      .from('scanners')
+      .insert({ name, password_hash: placeholderHash, active })
+      .select('id, name, active')
+      .single();
+    data = retry.data;
+    error = retry.error;
+  }
+
   if (error) return res.status(400).json({ error: error.message || 'Could not create scanner.' });
   res.json({ ok: true, scanner: data });
+});
+
+app.delete('/api/admin/scanners/:id', async (req, res) => {
+  const authError = await requireAdmin(req, res);
+  if (authError) return;
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+
+  const id = String(req.params.id || '').trim();
+  if (!id) return res.status(400).json({ error: 'id is required.' });
+
+  const { data: deleted, error } = await supabase.from('scanners').delete().eq('id', id).select('id').maybeSingle();
+  if (error) {
+    console.error('Delete scanner error:', error.message, error.code, error.details);
+    return res.status(500).json({
+      error: error.message || 'Could not delete scanner.',
+      code: error.code || null,
+      details: error.details || null,
+      hint: error.hint || null,
+    });
+  }
+  if (!deleted) {
+    return res.status(404).json({
+      error:
+        'No scanner was deleted (wrong id, or blocked). If you use Supabase RLS on public.scanners, deletes must be allowed for the service role, and the server must use SUPABASE_SERVICE_ROLE_KEY.',
+    });
+  }
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/scanner-requests', async (req, res) => {
+  const authError = await requireAdmin(req, res);
+  if (authError) return;
+  if (!supabase) return res.json([]);
+
+  const { data: rows, error } = await supabase
+    .from('scanner_access_requests')
+    .select('id, scanner_id, device_id, requested_name, status, created_at')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    const hint = String(error.message || error.details || error.hint || '').toLowerCase();
+    const code = String(error.code || '');
+    const tableMissing =
+      code === 'PGRST205' ||
+      code === '42P01' ||
+      hint.includes('scanner_access_requests') ||
+      (/schema cache/i.test(hint) && hint.includes('scanner_access'));
+    if (tableMissing) return res.json([]);
+    return res.status(500).json({ error: error.message || 'Could not load requests.' });
+  }
+
+  const ids = [...new Set((rows || []).map((r) => r.scanner_id).filter(Boolean))];
+  const nameById = {};
+  if (ids.length) {
+    const { data: sn } = await supabase.from('scanners').select('id, name').in('id', ids);
+    (sn || []).forEach((s) => {
+      nameById[s.id] = s.name;
+    });
+  }
+
+  res.json(
+    (rows || []).map((r) => ({
+      id: r.id,
+      scannerId: r.scanner_id,
+      scannerName: nameById[r.scanner_id] || '',
+      deviceId: r.device_id,
+      requestedName: r.requested_name,
+      createdAt: r.created_at,
+    }))
+  );
+});
+
+app.post('/api/admin/scanner-requests/:requestId/approve', async (req, res) => {
+  const authError = await requireAdmin(req, res);
+  if (authError) return;
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+
+  const requestId = String(req.params.requestId || '').trim();
+  const approvalToken = crypto.randomBytes(32).toString('hex');
+
+  const { data, error } = await supabase
+    .from('scanner_access_requests')
+    .update({
+      status: 'approved',
+      approval_token: approvalToken,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq('id', requestId)
+    .eq('status', 'pending')
+    .select('id')
+    .maybeSingle();
+
+  if (error || !data) {
+    return res.status(400).json({ error: 'Request not found or already handled.' });
+  }
+  res.json({ ok: true });
+});
+
+app.post('/api/admin/scanner-requests/:requestId/reject', async (req, res) => {
+  const authError = await requireAdmin(req, res);
+  if (authError) return;
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+
+  const requestId = String(req.params.requestId || '').trim();
+
+  const { data, error } = await supabase
+    .from('scanner_access_requests')
+    .update({
+      status: 'rejected',
+      approval_token: null,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq('id', requestId)
+    .eq('status', 'pending')
+    .select('id')
+    .maybeSingle();
+
+  if (error || !data) {
+    return res.status(400).json({ error: 'Request not found or already handled.' });
+  }
+  res.json({ ok: true });
 });
 
 app.get('/api/admin/scanner-history', async (req, res) => {
@@ -3034,7 +4289,9 @@ app.get('/api/admin/scanner-history', async (req, res) => {
 
   let q = supabase
     .from('scanner_scan_logs')
-    .select('created_at, status, ticket_id, event_name, user_name, user_email, ticket_category, ticket_number, device_id')
+    .select(
+      'created_at, status, ticket_id, event_name, user_name, user_email, ticket_category, ticket_number, device_id, operator_name'
+    )
     .eq('scanner_id', scannerId)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -3056,6 +4313,7 @@ app.get('/api/admin/scanner-history', async (req, res) => {
       ticketCategory: row.ticket_category,
       ticketNumber: row.ticket_number,
       deviceId: row.device_id,
+      operatorName: row.operator_name,
     })),
   });
 });
@@ -3134,25 +4392,214 @@ app.post('/api/scan-ticket', async (req, res) => {
   return res.status(500).json({ status: 'invalid', message: 'Invalid ticket' });
 });
 
-// My tickets: look up registrations by email (from Supabase)
+/** Group attendee rows by event for My Tickets UI (Tazkarti-style). */
+async function buildTicketGroupsForEmail(email, bookingRowsForUser) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!e || !supabase) return [];
+
+  const { data: rows, error } = await supabase
+    .from('attendees')
+    .select(
+      'ticket_id, event_name, event_id, attended, checkin_time, created_at, name, email, phone, ticket_category, ticket_number'
+    )
+    .eq('email', e)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Supabase buildTicketGroups error:', error.message);
+    return [];
+  }
+
+  const bookingByEventId = new Map();
+  for (const b of bookingRowsForUser || []) {
+    const eid = String(b.event_id || '');
+    if (eid && !bookingByEventId.has(eid)) bookingByEventId.set(eid, b);
+  }
+
+  const list = [];
+  for (const r of rows || []) {
+    const ev = r.event_id ? await getEventById(String(r.event_id)) : null;
+    const booking = r.event_id ? bookingByEventId.get(String(r.event_id)) : null;
+    list.push({
+      ticketId: r.ticket_id,
+      holderName: r.name,
+      eventName: r.event_name || ev?.name || 'Event',
+      eventId: r.event_id,
+      attended: !!r.attended,
+      checkinTime: r.checkin_time,
+      createdAt: r.created_at,
+      category: r.ticket_category || null,
+      seatLabel: r.ticket_number || null,
+      image: ev?.imageCard || ev?.image || null,
+      venue: ev?.venue || null,
+      date: ev?.date || null,
+      time: ev?.time || null,
+      eventCategory: ev?.category || null,
+      bookingId: booking?.id || null,
+    });
+  }
+
+  const groupMap = new Map();
+  for (const t of list) {
+    const key = String(t.eventId || t.eventName || 'unknown');
+    if (!groupMap.has(key)) {
+      const bk = t.bookingId;
+      groupMap.set(key, {
+        eventId: t.eventId,
+        eventName: t.eventName,
+        eventCategory: t.eventCategory,
+        venue: t.venue,
+        date: t.date,
+        time: t.time,
+        image: t.image,
+        bookingNo: bk ? `BK-${String(bk).replace(/-/g, '').slice(0, 8).toUpperCase()}` : '—',
+        holderName: t.holderName,
+        tickets: [],
+      });
+    }
+    groupMap.get(key).tickets.push(t);
+  }
+
+  return Array.from(groupMap.values());
+}
+
+function formatPaymentMethodLabel(m) {
+  const s = String(m || '').toLowerCase();
+  if (s === 'instapay') return 'InstaPay';
+  if (s === 'fawry') return 'Fawry';
+  if (s === 'free') return 'FREE';
+  if (s === 'applepay') return 'Apple Pay';
+  if (s === 'visa' || s === 'card' || s === 'credit' || s === 'debit') return 'Card';
+  return m ? String(m).charAt(0).toUpperCase() + String(m).slice(1) : '—';
+}
+
+// JSON for ticket detail modal (QR + metadata)
+app.get('/api/ticket-detail/:ticketId', async (req, res) => {
+  const ticketId = String(req.params.ticketId || '').trim();
+  if (!ticketId) return res.status(400).json({ error: 'ticketId required.' });
+  const attendee = await getAttendeeByTicketId(ticketId);
+  if (!attendee) return res.status(404).json({ error: 'Ticket not found.' });
+  const ev = attendee.event_id ? await getEventById(String(attendee.event_id)) : null;
+  let dataUrl = '';
+  try {
+    const out = await generateQR(ticketId);
+    dataUrl = out.dataUrl || '';
+  } catch (e) {
+    console.error('QR gen error:', e.message);
+  }
+  const checkinUrl = `${BASE_URL}/checkin/${encodeURIComponent(ticketId)}`;
+  res.json({
+    ticketId,
+    qrDataUrl: dataUrl,
+    checkinUrl,
+    holderName: attendee.name,
+    orderLabel: attendee.event_id
+      ? `BK-${String(attendee.event_id).replace(/-/g, '').slice(0, 8).toUpperCase()}`
+      : '—',
+    ticketNumber: attendee.ticket_number || ticketId,
+    seatLabel: attendee.ticket_number || null,
+    ticketCategory: attendee.ticket_category,
+    eventName: ev?.name || attendee.event_name,
+    venue: ev?.venue || null,
+    date: ev?.date || null,
+    time: ev?.time || null,
+    price: ev != null && ev.price != null ? Number(ev.price) : null,
+    gatesOpen: '— : —',
+    image: ev?.imageHero || ev?.image || null,
+    attended: !!attendee.attended,
+  });
+});
+
+// Logged-in: ticket groups + booking numbers when events match
+app.get('/api/auth/my-entry-tickets', async (req, res) => {
+  const user = await getAuthUserFromRequest(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized.' });
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+
+  const { data: bookings } = await supabase
+    .from('bookings')
+    .select('id, event_id, created_at, status')
+    .eq('user_id', user.id);
+
+  const groups = await buildTicketGroupsForEmail(user.email, bookings || []);
+  res.json({ groups });
+});
+
+// Payment history rows for My Tickets page
+app.get('/api/auth/payment-history', async (req, res) => {
+  const user = await getAuthUserFromRequest(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized.' });
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(
+      'id, created_at, payment_method, price_paid, status, ticket_selections, event_id, events(name, venue, date, time)'
+    )
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('payment-history error:', error.message);
+    return res.status(500).json({ error: 'Could not load payment history.' });
+  }
+
+  const rows = (data || []).map((b) => ({
+    id: b.id,
+    bookingNo: `BK-${String(b.id).replace(/-/g, '').slice(0, 8).toUpperCase()}`,
+    purchaseDate: b.created_at,
+    paymentMethod: formatPaymentMethodLabel(b.payment_method),
+    totalAmount: Number(b.price_paid || 0),
+    shipment: '',
+    status: b.status,
+    eventName: b.events?.name || null,
+    ticketSelections: b.ticket_selections,
+  }));
+
+  res.json({ payments: rows });
+});
+
+app.get('/api/auth/booking-detail/:id', async (req, res) => {
+  const user = await getAuthUserFromRequest(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized.' });
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+  const id = String(req.params.id || '').trim();
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(
+      'id, created_at, payment_method, price_paid, status, ticket_selections, event_id, events(name, venue, date, time, image, image_card, image_detail)'
+    )
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (error || !data) return res.status(404).json({ error: 'Booking not found.' });
+  const evRaw = data.events;
+  const im = evRaw ? eventImageFields(evRaw) : null;
+  const eventOut = evRaw
+    ? Object.assign({}, evRaw, { image: im.image, imageCard: im.imageCard, imageHero: im.imageHero })
+    : null;
+  res.json({
+    bookingNo: `BK-${String(data.id).replace(/-/g, '').slice(0, 8).toUpperCase()}`,
+    createdAt: data.created_at,
+    paymentMethod: formatPaymentMethodLabel(data.payment_method),
+    pricePaid: Number(data.price_paid || 0),
+    status: data.status,
+    event: eventOut,
+    ticketSelections: data.ticket_selections,
+  });
+});
+
+// My tickets: look up registrations by email (from Supabase) — returns { groups }
 app.get('/api/my-tickets', async (req, res) => {
   const email = (req.query.email || '').trim().toLowerCase();
   if (!email) {
-    return res.json([]);
+    return res.json({ groups: [] });
   }
   if (!supabase) {
-    return res.json([]);
+    return res.json({ groups: [] });
   }
-  const { data, error } = await supabase
-    .from('attendees')
-    .select('ticket_id, event_name, event_id, attended, checkin_time, created_at, name, email, phone')
-    .eq('email', email)
-    .order('created_at', { ascending: false });
-  if (error) {
-    console.error('Supabase my-tickets error:', error.message);
-    return res.json([]);
-  }
-  res.json(data || []);
+  const groups = await buildTicketGroupsForEmail(email, []);
+  res.json({ groups });
 });
 
 // Update profile (name, phone) by email – email cannot be changed; phone required
@@ -3230,6 +4677,8 @@ app.post('/api/resend-ticket', async (req, res) => {
   }
   res.json({ success: true, message: 'Ticket sent to your email.' });
 });
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Ensure sheet has header (run once or add manually)
 async function ensureSheetHeaders() {

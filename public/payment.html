@@ -7,11 +7,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/site-chrome.css">
   <style>
     :root{
       --bg:#0a0a0c; --card:#141418; --border:#25252d;
       --text:#e8e8ed; --muted:#8888a0;
-      --accent:#6366f1; --accent-hover:#818cf8;
+      --accent:#0066ff; --accent-hover:#3385ff;
       --danger:#ef4444; --ok:#22c55e;
       --bar-bg:#ffffff; --bar-text:#1a1a1a;
     }
@@ -20,19 +21,8 @@
       font-family:'Outfit',system-ui,sans-serif;
       background:var(--bg); color:var(--text);
       min-height:100vh; display:flex; flex-direction:column;
-      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.15), transparent);
+      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 102, 255, 0.15), transparent);
     }
-    .top-bar-wrap{width:100%; padding:1rem clamp(0.75rem,3vw,1.25rem) 0; margin-bottom:1rem;}
-    .top-bar{
-      width:100%; max-width:min(1400px,96vw); margin:0 auto;
-      background:var(--bar-bg); border-radius:16px; padding:0.75rem 1.25rem;
-      display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
-      box-shadow:0 4px 20px rgba(0,0,0,0.08);
-    }
-    .logo{width:110px; height:auto;}
-    .nav{margin-left:auto; display:flex; gap:1rem; flex-wrap:wrap;}
-    .nav a{color:var(--bar-text); text-decoration:none; font-weight:600; font-size:0.95rem;}
-    .nav a:hover{color:var(--accent);}
     .main{flex:1; width:100%; max-width:980px; margin:0 auto; padding:1.25rem;}
     h1{font-size:1.5rem; margin-bottom:0.25rem;}
     .sub{color:var(--muted); margin-bottom:1rem;}
@@ -69,16 +59,25 @@
   </style>
 </head>
 <body>
-  <div class="top-bar-wrap">
-    <header class="top-bar">
-      <a href="/"><img src="/block-logo.png" class="logo" alt="BLOCK"></a>
-      <nav class="nav">
-        <a href="/events">Events</a>
-        <a href="/cart">Cart</a>
-        <a href="/profile">Profile</a>
+  <header class="site-chrome-header">
+    <div class="site-chrome-header__inner">
+      <a href="/" class="site-chrome-header__logo-wrap" aria-label="BLOCK Home">
+        <img src="/block-logo.png" alt="" class="site-chrome-header__logo-img" width="120" height="26">
+      </a>
+      <nav class="site-chrome-nav site-chrome-nav--header" aria-label="Main">
+        <a href="/" data-nav-match="/">Home</a>
+        <a href="/events" data-nav-match="/events">Events</a>
+        <a href="/my-tickets" data-nav-match="/my-tickets">My Tickets</a>
+        <a href="/contact" data-nav-match="/contact">Contact Us</a>
+        <a href="/about-us" data-nav-match="/about-us">About</a>
       </nav>
-    </header>
-  </div>
+      <div class="site-chrome-header__account">
+        <a href="/profile" class="site-chrome-header__account-link" data-nav-match="/profile">Account</a>
+        <a href="/auth" class="site-chrome-header__signin">Sign in</a>
+        <button type="button" class="site-chrome-header__signout" id="siteChromeSignOut">Sign out</button>
+      </div>
+    </div>
+  </header>
 
   <main class="main">
     <h1>Payment</h1>
@@ -124,6 +123,23 @@
     </section>
   </main>
 
+  <footer class="site-chrome-footer">
+    <div class="site-chrome-footer__inner">
+      <a href="/" class="site-chrome-footer__logo-wrap" aria-label="BLOCK Home">
+        <img src="/block-logo.png" alt="" class="site-chrome-footer__logo-img" width="100" height="22">
+      </a>
+      <nav class="site-chrome-nav site-chrome-nav--footer" aria-label="Footer">
+        <a href="/" data-nav-match="/">Home</a>
+        <a href="/events" data-nav-match="/events">Events</a>
+        <a href="/my-tickets" data-nav-match="/my-tickets">My Tickets</a>
+        <a href="/contact" data-nav-match="/contact">Contact Us</a>
+        <a href="/about-us" data-nav-match="/about-us">About</a>
+      </nav>
+      <span class="site-chrome-footer__copy" id="siteChromeCopyright">© BLOCK</span>
+    </div>
+  </footer>
+
+  <script src="/site-chrome.js" defer></script>
   <script>
     const params = new URLSearchParams(location.search);
     const sessionId = params.get('session') || '';
