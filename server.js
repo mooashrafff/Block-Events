@@ -170,9 +170,9 @@ async function markAttendedInSupabase(ticketId, scannerName, scannerPhone) {
   return data && data.length > 0;
 }
 
-// Allow slightly larger JSON bodies (for base64 event images from admin)
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+// Admin event saves embed base64 data URLs (card + detail + gallery); raise limit so saves do not 413.
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
 function signSessionToken(user) {
@@ -839,15 +839,23 @@ function isAdminRequest(req) {
 }
 
 function isLocalhostRequest(req) {
+  const hostRaw = String((req.hostname || req.headers?.host || '').split(':')[0] || '').toLowerCase();
+  if (hostRaw === 'localhost' || hostRaw === '127.0.0.1' || hostRaw === '[::1]') return true;
   const candidate = String(
     (req.headers && (req.headers['x-forwarded-for'] || req.headers['X-Forwarded-For'])) ||
       req.ip ||
+      req.socket?.remoteAddress ||
       req.connection?.remoteAddress ||
       ''
   );
   // x-forwarded-for might be a list: take the last hop
   const ip = candidate.split(',').map((s) => s.trim()).filter(Boolean).slice(-1)[0] || '';
-  return ip === '127.0.0.1' || ip === '::1' || ip.endsWith('127.0.0.1');
+  return (
+    ip === '127.0.0.1' ||
+    ip === '::1' ||
+    ip === '::ffff:127.0.0.1' ||
+    ip.endsWith('127.0.0.1')
+  );
 }
 
 function requireScanner(req, res) {
@@ -3608,6 +3616,158 @@ app.post('/api/admin/attendees/:id/block', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Registered website users (app_users) — list / edit / delete (no password_hash in responses)
+const APP_USER_ADMIN_SELECT =
+  'id, name, email, phone, birthdate, gender, profile_picture_url, created_at, updated_at';
+
+app.get('/api/admin/users', async (req, res) => {
+  const authError = await requireAdmin(req, res);
+  if (authError) return;
+  if (!supabase) {
+    return res.status(503).json({ error: 'Supabase not configured.' });
+  }
+  try {
+    const { data, error } = await supabase
+      .from('app_users')
+      .select(APP_USER_ADMIN_SELECT)
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('Admin list users error:', error.message);
+      return res.status(500).json({ error: 'Could not load users.', details: error.message });
+    }
+    res.json(data || []);
+  } catch (e) {
+    console.error('Admin list users exception:', e.message);
+    res.status(500).json({ error: 'Could not load users.', details: e.message });
+  }
+});
+
+app.put('/api/admin/users/:id', async (req, res) => {
+  const authError = await requireAdmin(req, res);
+  if (authError) return;
+  if (!supabase) {
+    return res.status(503).json({ error: 'Supabase not configured.' });
+  }
+  const { id } = req.params;
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRe.test(id)) {
+    return res.status(400).json({ error: 'Invalid user id.' });
+  }
+  const body = req.body || {};
+  const name = body.name != null ? String(body.name).trim() : undefined;
+  const email = body.email != null ? String(body.email).trim().toLowerCase() : undefined;
+  const phone = body.phone != null ? String(body.phone).trim() || null : undefined;
+  let birthdate =
+    body.birthdate != null && String(body.birthdate).trim() !== ''
+      ? String(body.birthdate).trim()
+      : body.birthdate === null
+        ? null
+        : undefined;
+  if (birthdate === '') birthdate = null;
+  const gender = body.gender != null ? String(body.gender).trim() || null : undefined;
+  const profilePictureUrl =
+    body.profile_picture_url != null ? String(body.profile_picture_url).trim() || null : undefined;
+  const newPassword = body.newPassword != null ? String(body.newPassword) : '';
+
+  if (email !== undefined) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: 'Valid email is required.' });
+    }
+    const { data: clash, error: clashErr } = await supabase
+      .from('app_users')
+      .select('id')
+      .eq('email', email)
+      .neq('id', id)
+      .maybeSingle();
+    if (clashErr) {
+      console.error('Admin user email check error:', clashErr.message);
+      return res.status(500).json({ error: clashErr.message });
+    }
+    if (clash) {
+      return res.status(409).json({ error: 'Another account already uses this email.' });
+    }
+  }
+
+  const patch = { updated_at: new Date().toISOString() };
+  if (name !== undefined) patch.name = name || null;
+  if (email !== undefined) patch.email = email;
+  if (phone !== undefined) patch.phone = phone;
+  if (birthdate !== undefined) patch.birthdate = birthdate;
+  if (gender !== undefined) patch.gender = gender;
+  if (profilePictureUrl !== undefined) patch.profile_picture_url = profilePictureUrl;
+
+  if (newPassword.trim()) {
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+    }
+    patch.password_hash = await bcrypt.hash(newPassword.trim(), 10);
+    patch.password_reset_token_hash = null;
+    patch.password_reset_expires_at = null;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('app_users')
+      .update(patch)
+      .eq('id', id)
+      .select(APP_USER_ADMIN_SELECT)
+      .maybeSingle();
+    if (error) {
+      console.error('Admin update user error:', error.message);
+      return res.status(500).json({ error: error.message });
+    }
+    if (!data) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    res.json(data);
+  } catch (e) {
+    console.error('Admin update user exception:', e.message);
+    res.status(500).json({ error: 'Could not update user.', details: e.message });
+  }
+});
+
+app.delete('/api/admin/users/:id', async (req, res) => {
+  const authError = await requireAdmin(req, res);
+  if (authError) return;
+  if (!supabase) {
+    return res.status(503).json({ error: 'Supabase not configured.' });
+  }
+  const { id } = req.params;
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidRe.test(id)) {
+    return res.status(400).json({ error: 'Invalid user id.' });
+  }
+  try {
+    const { data: userRow, error: fetchErr } = await supabase
+      .from('app_users')
+      .select('email')
+      .eq('id', id)
+      .maybeSingle();
+    if (fetchErr) {
+      console.error('Admin delete user fetch error:', fetchErr.message);
+      return res.status(500).json({ error: fetchErr.message });
+    }
+    if (!userRow || !userRow.email) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    const em = String(userRow.email).replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+    const { error: attErr } = await supabase.from('attendees').delete().ilike('email', em);
+    if (attErr) {
+      console.error('Admin delete user attendees cleanup error:', attErr.message);
+      return res.status(500).json({ error: attErr.message });
+    }
+    const { error: delErr } = await supabase.from('app_users').delete().eq('id', id);
+    if (delErr) {
+      console.error('Admin delete user error:', delErr.message);
+      return res.status(500).json({ error: delErr.message });
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Admin delete user exception:', e.message);
+    res.status(500).json({ error: 'Could not delete user.', details: e.message });
+  }
+});
+
 app.get('/api/ticket-status/:ticketId', async (req, res) => {
   const { ticketId } = req.params;
   const attendee = await getAttendeeByTicketId(ticketId);
@@ -4155,7 +4315,7 @@ app.post('/api/admin/scanners', async (req, res) => {
   res.json({ ok: true, scanner: data });
 });
 
-app.delete('/api/admin/scanners/:id', async (req, res) => {
+async function adminDeleteScannerHandler(req, res) {
   const authError = await requireAdmin(req, res);
   if (authError) return;
   if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
@@ -4180,7 +4340,11 @@ app.delete('/api/admin/scanners/:id', async (req, res) => {
     });
   }
   res.json({ ok: true });
-});
+}
+
+app.delete('/api/admin/scanners/:id', adminDeleteScannerHandler);
+// POST alias: some proxies / older setups mishandle DELETE; admin UI uses this path.
+app.post('/api/admin/scanners/:id/delete', adminDeleteScannerHandler);
 
 app.get('/api/admin/scanner-requests', async (req, res) => {
   const authError = await requireAdmin(req, res);

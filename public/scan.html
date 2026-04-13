@@ -26,8 +26,41 @@
     .logo { width: 90px; height: auto; margin-bottom: 0.75rem; filter: brightness(2.4); }
     h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
     .sub { color: #8888a0; font-size: 0.9rem; margin-bottom: 1rem; }
+    #qr-reader-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 320px;
+      display: none;
+    }
     #qr-reader { border-radius: 12px; overflow: hidden; max-width: 100%; }
     #qr-reader__scan_region { background: #1a1a1e; }
+    #scanFeedbackOverlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 20;
+      border-radius: 12px;
+      background: rgba(15, 15, 18, 0.5);
+    }
+    #scanFeedbackOverlay.show { display: flex; }
+    .scan-feedback-bubble {
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.35rem;
+      font-weight: 800;
+      line-height: 1;
+      color: #fff;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+    }
+    .scan-feedback-bubble.ok { background: #22c55e; }
+    .scan-feedback-bubble.bad { background: #ef4444; }
     #result {
       margin-top: 1rem;
       padding: 1rem 1.25rem;
@@ -269,7 +302,12 @@
     <p>Camera access is required to scan QR codes.<br>Click the button below to start.</p>
     <button type="button" class="btn-camera" id="btnStartCamera">Start camera</button>
   </div>
-  <div id="qr-reader" style="width: 100%; max-width: 320px; display: none;"></div>
+  <div id="qr-reader-wrap">
+    <div id="qr-reader" style="width: 100%; max-width: 320px;"></div>
+    <div id="scanFeedbackOverlay" aria-live="polite" aria-atomic="true">
+      <div id="scanFeedbackBubble" class="scan-feedback-bubble ok" style="display:none;"></div>
+    </div>
+  </div>
   <div id="result"></div>
   <div id="ticketInfo" style="display:none; width:100%; max-width:320px; margin-top:0.75rem; border:1px solid #25252d; border-radius:12px; background:#141418; padding:0.85rem 1rem; text-align:left;">
     <div id="ticketHeader" style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.6rem;">
@@ -314,6 +352,49 @@
     function setResult(msg, type) {
       var el = document.getElementById('result');
       if (el) { el.textContent = msg; el.className = type || ''; }
+    }
+
+    var scanFeedbackTimer = null;
+    function hideScanBoxFeedback() {
+      var ov = document.getElementById('scanFeedbackOverlay');
+      var bub = document.getElementById('scanFeedbackBubble');
+      if (ov) ov.classList.remove('show');
+      if (bub) {
+        bub.style.display = 'none';
+        bub.textContent = '';
+      }
+    }
+    /** Green circle + check or red circle + X on the camera box (QR scans only). */
+    function showScanBoxFeedbackVisual(status) {
+      var ov = document.getElementById('scanFeedbackOverlay');
+      var bub = document.getElementById('scanFeedbackBubble');
+      if (!ov || !bub) return;
+      var ok = status === 'success';
+      bub.className = 'scan-feedback-bubble ' + (ok ? 'ok' : 'bad');
+      bub.textContent = ok ? '\u2713' : '\u2715';
+      bub.style.display = 'flex';
+      ov.classList.add('show');
+    }
+    /** After 2s: hide overlay, clear banner, resume camera. */
+    function scheduleCameraResumeAfterScan(fromScan, status) {
+      if (!fromScan || !window.html5QrCode) return;
+      var wrap = document.getElementById('qr-reader-wrap');
+      if (!wrap) return;
+      try {
+        if (window.getComputedStyle(wrap).display === 'none') return;
+      } catch (e) {
+        return;
+      }
+      showScanBoxFeedbackVisual(status);
+      if (scanFeedbackTimer) clearTimeout(scanFeedbackTimer);
+      scanFeedbackTimer = setTimeout(function () {
+        scanFeedbackTimer = null;
+        hideScanBoxFeedback();
+        setResult('');
+        try {
+          window.html5QrCode.resume();
+        } catch (e2) {}
+      }, 2000);
     }
 
     function beep(ok) {
@@ -757,6 +838,11 @@
               return doScan(ticketId, fromScan);
             }
             setResult('Unauthorized', 'error');
+            if (fromScan && window.html5QrCode) {
+              try {
+                window.html5QrCode.resume();
+              } catch (eR) {}
+            }
             return;
           }
 
@@ -786,9 +872,7 @@
           if (historyTimer) clearTimeout(historyTimer);
           historyTimer = setTimeout(function () { setHistoryBlurred(true); }, 10000);
 
-          if (fromScan && window.html5QrCode) {
-            setTimeout(function () { setResult(''); window.html5QrCode.resume(); }, 1800);
-          }
+          scheduleCameraResumeAfterScan(fromScan, data0.status || 'invalid');
           return;
         }
 
@@ -804,6 +888,11 @@
           var signedIn = await openLoginOverlay(scannerId, publicProfileName || scannerId);
           if (!signedIn) {
             setResult('Sign in required', 'error');
+            if (fromScan && window.html5QrCode) {
+              try {
+                window.html5QrCode.resume();
+              } catch (eR) {}
+            }
             return;
           }
           return doScan(ticketId, fromScan);
@@ -823,13 +912,11 @@
         renderTicketState(data);
         await revealHistoryForTenSeconds();
 
-        if (fromScan && window.html5QrCode) {
-          setTimeout(function () { setResult(''); window.html5QrCode.resume(); }, 1800);
-        }
+        scheduleCameraResumeAfterScan(fromScan, data.status || 'invalid');
       } catch (e) {
         setResult('Network error', 'error');
         beep(false); haptic(false);
-        if (fromScan && window.html5QrCode) window.html5QrCode.resume();
+        scheduleCameraResumeAfterScan(fromScan, 'invalid');
       }
     }
 
@@ -837,12 +924,18 @@
 
     function startCamera() {
       var placeholder = document.getElementById('cameraPlaceholder');
+      var wrap = document.getElementById('qr-reader-wrap');
       var qrReader = document.getElementById('qr-reader');
       var btn = document.getElementById('btnStartCamera');
       if (!placeholder || !qrReader || !btn) return;
       btn.disabled = true;
       btn.textContent = 'Starting…';
       setResult('');
+      if (scanFeedbackTimer) {
+        clearTimeout(scanFeedbackTimer);
+        scanFeedbackTimer = null;
+      }
+      hideScanBoxFeedback();
 
       try {
         if (typeof Html5Qrcode === 'undefined') {
@@ -852,7 +945,7 @@
           return;
         }
         placeholder.style.display = 'none';
-        qrReader.style.display = 'block';
+        if (wrap) wrap.style.display = 'block';
         if (!html5QrCode) html5QrCode = new Html5Qrcode('qr-reader');
         window.html5QrCode = html5QrCode;
         var config = { fps: 10, qrbox: { width: 220, height: 220 } };
@@ -862,7 +955,7 @@
             btn.disabled = false;
             btn.textContent = 'Retry';
             placeholder.style.display = 'flex';
-            qrReader.style.display = 'none';
+            if (wrap) wrap.style.display = 'none';
             return;
           }
           var back = cameras.find(function(c) { return (c.label || '').toLowerCase().indexOf('back') !== -1; });
@@ -880,7 +973,7 @@
           btn.disabled = false;
           btn.textContent = 'Retry';
           placeholder.style.display = 'flex';
-          qrReader.style.display = 'none';
+          if (wrap) wrap.style.display = 'none';
         });
       } catch (err) {
         setResult('Error: ' + (err.message || 'Failed to start scanner.'), 'error');
