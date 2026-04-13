@@ -333,6 +333,7 @@
       el.textContent = labelText;
     });
     applyChromeHeaderFooterI18n(lang);
+    updateTicketLoaderCopy();
     try {
       window.dispatchEvent(new CustomEvent('block:langchange', { detail: { lang: lang } }));
     } catch (e2) {}
@@ -569,7 +570,187 @@
     { label: 'About Us', url: '/about-us' },
   ];
 
+  var NAV_LOADER_KEY = 'block_nav_loader_pending';
+  var NAV_LOADER_TS_KEY = 'block_nav_loader_ts';
+  var NAV_LOADER_MIN_MS = 2600;
+  var navLoaderSafetyTimer = null;
+
+  function normalizePathname(p) {
+    var s = String(p || '');
+    if (s.length > 1 && s.endsWith('/')) return s.slice(0, -1) || '/';
+    return s || '/';
+  }
+
+  function ensureTicketLoader() {
+    var existing = document.getElementById('blockTicketLoader');
+    if (existing) {
+      if (existing.querySelector('.block-ticket-loader__svg')) return;
+      existing.remove();
+    }
+    var wrap = document.createElement('div');
+    wrap.id = 'blockTicketLoader';
+    wrap.className = 'block-ticket-loader';
+    wrap.setAttribute('aria-hidden', 'true');
+    wrap.hidden = true;
+    wrap.innerHTML =
+      '<div class="block-ticket-loader__backdrop" aria-hidden="true"></div>' +
+      '<div class="block-ticket-loader__center">' +
+      '<div class="block-ticket-loader__tilt">' +
+      '<div class="block-ticket-loader__svg-host" role="status" aria-live="polite" aria-label="Loading">' +
+      '<svg class="block-ticket-loader__svg" viewBox="0 0 240 128" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<defs>' +
+      '<mask id="blockTicketLoaderMask"><rect width="240" height="128" fill="white"/>' +
+      '<circle cx="24" cy="64" r="13" fill="black"/><circle cx="216" cy="64" r="13" fill="black"/></mask>' +
+      '<linearGradient id="blockTicketBarShine" x1="0%" y1="0%" x2="100%" y2="0%">' +
+      '<stop offset="0%" stop-color="#0066ff" stop-opacity="0.35"/><stop offset="45%" stop-color="#4d94ff" stop-opacity="1"/>' +
+      '<stop offset="55%" stop-color="#4d94ff" stop-opacity="1"/><stop offset="100%" stop-color="#0066ff" stop-opacity="0.35"/></linearGradient>' +
+      '</defs>' +
+      '<g class="block-ticket-loader__svg-g">' +
+      '<rect class="block-ticket-loader__shape" x="12" y="14" width="216" height="100" rx="12" ry="12" fill="#080c14" stroke="#0066ff" stroke-width="3" mask="url(#blockTicketLoaderMask)"/>' +
+      '<line class="block-ticket-loader__vline" x1="149" y1="28" x2="149" y2="100" stroke="#0066ff" stroke-width="2" stroke-linecap="round"/>' +
+      '<rect class="block-ticket-loader__bar" x="28" y="38" width="108" height="7" rx="2" fill="url(#blockTicketBarShine)"/>' +
+      '<rect class="block-ticket-loader__bar block-ticket-loader__bar--2" x="28" y="54" width="122" height="7" rx="2" fill="#0066ff"/>' +
+      '<rect class="block-ticket-loader__bar block-ticket-loader__bar--3" x="28" y="70" width="76" height="7" rx="2" fill="#0066ff"/>' +
+      '</g></svg></div></div></div>';
+    document.body.appendChild(wrap);
+  }
+
+  function updateTicketLoaderCopy() {
+    var el = document.getElementById('blockTicketLoader');
+    if (!el) return;
+    var ar = document.documentElement.lang === 'ar' || document.body.classList.contains('rtl');
+    var status = el.querySelector('.block-ticket-loader__svg-host[role="status"]');
+    if (status) status.setAttribute('aria-label', ar ? 'جاري التحميل' : 'Loading');
+  }
+
+  function hideTicketLoader() {
+    var el = document.getElementById('blockTicketLoader');
+    if (el) {
+      el.hidden = true;
+      el.setAttribute('aria-hidden', 'true');
+    }
+    document.body.classList.remove('block-ticket-loader-open');
+    if (navLoaderSafetyTimer) {
+      clearTimeout(navLoaderSafetyTimer);
+      navLoaderSafetyTimer = null;
+    }
+  }
+
+  function showTicketLoader() {
+    ensureTicketLoader();
+    updateTicketLoaderCopy();
+    var el = document.getElementById('blockTicketLoader');
+    if (!el) return;
+    el.hidden = false;
+    el.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('block-ticket-loader-open');
+    if (navLoaderSafetyTimer) clearTimeout(navLoaderSafetyTimer);
+    navLoaderSafetyTimer = setTimeout(hideTicketLoader, 12000);
+  }
+
+  function scheduleHideTicketLoaderAfterNav(startedAt) {
+    var t0 = typeof startedAt === 'number' ? startedAt : Date.now();
+    function finish() {
+      var elapsed = Date.now() - t0;
+      var wait = Math.max(0, NAV_LOADER_MIN_MS - elapsed);
+      setTimeout(hideTicketLoader, wait);
+    }
+    if (document.readyState === 'complete') finish();
+    else window.addEventListener('load', finish, { once: true });
+  }
+
+  function beginNavLoaderFromClick() {
+    try {
+      sessionStorage.setItem(NAV_LOADER_KEY, '1');
+      sessionStorage.setItem(NAV_LOADER_TS_KEY, String(Date.now()));
+    } catch (e) {}
+    showTicketLoader();
+  }
+
+  function resumeNavLoaderIfPending() {
+    try {
+      if (sessionStorage.getItem(NAV_LOADER_KEY) !== '1') return;
+      var tsRaw = sessionStorage.getItem(NAV_LOADER_TS_KEY);
+      var started = tsRaw ? parseInt(tsRaw, 10) : NaN;
+      if (!started || isNaN(started)) started = Date.now();
+      sessionStorage.removeItem(NAV_LOADER_KEY);
+      sessionStorage.removeItem(NAV_LOADER_TS_KEY);
+      showTicketLoader();
+      scheduleHideTicketLoaderAfterNav(started);
+    } catch (e) {
+      try {
+        sessionStorage.removeItem(NAV_LOADER_KEY);
+        sessionStorage.removeItem(NAV_LOADER_TS_KEY);
+      } catch (e2) {}
+    }
+  }
+
+  function isTrackedNavAnchor(a) {
+    if (!a) return false;
+    if (a.closest('.site-chrome-nav--header')) return true;
+    if (a.closest('.site-chrome-nav--footer')) return true;
+    if (a.classList.contains('site-chrome-header__logo-wrap')) return true;
+    if (a.closest('.home-drawer__nav')) return true;
+    if (a.closest('#homeDrawer')) return true;
+    if (a.closest('.tk-main-nav')) return true;
+    return false;
+  }
+
+  function bindNavLoaderClicks() {
+    document.addEventListener(
+      'click',
+      function (e) {
+        var a = e.target && e.target.closest && e.target.closest('a[href]');
+        if (!a) return;
+        if (e.defaultPrevented) return;
+        if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        if (a.target === '_blank') return;
+        if (a.hasAttribute('download')) return;
+        var hrefAttr = a.getAttribute('href') || '';
+        if (hrefAttr.startsWith('mailto:') || hrefAttr.startsWith('tel:') || hrefAttr.startsWith('javascript:')) return;
+        if (!isTrackedNavAnchor(a)) return;
+        var url;
+        try {
+          url = new URL(a.href, window.location.href);
+        } catch (err) {
+          return;
+        }
+        if (url.origin !== window.location.origin) return;
+        var cur = normalizePathname(window.location.pathname) + window.location.search;
+        var next = normalizePathname(url.pathname) + url.search;
+        if (cur === next) return;
+        beginNavLoaderFromClick();
+      },
+      true
+    );
+  }
+
+  window.addEventListener('pageshow', function (ev) {
+    if (ev.persisted) hideTicketLoader();
+  });
+
+  window.blockTicketLoader = {
+    show: showTicketLoader,
+    hide: hideTicketLoader,
+    /** If a nav click set the loader timestamp, hide after min display time; otherwise hide now. */
+    markContentReady: function () {
+      try {
+        var tsRaw = sessionStorage.getItem(NAV_LOADER_TS_KEY);
+        if (tsRaw) {
+          var started = parseInt(tsRaw, 10);
+          if (!started || isNaN(started)) hideTicketLoader();
+          else scheduleHideTicketLoaderAfterNav(started);
+        } else {
+          hideTicketLoader();
+        }
+      } catch (e) {
+        hideTicketLoader();
+      }
+    },
+  };
+
   document.addEventListener('DOMContentLoaded', function () {
+    resumeNavLoaderIfPending();
     splitHeaderDom();
     injectLanguageSwitcher();
     splitFooterDom();
@@ -601,5 +782,6 @@
         applyChromeHeaderFooterI18n(getChromeLang());
       });
     bindSessionChrome();
+    bindNavLoaderClicks();
   });
 })();

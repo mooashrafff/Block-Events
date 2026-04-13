@@ -1408,10 +1408,19 @@
           <p class="subtitle" style="margin-top:-0.2rem; margin-bottom: 0.9rem;">Server-side immutable logs. This is for the selected scanner profile.</p>
 
           <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:flex-end;">
-            <div style="flex:1; min-width:260px;">
+            <div style="flex:1; min-width:200px;">
               <label style="font-weight:800; color:var(--muted); font-size:0.9rem;" for="scannerHistoryDeviceSelect">Device filter</label>
               <select id="scannerHistoryDeviceSelect" style="width:100%;">
                 <option value="">All devices</option>
+              </select>
+            </div>
+            <div style="flex:1; min-width:200px;">
+              <label style="font-weight:800; color:var(--muted); font-size:0.9rem;" for="scannerHistoryStatusSelect">Scan result</label>
+              <select id="scannerHistoryStatusSelect" style="width:100%;">
+                <option value="all">All results</option>
+                <option value="success">Success only</option>
+                <option value="already_used">Used before only</option>
+                <option value="invalid">Invalid only</option>
               </select>
             </div>
             <div style="display:flex; gap:0.75rem; margin-left:auto;">
@@ -1421,6 +1430,7 @@
           </div>
 
           <div id="scannerHistoryMessage" class="message error" style="display:none; margin-top:0.75rem;"></div>
+          <div id="scannerHistorySummary" style="display:none; margin-top:0.85rem; border:1px solid var(--border); border-radius:12px; padding:0.65rem 0.75rem; background:#141418; font-size:0.82rem;"></div>
           <div id="scannerHistoryBody" style="margin-top:1rem; max-height: 420px; overflow:auto; padding-right: 0.25rem;"></div>
         </div>
       </div>
@@ -3372,15 +3382,90 @@
       var activeScannerForHistory = null;
       var activeDevicesForHistory = [];
 
+      function scannerHistoryLabelForDevice(deviceId) {
+        var id = String(deviceId || '');
+        if (!id) return 'Unknown device';
+        var d = (activeDevicesForHistory || []).find(function (x) { return x && x.deviceId === id; });
+        if (d && d.operatorName) return d.operatorName + ' — ' + id;
+        return id;
+      }
+
+      function renderScannerHistorySummary(deviceTotals) {
+        var el = document.getElementById('scannerHistorySummary');
+        if (!el) return;
+        var o = deviceTotals && typeof deviceTotals === 'object' ? deviceTotals : {};
+        var keys = Object.keys(o);
+        if (!keys.length) {
+          el.style.display = 'none';
+          el.innerHTML = '';
+          return;
+        }
+        el.style.display = 'block';
+        var sorted = keys.slice().sort(function (a, b) {
+          return ((o[b] && o[b].total) || 0) - ((o[a] && o[a].total) || 0);
+        });
+        el.innerHTML =
+          '<div style="font-weight:800; color:var(--muted); margin-bottom:0.35rem; text-transform:uppercase; letter-spacing:0.04em; font-size:0.72rem;">Scan totals (match Device + Scan result filters)</div>' +
+          '<div class="small" style="color:var(--muted); margin-bottom:0.5rem; line-height:1.35;">' +
+          '<strong>Tickets 2+ scans</strong> = distinct tickets with two or more log lines (any outcome), for the same device scope. Other columns count only rows that match the filters.' +
+          '</div>' +
+          '<div style="overflow:auto; max-width:100%;">' +
+          '<table style="width:100%; border-collapse:collapse; min-width:520px;">' +
+          '<thead><tr style="color:var(--muted); text-align:left;">' +
+          '<th style="padding:0.35rem 0.5rem; border-bottom:1px solid var(--border);">Device</th>' +
+          '<th style="padding:0.35rem 0.5rem; border-bottom:1px solid var(--border);">Total</th>' +
+          '<th style="padding:0.35rem 0.5rem; border-bottom:1px solid var(--border); color:#22c55e;">Success</th>' +
+          '<th style="padding:0.35rem 0.5rem; border-bottom:1px solid var(--border); color:#eab308;">Used before</th>' +
+          '<th style="padding:0.35rem 0.5rem; border-bottom:1px solid var(--border); color:#ef4444;">Invalid</th>' +
+          '<th style="padding:0.35rem 0.5rem; border-bottom:1px solid var(--border); color:#a78bfa;">Tickets 2+ scans</th>' +
+          '</tr></thead><tbody>' +
+          sorted.map(function (k) {
+            var row = o[k] || {
+              total: 0,
+              success: 0,
+              already_used: 0,
+              invalid: 0,
+              ticketsWithMultiScans: 0,
+            };
+            var multi = row.ticketsWithMultiScans != null ? row.ticketsWithMultiScans : 0;
+            var label = k === '—' ? 'Unknown device' : scannerHistoryLabelForDevice(k);
+            return (
+              '<tr>' +
+              '<td style="padding:0.4rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.06); word-break:break-all;">' +
+              escapeHtml(label) +
+              '</td>' +
+              '<td style="padding:0.4rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.06); font-weight:800;">' +
+              row.total +
+              '</td>' +
+              '<td style="padding:0.4rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.06);">' +
+              row.success +
+              '</td>' +
+              '<td style="padding:0.4rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.06);">' +
+              row.already_used +
+              '</td>' +
+              '<td style="padding:0.4rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.06);">' +
+              row.invalid +
+              '</td>' +
+              '<td style="padding:0.4rem 0.5rem; border-bottom:1px solid rgba(255,255,255,0.06); font-weight:700;">' +
+              multi +
+              '</td>' +
+              '</tr>'
+            );
+          }).join('') +
+          '</tbody></table></div>';
+      }
+
       function openScannerHistory(scannerId) {
         activeScannerForHistory = scannerId;
         var deviceSel = document.getElementById('scannerHistoryDeviceSelect');
         var modal = document.getElementById('scannerHistoryModal');
         var body = document.getElementById('scannerHistoryBody');
         var msg = document.getElementById('scannerHistoryMessage');
+        var sum = document.getElementById('scannerHistorySummary');
         if (!modal || !deviceSel || !body) return;
 
         if (msg) { msg.style.display = 'none'; msg.textContent = ''; }
+        if (sum) { sum.style.display = 'none'; sum.innerHTML = ''; }
         body.innerHTML = 'Loading…';
 
         // Load scanners list again to get device list.
@@ -3412,18 +3497,44 @@
         if (!modal || !body || !activeScannerForHistory) return;
 
         var deviceSel = document.getElementById('scannerHistoryDeviceSelect');
+        var statusSel = document.getElementById('scannerHistoryStatusSelect');
         var deviceId = deviceSel ? deviceSel.value : '';
+        var statusFilter = statusSel && statusSel.value ? statusSel.value : 'all';
 
         body.innerHTML = 'Loading…';
         if (msg) { msg.style.display = 'none'; msg.textContent = ''; }
 
-        var url = '/api/admin/scanner-history?scannerId=' + encodeURIComponent(activeScannerForHistory) + (deviceId ? ('&deviceId=' + encodeURIComponent(deviceId)) : '') + '&limit=120';
-        api(url)
+        var url =
+          '/api/admin/scanner-history?scannerId=' +
+          encodeURIComponent(activeScannerForHistory) +
+          (deviceId ? '&deviceId=' + encodeURIComponent(deviceId) : '') +
+          '&status=' +
+          encodeURIComponent(statusFilter) +
+          '&limit=120';
+        api(url, { cache: 'no-store' })
           .then(function (r) { return r.json(); })
           .then(function (data) {
-            var logs = Array.isArray(data && data.logs) ? data.logs : [];
+            if (data && data.error) {
+              if (msg) {
+                msg.textContent = data.error;
+                msg.style.display = 'block';
+              }
+              body.innerHTML = '';
+              renderScannerHistorySummary({});
+              return;
+            }
+            renderScannerHistorySummary(data && data.deviceTotals);
+            var logs = Array.isArray(data && data.logs) ? data.logs.slice() : [];
+            if (statusFilter !== 'all') {
+              logs = logs.filter(function (l) {
+                return String(l.status || '')
+                  .trim()
+                  .toLowerCase() === statusFilter;
+              });
+            }
             if (!logs.length) {
-              body.innerHTML = '<div class="small" style="color:var(--muted); padding:1rem;">No history yet.</div>';
+              body.innerHTML =
+                '<div class="small" style="color:var(--muted); padding:1rem;">No log entries match these filters.</div>';
               return;
             }
 
@@ -3445,6 +3556,7 @@
             }).join('');
           })
           .catch(function () {
+            renderScannerHistorySummary({});
             body.innerHTML = 'Could not load history.';
           });
       }
@@ -3459,9 +3571,22 @@
 
       var btnLoadHistory = document.getElementById('btnLoadScannerHistory');
       var deviceSelEl = document.getElementById('scannerHistoryDeviceSelect');
+      var scannerHistoryStatusSelect = document.getElementById('scannerHistoryStatusSelect');
       if (btnLoadHistory && deviceSelEl) {
         btnLoadHistory.addEventListener('click', function () {
           loadScannerHistory();
+        });
+        deviceSelEl.addEventListener('change', function () {
+          if (activeScannerForHistory && document.getElementById('scannerHistoryModal') && document.getElementById('scannerHistoryModal').style.display === 'flex') {
+            loadScannerHistory();
+          }
+        });
+      }
+      if (scannerHistoryStatusSelect) {
+        scannerHistoryStatusSelect.addEventListener('change', function () {
+          if (activeScannerForHistory && document.getElementById('scannerHistoryModal') && document.getElementById('scannerHistoryModal').style.display === 'flex') {
+            loadScannerHistory();
+          }
         });
       }
 

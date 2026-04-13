@@ -4441,6 +4441,79 @@ app.post('/api/admin/scanner-requests/:requestId/reject', async (req, res) => {
   res.json({ ok: true });
 });
 
+async function fetchScanLogPages(supabaseClient, selectCols, scannerId, deviceId, statusKey) {
+  const rows = [];
+  let from = 0;
+  const step = 1000;
+  for (;;) {
+    let q = supabaseClient
+      .from('scanner_scan_logs')
+      .select(selectCols)
+      .eq('scanner_id', scannerId)
+      .order('id', { ascending: true })
+      .range(from, from + step - 1);
+    if (deviceId) q = q.eq('device_id', deviceId);
+    if (statusKey && statusKey !== 'all') q = q.eq('status', statusKey);
+    const { data, error } = await q;
+    if (error) {
+      console.error('Scanner history page fetch:', error.message);
+      return { rows, error };
+    }
+    if (!data || !data.length) break;
+    rows.push(...data);
+    if (data.length < step) break;
+    from += step;
+    if (from >= 100000) break;
+  }
+  return { rows, error: null };
+}
+
+function buildScannerHistoryDeviceTotals(filteredRows, repeatRows) {
+  const deviceTotals = {};
+  for (const row of filteredRows) {
+    const d = row.device_id ? String(row.device_id) : '—';
+    if (!deviceTotals[d]) {
+      deviceTotals[d] = {
+        total: 0,
+        success: 0,
+        already_used: 0,
+        invalid: 0,
+        ticketsWithMultiScans: 0,
+      };
+    }
+    deviceTotals[d].total += 1;
+    const st = String(row.status || '')
+      .trim()
+      .toLowerCase();
+    if (st === 'success') deviceTotals[d].success += 1;
+    else if (st === 'already_used') deviceTotals[d].already_used += 1;
+    else if (st === 'invalid') deviceTotals[d].invalid += 1;
+  }
+  const perDevTickets = {};
+  for (const row of repeatRows) {
+    const d = row.device_id ? String(row.device_id) : '—';
+    const t = row.ticket_id ? String(row.ticket_id).trim() : '';
+    if (!t) continue;
+    if (!perDevTickets[d]) perDevTickets[d] = {};
+    perDevTickets[d][t] = (perDevTickets[d][t] || 0) + 1;
+  }
+  const devices = new Set([...Object.keys(deviceTotals), ...Object.keys(perDevTickets)]);
+  for (const d of devices) {
+    if (!deviceTotals[d]) {
+      deviceTotals[d] = {
+        total: 0,
+        success: 0,
+        already_used: 0,
+        invalid: 0,
+        ticketsWithMultiScans: 0,
+      };
+    }
+    const counts = Object.values(perDevTickets[d] || {});
+    deviceTotals[d].ticketsWithMultiScans = counts.filter((c) => c >= 2).length;
+  }
+  return deviceTotals;
+}
+
 app.get('/api/admin/scanner-history', async (req, res) => {
   const authError = await requireAdmin(req, res);
   if (authError) return;
@@ -4448,26 +4521,53 @@ app.get('/api/admin/scanner-history', async (req, res) => {
 
   const scannerId = String(req.query.scannerId || '').trim();
   const deviceId = String(req.query.deviceId || '').trim();
+  const statusFilter = String(req.query.status || 'all')
+    .trim()
+    .toLowerCase();
   const limit = Math.max(1, Math.min(200, parseInt(String(req.query.limit || 25), 10) || 25));
   if (!scannerId) return res.status(400).json({ error: 'scannerId is required.' });
 
-  let q = supabase
+  const allowedStatus = new Set(['all', 'success', 'already_used', 'invalid']);
+  const statusKey = allowedStatus.has(statusFilter) ? statusFilter : 'all';
+
+  let listQ = supabase
     .from('scanner_scan_logs')
     .select(
       'created_at, status, ticket_id, event_name, user_name, user_email, ticket_category, ticket_number, device_id, operator_name'
     )
-    .eq('scanner_id', scannerId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+    .eq('scanner_id', scannerId);
+  if (deviceId) listQ = listQ.eq('device_id', deviceId);
+  if (statusKey !== 'all') listQ = listQ.eq('status', statusKey);
+  listQ = listQ.order('created_at', { ascending: false }).limit(limit);
 
-  if (deviceId) q = q.eq('device_id', deviceId);
+  const listPromise = listQ;
+  const filteredAggPromise = fetchScanLogPages(
+    supabase,
+    'device_id, status, ticket_id',
+    scannerId,
+    deviceId,
+    statusKey
+  );
+  const repeatPromise = fetchScanLogPages(supabase, 'device_id, ticket_id', scannerId, deviceId, 'all');
 
-  const { data, error } = await q;
-  if (error) return res.status(500).json({ error: 'Could not load history.' });
+  const [listRes, filteredAggRes, repeatRes] = await Promise.all([
+    listPromise,
+    filteredAggPromise,
+    repeatPromise,
+  ]);
+
+  if (listRes.error) return res.status(500).json({ error: 'Could not load history.' });
+
+  const deviceTotals = buildScannerHistoryDeviceTotals(
+    filteredAggRes.rows || [],
+    repeatRes.rows || []
+  );
 
   res.json({
     ok: true,
-    logs: (data || []).map((row) => ({
+    statusFilter: statusKey,
+    deviceTotals,
+    logs: (listRes.data || []).map((row) => ({
       at: row.created_at,
       status: row.status,
       ticketId: row.ticket_id,
