@@ -219,7 +219,7 @@
     .event-card img {
       width: 100%;
       aspect-ratio: 16/9;
-      object-fit: cover;
+      object-fit: contain;
       background: var(--border);
     }
     .event-card-body {
@@ -304,7 +304,8 @@
       max-height: 140px;
       border-radius: 10px;
       border: 1px solid rgba(255,255,255,0.06);
-      object-fit: cover;
+      object-fit: contain;
+      background: #2a2a2a;
       display: none;
     }
     .form-actions {
@@ -750,7 +751,7 @@
     .ev-user-preview .card-mini img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       display: block;
     }
     .ev-user-preview .hero-mini {
@@ -764,7 +765,7 @@
     .ev-user-preview .hero-mini img {
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       display: block;
     }
     .ev-user-preview .preview-title {
@@ -859,6 +860,93 @@
       font-weight: 600;
       color: var(--muted);
     }
+    .admin-event-guide {
+      border-radius: 12px;
+      border: 1px solid rgba(0, 102, 255, 0.28);
+      background: rgba(0, 102, 255, 0.08);
+      padding: 0.85rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .admin-event-guide strong { color: var(--text); }
+    .admin-event-section {
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(15, 15, 20, 0.55);
+      padding: 1rem 1.1rem;
+      margin-bottom: 1rem;
+    }
+    .admin-event-section > h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin: 0 0 0.35rem 0;
+      color: var(--text);
+    }
+    .admin-event-section .section-hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin: 0 0 0.85rem 0;
+      line-height: 1.45;
+    }
+    .admin-event-section .field:last-child { margin-bottom: 0; }
+    .gallery-admin-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem;
+      margin-bottom: 0.65rem;
+    }
+    .gallery-admin-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      min-height: 2.5rem;
+      margin-bottom: 0.65rem;
+    }
+    .gallery-admin-thumb {
+      position: relative;
+      width: 92px;
+      height: 68px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #0f0f12;
+    }
+    .gallery-admin-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .gallery-admin-remove {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 22px;
+      height: 22px;
+      border: none;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.65);
+      color: #fff;
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .gallery-admin-remove:hover { background: var(--danger); }
+    .venue-map-preview {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 10px;
+      margin-top: 0.5rem;
+      border: 1px solid var(--border);
+      display: none;
+    }
     .instapay-admin-table {
       width: 100%;
       border-collapse: collapse;
@@ -907,6 +995,10 @@
         <div class="nav-item nav-sub" data-view="payments">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
           <span>Payments</span>
+        </div>
+        <div class="nav-item nav-sub" data-view="promos">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112-2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg>
+          <span>Promo codes</span>
         </div>
         <div class="nav-item nav-sub" data-view="users">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -995,16 +1087,24 @@
       </div>
       <form id="eventForm" class="form">
         <input type="hidden" id="eventId">
-        <div class="ev-user-preview">
+        <div class="admin-event-guide">
+          <strong>Tickets &amp; gallery</strong> (middle of this form) control <strong>what people pay</strong> and <strong>extra photos</strong> on the event page.
+          <strong>Schedule &amp; caps</strong> (last section) control the <strong>event date/time</strong>, <strong>URL slug</strong>, a <strong>fallback price</strong>, and the <strong>total registration limit</strong> for the whole event—separate from per-category caps in the ticket table.
+        </div>
+
+        <div class="admin-event-section">
+          <h3>Basics &amp; visibility</h3>
+          <p class="section-hint">Title, venue line, description, and whether the event appears on the site.</p>
+          <div class="ev-user-preview" style="margin-bottom:0;">
           <div class="preview-images-row">
             <div>
-              <div class="preview-img-label">List / cards (outside) 4∶3</div>
+              <div class="preview-img-label">List / cards (~4∶3 frame)</div>
               <div class="card-mini">
                 <img id="previewCardImg" src="/block-logo.png" alt="">
               </div>
             </div>
             <div>
-              <div class="preview-img-label">Event detail (inside) ~16∶9</div>
+              <div class="preview-img-label">Detail hero (~16∶9 frame)</div>
               <div class="hero-mini">
                 <img id="previewHeroImg" src="/block-logo.png" alt="">
               </div>
@@ -1027,25 +1127,23 @@
             <p class="small" style="color:var(--muted);margin:0.35rem 0 0 0;">When off, the event is hidden from the home page, events list, and public API listings. Saved event links can still open.</p>
           </div>
         </div>
+        </div>
 
-        <div class="field">
-          <label>List / outside image</label>
-          <p class="small" style="color:var(--muted);margin:0 0 0.35rem;">Used on the Events page, home carousel, cart, and ticket thumbnails. Target <strong>4∶3</strong> (e.g. <strong>1200×900</strong> px or larger).</p>
+        <div class="admin-event-section">
+          <h3>Hero image</h3>
+          <p class="section-hint">One image for list cards, home carousel, detail hero, and checkout. You can paste a URL or choose a file.</p>
+          <div class="field" style="margin-bottom:0;">
           <input type="text" id="eventImageCard" placeholder="URL or upload below">
           <input type="file" id="eventImageCardFile" accept="image/*" style="margin-top:0.5rem;">
+          <input type="hidden" id="eventImageDetail" value="">
           <img id="imagePreviewCard" class="image-preview" alt="" style="display:none;margin-top:0.5rem;">
         </div>
-        <div class="field">
-          <label>Detail / inside image</label>
-          <p class="small" style="color:var(--muted);margin:0 0 0.35rem;">Used on the event detail hero and ticket QR modal banner. Target wide <strong>16∶9</strong> (e.g. <strong>1920×1080</strong>) or <strong>8∶3</strong> (e.g. <strong>1920×720</strong>).</p>
-          <input type="text" id="eventImageDetail" placeholder="URL or upload below">
-          <input type="file" id="eventImageDetailFile" accept="image/*" style="margin-top:0.5rem;">
-          <img id="imagePreviewDetail" class="image-preview" alt="" style="display:none;margin-top:0.5rem;">
         </div>
 
-        <div class="field">
-          <label>Ticket categories</label>
-          <p class="small" style="color:var(--muted);margin-bottom:0.35rem;">Set price, optional cap (blank = unlimited), and sold out.</p>
+        <div class="admin-event-section">
+          <h3>Ticket categories</h3>
+          <p class="section-hint">Pricing tiers shown on the booking page. <strong>Cap</strong> here limits seats <em>per category</em>. The <strong>total registrations cap</strong> in the schedule section limits the whole event.</p>
+          <div class="field" style="margin-bottom:0;">
           <table class="ticket-edit-table">
             <thead>
               <tr>
@@ -1060,33 +1158,56 @@
           </table>
           <button type="button" class="btn btn-ghost" id="btnAddTicketRow" style="margin-top:0.5rem;">+ Add category</button>
         </div>
-
-        <div class="field">
-          <label for="eventGallery">Gallery (one image URL per line)</label>
-          <textarea id="eventGallery" rows="4" placeholder="https://…"></textarea>
         </div>
 
-        <div class="field">
-          <label for="eventLocationAddress">Map / location address (optional, for Google Maps link)</label>
-          <input type="text" id="eventLocationAddress" placeholder="Same as venue or full address">
-        </div>
-        <div class="field">
-          <label for="eventMapEmbed">Embed map URL (optional, Google Maps embed https URL)</label>
-          <input type="url" id="eventMapEmbed" placeholder="https://www.google.com/maps/embed?...">
+        <div class="admin-event-section">
+          <h3>Gallery (extra photos)</h3>
+          <p class="section-hint">Optional strip of images below the description on the public page—not the main hero. Add files with <strong>Add photos</strong> or paste links (one per line).</p>
+          <div class="gallery-admin-toolbar">
+            <input type="file" id="galleryFilesInput" accept="image/*" multiple>
+            <span class="small" style="color:var(--muted);">JPEG/PNG; images are resized to keep saves small.</span>
+          </div>
+          <div id="galleryListAdmin" class="gallery-admin-list"></div>
+          <label for="eventGalleryPaste" class="small" style="color:var(--muted);">Image URLs (one per line, optional)</label>
+          <textarea id="eventGalleryPaste" rows="3" placeholder="https://…" style="width:100%;margin-top:0.35rem;font:inherit;border-radius:10px;border:1px solid var(--border);background:#0f0f12;color:var(--text);padding:0.6rem 0.75rem;"></textarea>
         </div>
 
-        <div class="field">
-          <label for="eventRulesTerms">Terms of entry (shown in popup &amp; accordion; one rule per line)</label>
-          <textarea id="eventRulesTerms" rows="6" placeholder="No refunds…"></textarea>
+        <div class="admin-event-section">
+          <h3>Location &amp; maps</h3>
+          <p class="section-hint"><strong>Address</strong> powers the “open in Google Maps” link. <strong>Embed URL</strong> is the interactive Google map iframe. <strong>Venue layout</strong> is an optional image (seating chart or floor plan)—not the same as the embed.</p>
+          <div class="field">
+            <label for="eventLocationAddress">Address (optional, for Maps link)</label>
+            <input type="text" id="eventLocationAddress" placeholder="Same as venue or full address">
+          </div>
+          <div class="field">
+            <label for="eventMapEmbed">Google Maps embed URL (optional)</label>
+            <input type="url" id="eventMapEmbed" placeholder="https://www.google.com/maps/embed?...">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label for="eventVenueMapUrl">Venue layout image (optional — URL or upload)</label>
+            <input type="text" id="eventVenueMapUrl" placeholder="URL or upload below">
+            <input type="file" id="eventVenueMapFile" accept="image/*" style="margin-top:0.5rem;">
+            <img id="venueMapPreview" class="venue-map-preview" alt="Venue layout preview">
+          </div>
         </div>
-        <div class="field">
-          <label for="eventRulesMaxTickets">Max tickets per order</label>
-          <input type="number" id="eventRulesMaxTickets" min="1" max="100" value="10">
+
+        <div class="admin-event-section">
+          <h3>Booking rules</h3>
+          <p class="section-hint">Terms modal and max tickets per checkout.</p>
+          <div class="field">
+            <label for="eventRulesTerms">Terms of entry (one rule per line)</label>
+            <textarea id="eventRulesTerms" rows="6" placeholder="No refunds…"></textarea>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label for="eventRulesMaxTickets">Max tickets per order</label>
+            <input type="number" id="eventRulesMaxTickets" min="1" max="100" value="10">
+          </div>
         </div>
 
         <details class="admin-meta-details" open>
-          <summary>Slug, schedule &amp; inventory</summary>
-          <div class="field" style="margin-top:0.75rem;">
+          <summary>URL slug, schedule &amp; event-wide cap</summary>
+          <p class="small" style="color:var(--muted);margin:0.5rem 0 0.75rem;line-height:1.45;">Use this for the public link slug, when the event runs, default pricing if needed, and a <strong>total</strong> registration limit across all categories.</p>
+          <div class="field" style="margin-top:0;">
             <label for="eventSlug">Slug (URL id – optional)</label>
             <input type="text" id="eventSlug" placeholder="ramadan-palace">
           </div>
@@ -1101,10 +1222,10 @@
           <div class="field">
             <label for="eventPrice">Fallback price (EGP)</label>
             <input type="number" id="eventPrice" min="0" step="0.01" placeholder="Used if no categories">
-            <p class="small" style="color:var(--muted);margin-top:0.25rem;">Ticket rows above override this for the booking page.</p>
+            <p class="small" style="color:var(--muted);margin-top:0.25rem;">Ticket categories above override this on the booking page.</p>
           </div>
           <div class="field">
-            <label for="eventAvailableTickets">Total registrations cap (admin only)</label>
+            <label for="eventAvailableTickets">Total registrations cap (whole event)</label>
             <input type="number" id="eventAvailableTickets" min="0" placeholder="Unlimited if empty">
           </div>
         </details>
@@ -1155,7 +1276,7 @@
               </tbody>
             </table>
           </div>
-          <div style="margin-top: 1rem;">
+                   <div style="margin-top: 1rem;">
             <button type="button" class="btn btn-primary" id="btnDownloadAttendeesExcel">Download attendees as Excel (CSV)</button>
           </div>
         </div>
@@ -1198,6 +1319,48 @@
             </div>
             <div style="margin-top: 1rem;">
               <button type="button" class="btn btn-primary" id="btnDownloadPaymentsExcel">Download payments as Excel (CSV)</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Promo codes (checkout cart %) -->
+      <div class="view" id="view-promos">
+        <div class="main-header">
+          <div>
+            <h1>Promo codes</h1>
+            <p class="subtitle">Percentage off the <strong>entire cart</strong> at checkout (all ticket lines). Codes are case-insensitive. Customers enter a code on the checkout page.</p>
+          </div>
+        </div>
+        <section class="attendees-section">
+          <div class="column" style="margin-top:0;">
+            <div id="promoAdminMsg" class="message"></div>
+            <div style="max-height: 420px; overflow: auto; border-radius: 12px; border: 1px solid rgba(31,41,55,0.9); margin-bottom: 0.85rem;">
+              <table class="attendees-table" style="margin: 0;">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th style="width: 7rem;">% off</th>
+                    <th style="width: 5rem;">Active</th>
+                    <th style="width: 5rem;"></th>
+                  </tr>
+                </thead>
+                <tbody id="promoAdminBody">
+                  <tr><td colspan="4" class="small" style="color: var(--muted); text-align: center; padding: 1rem;">Open <strong>Promo codes</strong> in the sidebar to load.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="row" style="display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: flex-end;">
+              <div class="field" style="margin: 0; flex: 1; min-width: 120px;">
+                <label for="promoNewCode" class="small" style="display: block; margin-bottom: 0.25rem; color: var(--muted); font-weight: 600;">New code</label>
+                <input type="text" id="promoNewCode" placeholder="e.g. SUMMER20" autocomplete="off" style="width: 100%; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--border); background: #05050a; color: var(--text); font: inherit;">
+              </div>
+              <div class="field" style="margin: 0; width: 6.5rem;">
+                <label for="promoNewPct" class="small" style="display: block; margin-bottom: 0.25rem; color: var(--muted); font-weight: 600;">Percent</label>
+                <input type="number" id="promoNewPct" min="1" max="100" step="1" placeholder="%" value="10" style="width: 100%; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--border); background: #05050a; color: var(--text); font: inherit;">
+              </div>
+              <button type="button" class="btn btn-primary" id="btnPromoAdd">Add code</button>
+              <button type="button" class="btn btn-ghost" id="btnPromoSave">Save changes</button>
             </div>
           </div>
         </section>
@@ -1296,12 +1459,13 @@
                 <th>User</th>
                 <th>Event</th>
                 <th>Amount</th>
+                <th>Paid from</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody id="instapayTbody">
-              <tr><td colspan="6" class="small" style="color:var(--muted);">Open this tab to load bookings.</td></tr>
+              <tr><td colspan="7" class="small" style="color:var(--muted);">Open this tab to load bookings.</td></tr>
             </tbody>
           </table>
         </div>
@@ -1503,16 +1667,20 @@
       var fPrice = document.getElementById('eventPrice');
       var fAvailableTickets = document.getElementById('eventAvailableTickets');
       var fImageCardFile = document.getElementById('eventImageCardFile');
-      var fImageDetailFile = document.getElementById('eventImageDetailFile');
       var imagePreviewCard = document.getElementById('imagePreviewCard');
-      var imagePreviewDetail = document.getElementById('imagePreviewDetail');
       var previewCardImg = document.getElementById('previewCardImg');
       var previewHeroImg = document.getElementById('previewHeroImg');
       var ticketRowsBody = document.getElementById('ticketRowsBody');
       var btnAddTicketRow = document.getElementById('btnAddTicketRow');
-      var fGallery = document.getElementById('eventGallery');
+      var galleryListAdmin = document.getElementById('galleryListAdmin');
+      var galleryFilesInput = document.getElementById('galleryFilesInput');
+      var fGalleryPaste = document.getElementById('eventGalleryPaste');
+      var galleryItems = [];
       var fLocAddr = document.getElementById('eventLocationAddress');
       var fMapEmbed = document.getElementById('eventMapEmbed');
+      var fVenueMapUrl = document.getElementById('eventVenueMapUrl');
+      var fVenueMapFile = document.getElementById('eventVenueMapFile');
+      var venueMapPreview = document.getElementById('venueMapPreview');
       var fRulesTerms = document.getElementById('eventRulesTerms');
       var fRulesMax = document.getElementById('eventRulesMaxTickets');
       var fPublished = document.getElementById('eventPublished');
@@ -1539,7 +1707,7 @@
       var attendanceChart = null;
 
       function switchView(name) {
-        ['dashboard', 'events', 'attendees', 'payments', 'users', 'scanner', 'footer', 'instapay'].forEach(function (v) {
+        ['dashboard', 'events', 'attendees', 'payments', 'promos', 'users', 'scanner', 'footer', 'instapay'].forEach(function (v) {
           var vEl = document.getElementById('view-' + v);
           var nEl = document.querySelector('.nav-item[data-view="' + v + '"]');
           if (vEl) vEl.classList.toggle('active', v === name);
@@ -1566,6 +1734,9 @@
           buildAttendeeFilterOptions();
           loadPayments();
         }
+        if (name === 'promos') {
+          loadPromoCodesAdmin();
+        }
         if (name === 'users') {
           loadAdminUsers();
         }
@@ -1586,7 +1757,7 @@
         var headers = options.headers || {};
         headers['Content-Type'] = 'application/json';
         if (adminKey) headers['X-Admin-Key'] = adminKey;
-        return fetch(base + path, Object.assign({}, options, { headers: headers }));
+        return fetch(base + path, Object.assign({}, options, { headers: headers, credentials: 'same-origin' }));
       }
 
       /** Parse JSON from admin API; surface413 / plain-text errors instead of JSON.parse noise. */
@@ -1595,7 +1766,7 @@
           var t = String(text || '').trim();
           if (r.status === 413 || /entity too large|payload too large/i.test(t)) {
             throw new Error(
-              'Save failed: request too large. Use smaller images or paste image URLs instead of embedding very large files.',
+              'Save failed: request too large (many hosts allow ~4.5MB per save). Re-upload images so the admin can compress them, or paste smaller hosted image URLs.',
             );
           }
           var parsed = null;
@@ -1626,14 +1797,14 @@
       }
 
       function syncImagePreviews() {
+        if (fImageDetail && fImageCard) fImageDetail.value = fImageCard.value;
         var cardUrl = (fImageCard && fImageCard.value.trim()) || '/block-logo.png';
-        var detailUrl = (fImageDetail && fImageDetail.value.trim()) || cardUrl;
         if (previewCardImg) {
           previewCardImg.src = cardUrl;
           previewCardImg.alt = (fName && fName.value) || '';
         }
         if (previewHeroImg) {
-          previewHeroImg.src = detailUrl;
+          previewHeroImg.src = cardUrl;
           previewHeroImg.alt = (fName && fName.value) || '';
         }
         if (imagePreviewCard) {
@@ -1643,15 +1814,6 @@
           } else {
             imagePreviewCard.style.display = 'none';
             imagePreviewCard.src = '';
-          }
-        }
-        if (imagePreviewDetail) {
-          if (fImageDetail && fImageDetail.value.trim()) {
-            imagePreviewDetail.src = detailUrl;
-            imagePreviewDetail.style.display = 'block';
-          } else {
-            imagePreviewDetail.style.display = 'none';
-            imagePreviewDetail.src = '';
           }
         }
       }
@@ -1732,7 +1894,7 @@
         var msg = document.getElementById('instapayMsg');
         var sel = document.getElementById('instapayFilterStatus');
         if (!tbody) return;
-        tbody.innerHTML = '<tr><td colspan="6" class="small" style="color:var(--muted);">Loading…</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="small" style="color:var(--muted);">Loading…</td></tr>';
         if (msg) { msg.textContent = ''; msg.className = 'message'; }
         var st = sel && sel.value ? sel.value : 'pending_payment';
         api('/api/admin/instapay-bookings?status=' + encodeURIComponent(st))
@@ -1745,16 +1907,18 @@
                   ? '<button type="button" class="btn btn-primary instapay-confirm" data-id="' + escapeAttrib(item.id) + '">Confirm</button>'
                   : '<span class="chip">' + escapeAttrib(item.status || '') + '</span>';
               var amount = item.pricePaid != null && item.pricePaid > 0 ? Number(item.pricePaid).toFixed(2) + ' EGP' : 'FREE';
+              var fromPhone = item.instapaySenderPhone ? escapeAttrib(item.instapaySenderPhone) : '—';
               return (
                 '<tr><td class="small">#' + escapeAttrib(item.id) + '</td>' +
                 '<td>' + escapeAttrib(item.user && item.user.email ? item.user.email : '') + '<div class="small">' + escapeAttrib(item.user && item.user.name ? item.user.name : '') + '</div></td>' +
                 '<td>' + escapeAttrib(item.event && item.event.name ? item.event.name : '') + '<div class="small">' + escapeAttrib(item.event && item.event.date ? item.event.date : '') + '</div></td>' +
                 '<td>' + escapeAttrib(amount) + '</td>' +
+                '<td class="small">' + fromPhone + '</td>' +
                 '<td><span class="chip">' + escapeAttrib(item.status) + '</span></td>' +
                 '<td>' + action + '</td></tr>'
               );
             }).join('');
-            tbody.innerHTML = rows || '<tr><td colspan="6" class="small" style="color:var(--muted);">No bookings.</td></tr>';
+            tbody.innerHTML = rows || '<tr><td colspan="7" class="small" style="color:var(--muted);">No bookings.</td></tr>';
             tbody.querySelectorAll('.instapay-confirm').forEach(function (btn) {
               btn.addEventListener('click', function () {
                 var id = btn.getAttribute('data-id');
@@ -1774,7 +1938,112 @@
             });
           })
           .catch(function () {
-            tbody.innerHTML = '<tr><td colspan="6" class="small" style="color:var(--muted);">Could not load bookings (check Supabase / server logs).</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="small" style="color:var(--muted);">Could not load bookings (check Supabase / server logs).</td></tr>';
+          });
+      }
+
+      var promoAdminList = [];
+      var promoAdminBody = document.getElementById('promoAdminBody');
+      var promoAdminMsg = document.getElementById('promoAdminMsg');
+      var promoAdminDelegateAttached = false;
+
+      function showPromoAdminMsg(text, type) {
+        if (!promoAdminMsg) return;
+        promoAdminMsg.textContent = text || '';
+        promoAdminMsg.className = 'message' + (text ? ' show ' + (type || '') : '');
+      }
+
+      function renderPromoAdminTable() {
+        if (!promoAdminBody) return;
+        if (!promoAdminList.length) {
+          promoAdminBody.innerHTML =
+            '<tr><td colspan="4" class="small" style="text-align:center;color:var(--muted);padding:1rem;">No promo codes yet. Add one below.</td></tr>';
+          return;
+        }
+        promoAdminBody.innerHTML = promoAdminList
+          .map(function (p, i) {
+            return (
+              '<tr data-promo-i="' +
+              i +
+              '">' +
+              '<td><input type="text" class="promo-edit-code" value="' +
+              escapeAttrib(p.code) +
+              '" style="width:100%;max-width:220px;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:#05050a;color:var(--text);font:inherit;"></td>' +
+              '<td><input type="number" class="promo-edit-pct" min="1" max="100" step="1" value="' +
+              escapeAttrib(String(p.percentOff != null ? p.percentOff : '')) +
+              '" style="width:100%;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:#05050a;color:var(--text);font:inherit;"></td>' +
+              '<td style="text-align:center;"><input type="checkbox" class="promo-edit-active"' +
+              (p.active !== false ? ' checked' : '') +
+              '></td>' +
+              '<td><button type="button" class="btn btn-ghost promo-remove" data-i="' +
+              i +
+              '" style="padding:4px 8px;">Remove</button></td>' +
+              '</tr>'
+            );
+          })
+          .join('');
+      }
+
+      function collectPromoListFromDom() {
+        var out = [];
+        if (!promoAdminBody) return out;
+        promoAdminBody.querySelectorAll('tr[data-promo-i]').forEach(function (tr) {
+          var cEl = tr.querySelector('.promo-edit-code');
+          var pEl = tr.querySelector('.promo-edit-pct');
+          var aEl = tr.querySelector('.promo-edit-active');
+          out.push({
+            code: cEl ? cEl.value.trim() : '',
+            percentOff: pEl ? Number(pEl.value) : 0,
+            active: aEl ? aEl.checked : true,
+          });
+        });
+        return out;
+      }
+
+      function attachPromoAdminDelegates() {
+        if (promoAdminDelegateAttached || !promoAdminBody) return;
+        promoAdminDelegateAttached = true;
+        promoAdminBody.addEventListener('click', function (e) {
+          var btn = e.target.closest('.promo-remove');
+          if (!btn || !promoAdminBody.contains(btn)) return;
+          var i = parseInt(btn.getAttribute('data-i'), 10);
+          if (isNaN(i)) return;
+          promoAdminList.splice(i, 1);
+          renderPromoAdminTable();
+        });
+      }
+
+      function loadPromoCodesAdmin() {
+        if (!promoAdminBody) return;
+        promoAdminBody.innerHTML =
+          '<tr><td colspan="4" class="small" style="text-align:center;color:var(--muted);padding:1rem;">Loading…</td></tr>';
+        showPromoAdminMsg('', '');
+        attachPromoAdminDelegates();
+        api('/api/admin/promo-codes')
+          .then(readAdminJsonResponse)
+          .then(function (d) {
+            promoAdminList = Array.isArray(d.promoCodes) ? d.promoCodes.slice() : [];
+            renderPromoAdminTable();
+          })
+          .catch(function (e) {
+            promoAdminList = [];
+            renderPromoAdminTable();
+            showPromoAdminMsg(e.message || 'Could not load promo codes.', 'error');
+          });
+      }
+
+      function savePromoCodesAdmin() {
+        var list = collectPromoListFromDom();
+        showPromoAdminMsg('', '');
+        api('/api/admin/promo-codes', { method: 'PUT', body: JSON.stringify({ promoCodes: list }) })
+          .then(readAdminJsonResponse)
+          .then(function (d) {
+            promoAdminList = Array.isArray(d.promoCodes) ? d.promoCodes : [];
+            renderPromoAdminTable();
+            showPromoAdminMsg('Promo codes saved.', 'success');
+          })
+          .catch(function (e) {
+            showPromoAdminMsg(e.message || 'Could not save.', 'error');
           });
       }
 
@@ -2196,12 +2465,20 @@
           fDescription.value = '';
           if (fPrice) fPrice.value = '';
           if (fAvailableTickets) fAvailableTickets.value = '';
-          if (fGallery) fGallery.value = '';
+          galleryItems = [];
+          if (fGalleryPaste) fGalleryPaste.value = '';
+          if (galleryListAdmin) galleryListAdmin.innerHTML = '';
           if (fLocAddr) fLocAddr.value = '';
           if (fMapEmbed) fMapEmbed.value = '';
+          if (fVenueMapUrl) fVenueMapUrl.value = '';
+          if (venueMapPreview) {
+            venueMapPreview.removeAttribute('src');
+            venueMapPreview.style.display = 'none';
+          }
           renderTicketRows([{ ticketId: 'regular', ticketName: 'Regular', price: 0, available: null, soldOut: false }]);
           loadRulesForEditor('');
           syncImagePreviews();
+          renderGalleryAdmin();
           if (fPublished) fPublished.checked = true;
           btnDelete.style.display = 'none';
           btnCancelEdit.style.display = 'none';
@@ -2216,15 +2493,28 @@
           fVenue.value = event.venue || '';
           fCategory.value = event.category || '';
           var leg = event.image || '';
-          if (fImageCard) fImageCard.value = event.image_card || leg || '';
-          if (fImageDetail) fImageDetail.value = event.image_detail || leg || '';
+          var unifiedImg = event.image_card || event.image_detail || leg || '';
+          if (fImageCard) fImageCard.value = unifiedImg;
+          if (fImageDetail) fImageDetail.value = unifiedImg;
           fDescription.value = event.description || '';
           if (fPrice) fPrice.value = event.price != null ? String(event.price) : '';
           if (fAvailableTickets) fAvailableTickets.value = event.available_tickets != null ? String(event.available_tickets) : '';
-          if (fGallery) fGallery.value = Array.isArray(event.gallery) ? event.gallery.join('\n') : '';
+          galleryItems = Array.isArray(event.gallery) ? event.gallery.slice() : [];
+          if (fGalleryPaste) fGalleryPaste.value = '';
           var loc = event.location && typeof event.location === 'object' ? event.location : null;
           if (fLocAddr) fLocAddr.value = (loc && loc.address) || '';
           if (fMapEmbed) fMapEmbed.value = (loc && loc.mapEmbedUrl) || '';
+          if (fVenueMapUrl) fVenueMapUrl.value = (loc && loc.venueMapUrl) || '';
+          if (venueMapPreview && fVenueMapUrl) {
+            var vm = fVenueMapUrl.value.trim();
+            if (vm) {
+              venueMapPreview.src = vm;
+              venueMapPreview.style.display = 'block';
+            } else {
+              venueMapPreview.removeAttribute('src');
+              venueMapPreview.style.display = 'none';
+            }
+          }
           var tix = Array.isArray(event.tickets) && event.tickets.length ? event.tickets : null;
           if (!tix) {
             var p = event.price != null ? Number(event.price) : 0;
@@ -2233,6 +2523,7 @@
           renderTicketRows(tix);
           loadRulesForEditor(event.id || '');
           syncImagePreviews();
+          renderGalleryAdmin();
           if (fPublished) fPublished.checked = event.published !== false;
           btnDelete.style.display = 'inline-flex';
           btnCancelEdit.style.display = 'inline-flex';
@@ -2247,6 +2538,58 @@
       function escapeAttrib(s) {
         if (s == null) return '';
         return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+
+      function renderGalleryAdmin() {
+        if (!galleryListAdmin) return;
+        if (!galleryItems.length) {
+          galleryListAdmin.innerHTML =
+            '<p class="small" style="color:var(--muted);margin:0;">No extra photos yet. Choose files above or paste URLs below.</p>';
+          return;
+        }
+        galleryListAdmin.innerHTML = galleryItems
+          .map(function (url, i) {
+            return (
+              '<div class="gallery-admin-thumb">' +
+              '<img src="' +
+              escapeAttrib(url) +
+              '" alt="">' +
+              '<button type="button" class="gallery-admin-remove" data-i="' +
+              i +
+              '" aria-label="Remove">&times;</button>' +
+              '</div>'
+            );
+          })
+          .join('');
+        galleryListAdmin.querySelectorAll('.gallery-admin-remove').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var i = parseInt(btn.getAttribute('data-i'), 10);
+            if (!isNaN(i)) galleryItems.splice(i, 1);
+            renderGalleryAdmin();
+          });
+        });
+      }
+
+      function collectGalleryForSubmit() {
+        var pasted = (fGalleryPaste && fGalleryPaste.value) || '';
+        var lines = pasted.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+        var out = galleryItems.slice();
+        lines.forEach(function (u) {
+          if (out.indexOf(u) === -1) out.push(u);
+        });
+        return out;
+      }
+
+      function syncVenueMapPreview() {
+        if (!venueMapPreview || !fVenueMapUrl) return;
+        var u = fVenueMapUrl.value.trim();
+        if (u) {
+          venueMapPreview.src = u;
+          venueMapPreview.style.display = 'block';
+        } else {
+          venueMapPreview.removeAttribute('src');
+          venueMapPreview.style.display = 'none';
+        }
       }
 
       function renderList() {
@@ -2736,11 +3079,8 @@
           return;
         }
         var primaryPrice = tickets.length ? tickets[0].price : 0;
-        var galleryLines = (fGallery && fGallery.value) || '';
-        var gallery = galleryLines
-          .split(/\r?\n/)
-          .map(function (s) { return s.trim(); })
-          .filter(Boolean);
+        var gallery = collectGalleryForSubmit();
+        var eventImg = fImageCard && fImageCard.value.trim() ? fImageCard.value.trim() : null;
         var body = {
           name: name,
           slug: fSlug.value.trim() || null,
@@ -2748,8 +3088,8 @@
           time: fTime.value.trim() || null,
           venue: fVenue.value.trim() || null,
           category: fCategory.value.trim() || null,
-          image_card: fImageCard && fImageCard.value.trim() ? fImageCard.value.trim() : null,
-          image_detail: fImageDetail && fImageDetail.value.trim() ? fImageDetail.value.trim() : null,
+          image_card: eventImg,
+          image_detail: eventImg,
           description: fDescription.value.trim() || null,
           price: fPrice && fPrice.value.trim() ? fPrice.value.trim() : primaryPrice,
           available_tickets: fAvailableTickets && fAvailableTickets.value.trim() ? fAvailableTickets.value.trim() : null,
@@ -2758,6 +3098,7 @@
           location: {
             address: fLocAddr && fLocAddr.value.trim() ? fLocAddr.value.trim() : null,
             mapEmbedUrl: fMapEmbed && fMapEmbed.value.trim() ? fMapEmbed.value.trim() : null,
+            venueMapUrl: fVenueMapUrl && fVenueMapUrl.value.trim() ? fVenueMapUrl.value.trim() : null,
           },
           published: fPublished ? fPublished.checked : true,
         };
@@ -2828,7 +3169,71 @@
         });
       });
 
-      function wireImageFileInput(fileInput, textInput) {
+      /**
+       * Shrink uploaded event images so the save JSON stays under host limits (e.g. Vercel ~4.5MB).
+       * Skips SVG; re-encodes raster images as JPEG after max-edge downscale.
+       */
+      function compressImageFileForAdmin(file, maxLongEdge, jpegQuality, done) {
+        maxLongEdge = maxLongEdge || 1920;
+        jpegQuality = jpegQuality == null ? 0.82 : jpegQuality;
+        if (file.type === 'image/svg+xml') {
+          var r = new FileReader();
+          r.onload = function (e) {
+            done(null, e.target.result);
+          };
+          r.onerror = function () {
+            done(new Error('read'));
+          };
+          r.readAsDataURL(file);
+          return;
+        }
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var dataUrl = e.target.result;
+          var img = new Image();
+          img.onload = function () {
+            var w = img.naturalWidth || img.width;
+            var h = img.naturalHeight || img.height;
+            if (!w || !h) {
+              done(new Error('dims'));
+              return;
+            }
+            var scale = 1;
+            if (Math.max(w, h) > maxLongEdge) {
+              scale = maxLongEdge / Math.max(w, h);
+            }
+            var nw = Math.max(1, Math.round(w * scale));
+            var nh = Math.max(1, Math.round(h * scale));
+            var canvas = document.createElement('canvas');
+            canvas.width = nw;
+            canvas.height = nh;
+            var ctx = canvas.getContext('2d');
+            if (!ctx) {
+              done(new Error('canvas'));
+              return;
+            }
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, nw, nh);
+            ctx.drawImage(img, 0, 0, nw, nh);
+            try {
+              var out = canvas.toDataURL('image/jpeg', jpegQuality);
+              done(null, out);
+            } catch (err) {
+              done(err || new Error('encode'));
+            }
+          };
+          img.onerror = function () {
+            done(new Error('img'));
+          };
+          img.src = dataUrl;
+        };
+        reader.onerror = function () {
+          done(new Error('read'));
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function wireImageFileInput(fileInput, textInput, afterSet) {
         if (!fileInput || !textInput) return;
         fileInput.addEventListener('change', function () {
           var file = fileInput.files && fileInput.files[0];
@@ -2838,21 +3243,70 @@
             fileInput.value = '';
             return;
           }
-          var reader = new FileReader();
-          reader.onload = function (ev) {
-            var dataUrl = ev.target && ev.target.result;
-            if (typeof dataUrl === 'string') {
-              textInput.value = dataUrl;
-              syncImagePreviews();
+          showFormMessage('Optimizing image…', 'success');
+          var maxEdge = afterSet ? 2200 : 1920;
+          compressImageFileForAdmin(file, maxEdge, 0.82, function (err, dataUrl) {
+            if (err || typeof dataUrl !== 'string') {
+              showFormMessage('Could not process image. Try another file or paste an image URL instead.', 'error');
+              fileInput.value = '';
+              return;
             }
-          };
-          reader.readAsDataURL(file);
+            textInput.value = dataUrl;
+            if (typeof afterSet === 'function') afterSet();
+            else syncImagePreviews();
+            showFormMessage(
+              'Image added (resized and compressed) so saving stays under upload limits.',
+              'success'
+            );
+            setTimeout(function () {
+              if (formMessage && formMessage.textContent.indexOf('resized') >= 0) {
+                formMessage.textContent = '';
+                formMessage.className = 'message';
+              }
+            }, 4500);
+          });
         });
       }
       wireImageFileInput(fImageCardFile, fImageCard);
-      wireImageFileInput(fImageDetailFile, fImageDetail);
+      wireImageFileInput(fVenueMapFile, fVenueMapUrl, syncVenueMapPreview);
+      if (fVenueMapUrl) fVenueMapUrl.addEventListener('input', syncVenueMapPreview);
+      if (galleryFilesInput) {
+        galleryFilesInput.addEventListener('change', function () {
+          var files = galleryFilesInput.files;
+          if (!files || !files.length) return;
+          var list = Array.prototype.slice.call(files);
+          var remaining = list.length;
+          var hadError = false;
+          function doneOne(err, dataUrl) {
+            remaining--;
+            if (!err && typeof dataUrl === 'string') galleryItems.push(dataUrl);
+            else hadError = true;
+            if (remaining <= 0) {
+              renderGalleryAdmin();
+              galleryFilesInput.value = '';
+              if (hadError) {
+                showFormMessage('Some images could not be added. Others were saved in the list.', 'error');
+              }
+            }
+          }
+          list.forEach(function (file) {
+            if (!/^image\//.test(file.type)) {
+              hadError = true;
+              remaining--;
+              if (remaining <= 0) {
+                renderGalleryAdmin();
+                galleryFilesInput.value = '';
+                if (hadError) {
+                  showFormMessage('Some files were skipped (images only).', 'error');
+                }
+              }
+              return;
+            }
+            compressImageFileForAdmin(file, 1600, 0.78, doneOne);
+          });
+        });
+      }
       if (fImageCard) fImageCard.addEventListener('input', syncImagePreviews);
-      if (fImageDetail) fImageDetail.addEventListener('input', syncImagePreviews);
       if (fName) {
         fName.addEventListener('input', function () {
           var t = fName.value || '';
@@ -2896,6 +3350,34 @@
       if (btnDownloadPaymentsExcel) {
         btnDownloadPaymentsExcel.addEventListener('click', function () {
           downloadPaymentsExcel();
+        });
+      }
+
+      var btnPromoAdd = document.getElementById('btnPromoAdd');
+      var btnPromoSave = document.getElementById('btnPromoSave');
+      if (btnPromoAdd) {
+        btnPromoAdd.addEventListener('click', function () {
+          var codeEl = document.getElementById('promoNewCode');
+          var pctEl = document.getElementById('promoNewPct');
+          var code = codeEl && codeEl.value ? codeEl.value.trim().toUpperCase() : '';
+          var pct = pctEl ? parseInt(pctEl.value, 10) : NaN;
+          if (!code) {
+            showPromoAdminMsg('Enter a promo code.', 'error');
+            return;
+          }
+          if (!isFinite(pct) || pct < 1 || pct > 100) {
+            showPromoAdminMsg('Percent must be between 1 and 100.', 'error');
+            return;
+          }
+          promoAdminList.push({ code: code, percentOff: pct, active: true });
+          if (codeEl) codeEl.value = '';
+          renderPromoAdminTable();
+          showPromoAdminMsg('Added locally — click Save changes to write to site config.', 'success');
+        });
+      }
+      if (btnPromoSave) {
+        btnPromoSave.addEventListener('click', function () {
+          savePromoCodesAdmin();
         });
       }
 

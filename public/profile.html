@@ -352,6 +352,14 @@
       try { return new Date(d).toLocaleString(); } catch (e) { return String(d); }
     }
 
+    function escAttr(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
     async function requireMe() {
       const r = await fetch('/api/auth/me', { credentials: 'same-origin' });
       const data = await r.json().catch(() => ({}));
@@ -417,8 +425,15 @@
             (ticketUrl
               ? '<div style="margin-top:0.6rem;"><a class="btn secondary" href="' + ticketUrl + '" style="display:inline-flex; text-decoration:none;">View ticket / QR</a></div>'
               : '') +
-            (b.paymentQrDataUrl && !ticketUrl
-              ? '<div style="margin-top:0.6rem;"><div class="meta" style="margin-bottom:0.35rem;">InstaPay payment QR</div><img alt="InstaPay payment QR" src="' + b.paymentQrDataUrl.replace(/"/g, '&quot;') + '" style="width:180px; border-radius:12px; border:1px solid var(--border);"></div>'
+            (b.instapayQrImageUrl && b.instapayPaymentUrl && !ticketUrl
+              ? '<div style="margin-top:0.6rem;padding:0.75rem;border:1px solid var(--border);border-radius:12px;background:#121212;">' +
+                '<div class="meta" style="margin-bottom:0.35rem;">InstaPay — waiting for admin confirmation</div>' +
+                '<img alt="InstaPay QR" src="' + escAttr(b.instapayQrImageUrl) + '" style="width:180px;max-width:100%;border-radius:12px;border:1px solid var(--border);background:#fff;">' +
+                '<div style="margin-top:0.5rem;"><a href="' + escAttr(b.instapayPaymentUrl) + '" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-weight:600;word-break:break-all;font-size:0.9rem;">Open InstaPay payment link</a></div>' +
+                (b.instapaySenderPhone
+                  ? '<div class="meta" style="margin-top:0.5rem;">Paid from: <strong>' + escAttr(b.instapaySenderPhone) + '</strong></div>'
+                  : '<div class="meta" style="margin-top:0.5rem;">After paying, add the phone number you used on the <a href="/instapay-success?bookingIds=' + encodeURIComponent(b.id) + '" style="color:var(--accent);font-weight:600;">InstaPay pending</a> page.</div>') +
+                '</div>'
               : '') +
           '</div>' +
         '</div>';

@@ -61,8 +61,8 @@
     }
     body.rtl { direction: rtl; }
 
-    /* —— Top app bar (Tazkarti-style, BLOCK colors) —— */
-       .tk-header {
+    /* —— Legacy tk-header (home app area) —— */
+    .tk-header {
       background: linear-gradient(135deg, var(--header-bar) 0%, var(--header-bar-end) 100%);
       color: #fff;
       width: 100%;
@@ -462,7 +462,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       object-position: center;
       display: block;
     }
@@ -569,7 +569,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       object-position: center;
       display: block;
     }
@@ -660,12 +660,12 @@
       font-size: 0.85rem;
     }
 
-    /* —— Tazkarti-style pre-login gateway (home only) —— */
+    /* —— Pre-login landing (BLOCK — dark UI + blue accent, not generic ticketing clone) —— */
     .home-drawer-overlay {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.5);
+      background: rgba(5, 8, 12, 0.65);
       z-index: 280;
     }
     .home-drawer-overlay.open { display: block; }
@@ -737,7 +737,8 @@
       min-height: 100vh;
       min-height: 100dvh;
       width: 100%;
-      color: #fff;
+      color: var(--text);
+      background: var(--bg-page);
     }
     .landing-hero {
       position: relative;
@@ -745,201 +746,243 @@
       min-height: 100dvh;
       display: flex;
       flex-direction: column;
-      text-align: center;
+    }
+    .landing-hero__bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 100% 80% at 85% -15%, rgba(0, 102, 255, 0.28), transparent 52%),
+        radial-gradient(ellipse 70% 60% at 5% 105%, rgba(124, 58, 237, 0.2), transparent 48%),
+        linear-gradient(165deg, #0b0b0b 0%, #101018 42%, #0b0b0b 100%);
+      pointer-events: none;
+    }
+    .landing-hero__bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.35) 35%, rgba(0, 0, 0, 0.2) 100%);
+      opacity: 0.9;
+      pointer-events: none;
     }
     .landing-hero__main {
       flex: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 5.5rem clamp(1rem, 4vw, 2rem) 0.5rem;
-      padding-left: calc(48px + clamp(0.75rem, 3vw, 1.5rem));
+      padding: 5.25rem clamp(1rem, 4vw, 2rem) 2rem;
       position: relative;
       z-index: 1;
     }
-    body.home-landing.rtl .landing-hero__main {
-      padding-left: clamp(1rem, 4vw, 2rem);
-      padding-right: calc(48px + clamp(0.75rem, 3vw, 1.5rem));
-    }
-    .landing-hero__bg {
-      position: absolute;
-      inset: 0;
-      background: #0f172a url('/landing-hero.png') center / cover no-repeat;
-    }
-    .landing-hero__bg::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(180deg, rgba(15, 23, 42, 0.55) 0%, rgba(15, 23, 42, 0.75) 50%, rgba(15, 23, 42, 0.92) 100%);
-    }
-    .landing-hero__content {
-      position: relative;
-      max-width: 42rem;
-      margin: 0 auto;
-    }
-    .landing-hero__content h1 {
-      font-size: clamp(1.75rem, 5vw, 2.75rem);
-      font-weight: 700;
-      line-height: 1.15;
-      margin-bottom: 0.75rem;
-      text-shadow: 0 2px 24px rgba(0, 0, 0, 0.35);
-    }
-    .landing-hero__content > p {
-      font-size: clamp(1rem, 2.5vw, 1.15rem);
-      color: rgba(255, 255, 255, 0.88);
-      line-height: 1.55;
-      margin-bottom: 2rem;
-      text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
-    }
-    .landing-tile {
-      display: flex;
-      flex-direction: column;
+    .landing-hero__grid {
+      width: 100%;
+      max-width: min(1040px, 96vw);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
       align-items: center;
-      justify-content: center;
-      gap: 0.35rem;
-      margin: 0 auto 1.75rem;
-      max-width: 22rem;
-      min-height: 9rem;
-      padding: 1.5rem 1.75rem;
-      border-radius: 20px;
-      text-decoration: none;
-      color: #fff;
-      background: linear-gradient(145deg, rgba(34, 197, 94, 0.35), rgba(22, 101, 52, 0.55));
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
-      backdrop-filter: blur(8px);
-      transition: transform 0.2s, box-shadow 0.2s;
     }
-    .landing-tile:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 22px 56px rgba(0, 0, 0, 0.4);
-      color: #fff;
+    @media (min-width: 900px) {
+      .landing-hero__grid {
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 3rem;
+      }
+      .landing-hero__copy {
+        text-align: left;
+      }
+      .landing-cta-row,
+      .landing-cta-meta,
+      .landing-trust {
+        justify-content: flex-start;
+      }
     }
-    .landing-tile__icon {
-      width: 48px;
-      height: 48px;
-      margin-bottom: 0.25rem;
-      opacity: 0.95;
+    body.home-landing.rtl .landing-hero__copy {
+      text-align: right;
     }
-    .landing-tile__title {
-      font-size: 1.35rem;
+    body.home-landing.rtl .landing-cta-row,
+    body.home-landing.rtl .landing-cta-meta,
+    body.home-landing.rtl .landing-trust {
+      justify-content: flex-end;
+    }
+    .landing-hero__copy {
+      text-align: center;
+    }
+    .landing-eyebrow {
+      display: inline-block;
+      font-size: 0.78rem;
       font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-hover);
+      margin-bottom: 0.65rem;
     }
-    .landing-tile__sub {
-      font-size: 0.9rem;
-      color: rgba(255, 255, 255, 0.85);
-      font-weight: 500;
+    .landing-hero__copy h1 {
+      font-size: clamp(2rem, 5.5vw, 3.15rem);
+      font-weight: 700;
+      line-height: 1.08;
+      margin-bottom: 0.85rem;
+      letter-spacing: -0.02em;
     }
-    .landing-actions {
+    .landing-hero__copy > p.landing-lead {
+      font-size: clamp(1rem, 2.2vw, 1.18rem);
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+      max-width: 36rem;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    @media (min-width: 900px) {
+      .landing-hero__copy > p.landing-lead {
+        margin-left: 0;
+        margin-right: 0;
+      }
+    }
+    body.home-landing.rtl .landing-hero__copy > p.landing-lead {
+      margin-left: auto;
+      margin-right: auto;
+    }
+    @media (min-width: 900px) {
+      body.home-landing.rtl .landing-hero__copy > p.landing-lead {
+        margin-right: 0;
+        margin-left: auto;
+      }
+    }
+    .landing-cta-row {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: center;
-      gap: 0.65rem 1rem;
+      gap: 0.65rem 0.85rem;
+      margin-bottom: 1.35rem;
     }
-    .landing-link-signin {
-      color: rgba(255, 255, 255, 0.95);
-      font-weight: 600;
-      text-decoration: none;
-      border-bottom: 2px solid rgba(255, 255, 255, 0.35);
-    }
-    .landing-link-signin:hover { color: #fff; border-bottom-color: #fff; }
-    .landing-or { color: rgba(255, 255, 255, 0.55); font-size: 0.9rem; }
-    .landing-btn-register {
+    .landing-btn-primary {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1.35rem;
-      border-radius: 999px;
+      justify-content: center;
+      gap: 0.45rem;
+      padding: 0.85rem 1.5rem;
+      border-radius: 12px;
       background: var(--accent);
       color: #fff;
       font-weight: 700;
-      font-size: 0.95rem;
+      font-size: 1rem;
       text-decoration: none;
       border: none;
-      box-shadow: 0 8px 28px rgba(0, 102, 255, 0.4);
+      box-shadow: 0 6px 28px rgba(0, 102, 255, 0.38);
       transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
     }
-    .landing-btn-register:hover {
-      background: var(--accent-purple);
+    .landing-btn-primary:hover {
+      background: var(--accent-hover);
       color: #fff;
-      transform: translateY(-1px);
-      box-shadow: 0 10px 32px rgba(124, 58, 237, 0.35);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 36px rgba(0, 102, 255, 0.45);
     }
-    .landing-rail {
-      position: fixed;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 48px;
-      z-index: 120;
-      display: flex;
-      flex-direction: column;
+    .landing-btn-secondary {
+      display: inline-flex;
       align-items: center;
-      padding: calc(4.65rem + env(safe-area-inset-top, 0px)) 0 calc(0.45rem + env(safe-area-inset-bottom, 0px));
-      background: rgba(51, 65, 85, 0.82);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-right: 1px solid rgba(255, 255, 255, 0.1);
-      box-sizing: border-box;
-    }
-    body.rtl .landing-rail {
-      left: auto;
-      right: 0;
-      border-right: none;
-      border-left: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    .landing-rail__burger {
-      flex-shrink: 0;
-      width: 36px;
-      height: 36px;
-      margin-bottom: 0.25rem;
-      border: none;
-      border-radius: 8px;
+      justify-content: center;
+      padding: 0.85rem 1.25rem;
+      border-radius: 12px;
       background: transparent;
-      color: rgba(255, 255, 255, 0.92);
-      cursor: pointer;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      transition: border-color 0.2s, background 0.2s, color 0.2s;
+    }
+    .landing-btn-secondary:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: #fff;
+    }
+    .landing-cta-meta {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s;
+      gap: 0.35rem 0.75rem;
+      font-size: 0.9rem;
+      color: var(--muted);
     }
-    .landing-rail__burger:hover { background: rgba(255, 255, 255, 0.12); }
-    .landing-rail__burger-icon {
-      width: 22px;
-      height: 18px;
-      display: block;
+    .landing-cta-meta a {
+      color: var(--accent-hover);
+      font-weight: 600;
+      text-decoration: none;
     }
-    .landing-rail__spacer {
-      flex: 1;
-      min-height: 0.5rem;
+    .landing-cta-meta a:hover {
+      text-decoration: underline;
     }
-    .landing-rail__social {
+    .landing-trust {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      justify-content: center;
+      margin-top: 1.25rem;
+    }
+    .landing-trust span {
+      font-size: 0.82rem;
+      color: var(--muted);
+      padding: 0.35rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(26, 26, 26, 0.65);
+    }
+    .landing-visual {
+      position: relative;
+      min-height: 220px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: linear-gradient(145deg, rgba(26, 26, 26, 0.95), rgba(15, 15, 20, 0.98));
+      box-shadow: var(--card-shadow);
+      overflow: hidden;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+    }
+    .landing-visual::before {
+      content: '';
+      position: absolute;
+      inset: -40%;
+      background: conic-gradient(from 200deg at 50% 50%, rgba(0, 102, 255, 0.15), transparent 40%, rgba(124, 58, 237, 0.12), transparent 75%);
+      animation: landing-glow 14s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes landing-glow {
+      to { transform: rotate(360deg); }
+    }
+    .landing-visual__inner {
+      position: relative;
+      z-index: 1;
+      padding: 1.75rem;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      gap: 0.5rem;
-      flex-shrink: 0;
+      gap: 1rem;
+      width: 100%;
     }
-    .landing-rail__social a {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      color: rgba(255, 255, 255, 0.78);
-      text-decoration: none;
-      transition: color 0.15s, background 0.15s;
+    .landing-visual__card {
+      border-radius: 14px;
+      border: 1px solid rgba(0, 102, 255, 0.28);
+      background: rgba(0, 102, 255, 0.08);
+      padding: 1rem 1.15rem;
+      text-align: left;
     }
-    .landing-rail__social a:hover {
-      color: #fff;
-      background: rgba(255, 255, 255, 0.1);
+    body.home-landing.rtl .landing-visual__card {
+      text-align: right;
     }
-    .landing-rail__social svg {
-      width: 19px;
-      height: 19px;
+    .landing-visual__card strong {
       display: block;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+    .landing-visual__card span {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.45;
     }
     .landing-footer {
       position: relative;
@@ -948,24 +991,57 @@
       width: 100%;
       margin-top: auto;
       text-align: center;
-      padding: 0.28rem clamp(0.65rem, 3vw, 1rem) calc(0.4rem + env(safe-area-inset-bottom, 0px));
-      font-size: 0.65rem;
-      line-height: 1.3;
-      color: rgba(255, 255, 255, 0.92);
-      background: rgba(255, 255, 255, 0.12);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-top: 1px solid rgba(255, 255, 255, 0.18);
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      padding: 1rem clamp(0.75rem, 3vw, 1.25rem) calc(1rem + env(safe-area-inset-bottom, 0px));
+      font-size: 0.75rem;
+      line-height: 1.45;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      background: rgba(11, 11, 11, 0.92);
     }
     .landing-footer__line {
       margin: 0;
       font-weight: 500;
+      color: var(--muted);
     }
     .landing-footer__credit {
-      margin: 0.1rem 0 0;
-      opacity: 0.88;
+      margin: 0.35rem 0 0;
+      opacity: 0.85;
       font-weight: 400;
+    }
+    .landing-header-menu {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      margin-right: 0.35rem;
+      border: none;
+      border-radius: 10px;
+      background: rgba(0, 102, 255, 0.18);
+      color: #fff;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    body.home-landing .landing-header-menu {
+      display: inline-flex;
+    }
+    @media (min-width: 900px) {
+      body.home-landing .landing-header-menu {
+        display: none;
+      }
+    }
+    .landing-header-menu:hover {
+      background: rgba(0, 102, 255, 0.32);
+    }
+    .landing-header-menu svg {
+      width: 22px;
+      height: 18px;
+      display: block;
+    }
+    body.rtl .landing-header-menu {
+      margin-right: 0;
+      margin-left: 0.35rem;
     }
 
     body.home-landing .home-main { display: none !important; }
@@ -978,26 +1054,29 @@
       min-height: 100dvh;
     }
     body.home-landing .site-chrome-footer { display: none; }
-    body.home-landing .site-chrome-nav--header a[href='/events'],
-    body.home-landing .site-chrome-nav--header a[href='/my-tickets'] {
-      display: none !important;
-    }
     body.home-landing .site-chrome-header {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       z-index: 150;
-      box-shadow: none;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
     }
     body.home-landing .site-chrome-header__top {
-      background: rgba(15, 23, 42, 0.42) !important;
-      backdrop-filter: blur(10px);
+      background: rgba(11, 11, 11, 0.92) !important;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
     }
     body.home-landing .site-chrome-header__nav-band {
-      display: none !important;
+      display: block !important;
     }
 
+    @media (prefers-reduced-motion: reduce) {
+      .landing-visual::before {
+        animation: none;
+      }
+    }
     @media (max-width: 768px) {
       .featured-box { grid-template-columns: 1fr; min-height: auto; }
       .featured-panel { border-radius: 20px 20px 0 0; }
@@ -1095,6 +1174,7 @@
     </div>
     <nav class="home-drawer__nav">
       <a href="/" data-i18n="drawerHome">Home</a>
+      <a href="/events" data-i18n="drawerEvents">Events</a>
       <a href="/about-us" data-i18n="drawerAbout">About Block</a>
       <a href="/faq" data-i18n="drawerFaq">FAQ</a>
       <a href="/contact" data-i18n="drawerContact">Contact Us</a>
@@ -1124,42 +1204,37 @@
   <div id="landingRoot" class="landing-root">
     <section class="landing-hero" aria-label="Welcome">
       <div class="landing-hero__bg" aria-hidden="true"></div>
-      <div class="landing-rail" aria-label="Menu and social links">
-        <button type="button" class="landing-rail__burger" id="landingRailBurger" aria-label="Open menu" aria-expanded="false" aria-controls="homeDrawer">
-          <svg class="landing-rail__burger-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 18" fill="none" aria-hidden="true">
-            <line x1="2" y1="2.5" x2="20" y2="2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <line x1="2" y1="9" x2="20" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <line x1="2" y1="15.5" x2="11" y2="15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </button>
-        <div class="landing-rail__spacer" aria-hidden="true"></div>
-        <div class="landing-rail__social">
-          <a href="#" data-block-social="facebook" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-          </a>
-          <a href="#" data-block-social="linkedin" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-          </a>
-          <a href="#" data-block-social="instagram" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-          </a>
-        </div>
-      </div>
       <div class="landing-hero__main">
-        <div class="landing-hero__content">
-          <h1 data-i18n="landingHeadline">What is your next plan?</h1>
-          <p data-i18n="landingSub">Explore and book exclusive events and matches — all in one place with BLOCK.</p>
-          <a id="landingExploreBtn" class="landing-tile landing-tile--single" href="/auth?next=%2Fevents">
-            <svg class="landing-tile__icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-            </svg>
-            <span class="landing-tile__title" data-i18n="landingTileTitle">All events & tickets</span>
-            <span class="landing-tile__sub" data-i18n="landingTileSub">Sports, entertainment & more — one BLOCK pass</span>
-          </a>
-          <div class="landing-actions">
-            <a href="/auth" class="landing-link-signin" data-i18n="landingSignIn">Sign in</a>
-            <span class="landing-or" data-i18n="landingOr">or</span>
-            <a href="/auth#signup" class="landing-btn-register" data-i18n="landingRegister">Register now</a>
+        <div class="landing-hero__grid">
+          <div class="landing-hero__copy">
+            <p class="landing-eyebrow" data-i18n="landingEyebrow">BLOCK</p>
+            <h1 data-i18n="landingHeadline">Your night out, sorted.</h1>
+            <p class="landing-lead" data-i18n="landingSub">Browse what’s on, compare ticket tiers, and book in a few taps — the same bold BLOCK look as the rest of the site.</p>
+            <div class="landing-cta-row">
+              <a id="landingExploreBtn" class="landing-btn-primary" href="/events" data-i18n="landingBrowse">Browse events</a>
+              <a href="/auth#signup" class="landing-btn-secondary" data-i18n="landingRegister">Create account</a>
+            </div>
+            <div class="landing-cta-meta">
+              <span data-i18n="landingHaveAccount">Already registered?</span>
+              <a href="/auth" data-i18n="landingSignIn">Sign in</a>
+            </div>
+            <div class="landing-trust">
+              <span data-i18n="landingTrust1">Explore without signing in</span>
+              <span data-i18n="landingTrust2">Secure checkout</span>
+              <span data-i18n="landingTrust3">Digital tickets</span>
+            </div>
+          </div>
+          <div class="landing-visual" aria-hidden="true">
+            <div class="landing-visual__inner">
+              <div class="landing-visual__card">
+                <strong data-i18n="landingCard1Title">Discover</strong>
+                <span data-i18n="landingCard1Sub">Live shows, sports, and culture — curated listings, BLOCK styling.</span>
+              </div>
+              <div class="landing-visual__card" style="border-color: rgba(124,58,237,0.35); background: rgba(124,58,237,0.08);">
+                <strong data-i18n="landingCard2Title">Book in one flow</strong>
+                <span data-i18n="landingCard2Sub">Choose your tier, pay safely, and get your pass — no clutter.</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1252,12 +1327,21 @@
           menuTitle: 'Menu', searchPh: 'Search for events...', organizedBy: 'Organized by <strong>BLOCK</strong>',
           bookNow: 'Book Now', moreInfo: 'More Info', eventsHeading: 'Events', viewAllEvents: 'View All Events',
           loadingEvents: 'Loading events…', noMatch: 'No events match your search.',
-          drawerHome: 'Home', drawerAbout: 'About Block', drawerFaq: 'FAQ', drawerContact: 'Contact Us',
-          landingHeadline: 'What is your next plan?',
-          landingSub: 'Explore and book exclusive events and matches — all in one place with BLOCK.',
-          landingTileTitle: 'All events & tickets',
-          landingTileSub: 'Sports, entertainment & more — one BLOCK pass',
-          landingSignIn: 'Sign in', landingOr: 'or',           landingRegister: 'Register now',
+          drawerHome: 'Home', drawerEvents: 'Events', drawerAbout: 'About Block', drawerFaq: 'FAQ', drawerContact: 'Contact Us',
+          landingEyebrow: 'BLOCK',
+          landingHeadline: 'Your night out, sorted.',
+          landingSub: 'Browse what’s on, compare ticket tiers, and book in a few taps — the same bold BLOCK look as the rest of the site.',
+          landingBrowse: 'Browse events',
+          landingRegister: 'Create account',
+          landingHaveAccount: 'Already registered?',
+          landingSignIn: 'Sign in',
+          landingTrust1: 'Explore without signing in',
+          landingTrust2: 'Secure checkout',
+          landingTrust3: 'Digital tickets',
+          landingCard1Title: 'Discover',
+          landingCard1Sub: 'Live shows, sports, and culture — curated listings, BLOCK styling.',
+          landingCard2Title: 'Book in one flow',
+          landingCard2Sub: 'Choose your tier, pay safely, and get your pass — no clutter.',
           landingFooter: '© 2026 Block. All rights reserved.',
           landingFooterCredit: 'Developed and Powered by Ashrafko Designs'
         },
@@ -1267,12 +1351,22 @@
           menuTitle: 'القائمة', searchPh: 'ابحث عن الفعاليات...', organizedBy: 'تنظيم <strong>BLOCK</strong>',
           bookNow: 'احجز الآن', moreInfo: 'المزيد', eventsHeading: 'الفعاليات', viewAllEvents: 'كل الفعاليات',
           loadingEvents: 'جاري تحميل الفعاليات…', noMatch: 'لا توجد فعاليات مطابقة.',
-          drawerHome: 'الرئيسية', drawerAbout: 'عن BLOCK', drawerFaq: 'الأسئلة الشائعة', drawerContact: 'اتصل بنا',
-          landingHeadline: 'ما خطتك التالية؟',
-          landingSub: 'استكشف واحجز الفعاليات والمباريات الحصرية — كل ذلك مع BLOCK في مكان واحد.',
-          landingTileTitle: 'كل الفعاليات والتذاكر',
-          landingTileSub: 'رياضة، ترفيه والمزيد — تذكرة BLOCK واحدة',
-          landingSignIn: 'تسجيل الدخول', landingOr: 'أو',           landingRegister: 'سجّل الآن',
+          drawerHome: 'الرئيسية', drawerEvents: 'الفعاليات', drawerAbout: 'عن BLOCK', drawerFaq: 'الأسئلة الشائعة', drawerContact: 'اتصل بنا',
+          landingEyebrow: 'BLOCK',
+          landingHeadline: 'خطط لأمسيتك بسهولة.',
+          landingSub: 'تصفح الفعاليات، قارن فئات التذاكر، واحجز بخطوات قليلة — بنفس أسلوب BLOCK الداكن والواضح.',
+          landingBrowse: 'تصفح الفعاليات',
+          landingRegister: 'إنشاء حساب',
+          landingHaveAccount: 'مسجل مسبقاً؟',
+          landingSignIn: 'تسجيل الدخول',
+          landingTrust1: 'تصفح دون تسجيل',
+          landingTrust2: 'دفع آمن',
+          landingTrust3: 'تذاكر رقمية',
+          landingCard1Title: 'اكتشف',
+          landingCard1Sub: 'حفلات، رياضة، وثقافة — قوائم منسّقة بنفس هوية BLOCK.',
+          landingCard2Title: 'احجز بسلاسة',
+          landingCard2Sub: 'اختر الفئة، ادفع بأمان، واحصل على تذكرتك — بلا تعقيد.',
+
           landingFooter: '© 2026 Block. جميع الحقوق محفوظة.',
           landingFooterCredit: 'تطوير وتشغيل Ashrafko Designs'
         }
@@ -1401,7 +1495,23 @@
       loadEvents();
     }
 
+    function insertLandingHeaderMenu() {
+      var topIn = document.querySelector('.site-chrome-header__top-inner');
+      if (!topIn || document.getElementById('landingHeaderMenu')) return;
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'landingHeaderMenu';
+      btn.className = 'landing-header-menu';
+      btn.setAttribute('aria-label', 'Menu');
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-controls', 'homeDrawer');
+      btn.innerHTML =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 18" fill="none" aria-hidden="true"><line x1="2" y1="2.5" x2="20" y2="2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="9" x2="20" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="15.5" x2="11" y2="15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+      topIn.insertBefore(btn, topIn.firstChild);
+    }
+
     function setupHomeDrawer() {
+      insertLandingHeaderMenu();
       var overlay = document.getElementById('homeDrawerOverlay');
       var drawer = document.getElementById('homeDrawer');
       var closeBtn = document.getElementById('homeDrawerClose');
@@ -1411,16 +1521,16 @@
         drawer.classList.remove('open');
         drawer.hidden = true;
         overlay.setAttribute('aria-hidden', 'true');
-        var railB = document.getElementById('landingRailBurger');
-        if (railB) railB.setAttribute('aria-expanded', 'false');
+        var menuBtn = document.getElementById('landingHeaderMenu');
+        if (menuBtn) menuBtn.setAttribute('aria-expanded', 'false');
       }
       function openDrawer() {
         drawer.hidden = false;
         overlay.classList.add('open');
         drawer.classList.add('open');
         overlay.setAttribute('aria-hidden', 'false');
-        var railB = document.getElementById('landingRailBurger');
-        if (railB) railB.setAttribute('aria-expanded', 'true');
+        var menuBtn = document.getElementById('landingHeaderMenu');
+        if (menuBtn) menuBtn.setAttribute('aria-expanded', 'true');
       }
       window.blockOpenHomeDrawer = openDrawer;
       window.blockCloseHomeDrawer = closeDrawer;
@@ -1432,9 +1542,9 @@
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && drawer.classList.contains('open')) closeDrawer();
       });
-      var railBurger = document.getElementById('landingRailBurger');
-      if (railBurger) {
-        railBurger.addEventListener('click', function () {
+      var headerMenu = document.getElementById('landingHeaderMenu');
+      if (headerMenu) {
+        headerMenu.addEventListener('click', function () {
           if (window.blockOpenHomeDrawer) window.blockOpenHomeDrawer();
         });
       }
@@ -1443,17 +1553,16 @@
     function applyHomeModeFromSession() {
       var explore = document.getElementById('landingExploreBtn');
       var LS_KEY = 'block_home_signed_in';
+      if (explore) explore.setAttribute('href', '/events');
       if (window.__homeNoServer) {
         document.body.classList.add('home-app-visible');
         document.body.classList.remove('home-landing');
-        if (explore) explore.setAttribute('href', '/events');
         startHomeApp();
         return;
       }
       if (window.__homeHasUser) {
         document.body.classList.add('home-app-visible');
         document.body.classList.remove('home-landing');
-        if (explore) explore.setAttribute('href', '/events');
         try {
           localStorage.setItem(LS_KEY, '1');
         } catch (e) {}
@@ -1464,7 +1573,6 @@
         try {
           localStorage.removeItem(LS_KEY);
         } catch (e2) {}
-        if (explore) explore.setAttribute('href', '/auth?next=' + encodeURIComponent('/events'));
       }
     }
 

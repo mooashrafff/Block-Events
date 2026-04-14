@@ -174,7 +174,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       object-position: center;
       display: block;
     }
@@ -236,6 +236,23 @@
       object-fit: cover;
       border-radius: 10px;
       border: 1px solid var(--border);
+    }
+    .venue-layout-block { margin-bottom: 2rem; }
+    .venue-layout-block .section-heading {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.65rem;
+    }
+    .venue-map-image-wrap {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .venue-map-image-wrap img {
+      width: 100%;
+      height: auto;
+      display: block;
     }
     .map-embed-wrap {
       display: none;
@@ -371,7 +388,7 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       object-position: center;
       display: block;
     }
@@ -526,8 +543,14 @@
     <p class="desc" id="eventDescription"></p>
 
     <div class="gallery-strip" id="galleryStrip" aria-label="Event gallery"></div>
+    <section class="venue-layout-block" id="venueLayoutBlock" style="display:none;" aria-label="Venue layout">
+      <h2 class="section-heading">Venue layout</h2>
+      <div class="venue-map-image-wrap">
+        <img id="venueMapImage" src="" alt="Venue seating or floor plan">
+      </div>
+    </section>
     <div class="map-embed-wrap" id="mapEmbedWrap">
-      <iframe id="mapEmbedFrame" title="Venue map" loading="lazy" allowfullscreen="" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <iframe id="mapEmbedFrame" title="Google Maps" loading="lazy" allowfullscreen="" referrerpolicy="no-referrer-when-downgrade"></iframe>
     </div>
 
     <div class="accordion" id="accPrices">
@@ -908,6 +931,17 @@
           gs.innerHTML = '';
         }
 
+        var vlb = document.getElementById('venueLayoutBlock');
+        var vmi = document.getElementById('venueMapImage');
+        var venueMapSrc = loc && loc.venueMapUrl ? String(loc.venueMapUrl).trim() : '';
+        if (vlb && vmi && venueMapSrc) {
+          vlb.style.display = 'block';
+          vmi.src = venueMapSrc;
+        } else if (vlb) {
+          vlb.style.display = 'none';
+          if (vmi) vmi.removeAttribute('src');
+        }
+
         var mw = document.getElementById('mapEmbedWrap');
         var mf = document.getElementById('mapEmbedFrame');
         var embedSrc = loc && safeMapEmbedSrc(loc.mapEmbedUrl);
@@ -919,10 +953,9 @@
           if (mf) mf.removeAttribute('src');
         }
 
-        var pt = '<table class="price-table"><thead><tr><th>Category</th><th>Price</th><th>Status</th></tr></thead><tbody>';
+        var pt = '<table class="price-table"><thead><tr><th>Category</th><th>Price</th></tr></thead><tbody>';
         tickets.forEach(function (t) {
-          var st = t.soldOut ? 'Sold out' : t.available != null ? String(t.available) + ' left' : '—';
-          pt += '<tr><td>' + escapeHtml(t.name) + '</td><td>' + moneyFmt(t.price) + '</td><td>' + escapeHtml(st) + '</td></tr>';
+          pt += '<tr><td>' + escapeHtml(t.name) + '</td><td>' + moneyFmt(t.price) + '</td></tr>';
         });
         pt += '</tbody></table>';
         document.getElementById('panelPrices').innerHTML = tickets.length ? pt : '<p class="terms-list">No categories.</p>';

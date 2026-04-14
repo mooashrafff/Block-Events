@@ -78,12 +78,13 @@
             <th>User</th>
             <th>Event</th>
             <th>Amount</th>
+            <th>Paid from</th>
             <th>Status</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody id="tbody">
-          <tr><td colspan="6" class="small">Loading…</td></tr>
+          <tr><td colspan="7" class="small">Loading…</td></tr>
         </tbody>
       </table>
     </section>
@@ -125,7 +126,7 @@
     }
 
     async function load(){
-      tbody.innerHTML = '<tr><td colspan="6" class="small">Loading…</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="small">Loading…</td></tr>';
       show('', '');
       try{
         const list = await requireAdmin();
@@ -136,19 +137,21 @@
               : '<span class="badge">' + escapeHtml(item.status || '') + '</span>';
 
           const amount = (item.pricePaid != null && item.pricePaid > 0) ? (Number(item.pricePaid).toFixed(2) + ' EGP') : 'FREE';
+          const fromPhone = item.instapaySenderPhone ? escapeHtml(item.instapaySenderPhone) : '—';
 
           return '<tr>' +
             '<td class="small">#' + escapeHtml(item.id) + '</td>' +
             '<td>' + escapeHtml(item.user?.email || '') + '<div class="small">' + escapeHtml(item.user?.name || '') + '</div></td>' +
             '<td>' + escapeHtml(item.event?.name || '') + '<div class="small">' + escapeHtml(item.event?.date || '') + '</div></td>' +
             '<td>' + escapeHtml(amount) + '</td>' +
+            '<td class="small">' + fromPhone + '</td>' +
             '<td><span class="badge">' + escapeHtml(item.status) + '</span></td>' +
             '<td>' + action + '</td>' +
           '</tr>';
         }).join('');
 
         if (!rows) {
-          tbody.innerHTML = '<tr><td colspan="6" class="small">No bookings found.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" class="small">No bookings found.</td></tr>';
           return;
         }
         tbody.innerHTML = rows;
@@ -171,7 +174,7 @@
         });
       } catch (e){
         show('error', e.message || 'Could not load bookings.');
-        tbody.innerHTML = '<tr><td colspan="6" class="small">Error loading bookings.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="small">Error loading bookings.</td></tr>';
       }
     }
 

@@ -36,6 +36,12 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
+/** InstaPay (IPN): static QR asset in /public and deep link for the banking app */
+const INSTAPAY_IPN_PAYMENT_URL =
+  String(process.env.INSTAPAY_PAYMENT_URL || '').trim() ||
+  'https://ipn.eg/S/mooashraf227/instapay/61R1wB';
+const INSTAPAY_QR_IMAGE_PATH = '/instapay-ipn-qr.png';
+
 const JWT_SECRET = process.env.JWT_SECRET || '';
 if (!JWT_SECRET) {
   console.warn('JWT_SECRET not set – auth will be insecure in production. Set JWT_SECRET in .env.');
@@ -559,9 +565,12 @@ function parseEventExtra(raw) {
     out.gallery = raw.gallery.map((u) => String(u || '').trim()).filter(Boolean);
   }
   if (raw.location && typeof raw.location === 'object') {
+    const le = raw.location;
+    const vmu = le.venueMapUrl != null ? String(le.venueMapUrl).trim() : '';
     out.location = {
-      address: raw.location.address != null ? String(raw.location.address) : '',
-      mapEmbedUrl: raw.location.mapEmbedUrl ? String(raw.location.mapEmbedUrl).trim() : null,
+      address: le.address != null ? String(le.address) : '',
+      mapEmbedUrl: le.mapEmbedUrl ? String(le.mapEmbedUrl).trim() : null,
+      venueMapUrl: vmu || null,
     };
   }
   if (Array.isArray(raw.facilities)) {
@@ -593,9 +602,12 @@ function buildExtraFromAdminBody(body) {
     ex.gallery = b.gallery.map((u) => String(u || '').trim()).filter(Boolean);
   }
   if (b.location && typeof b.location === 'object') {
+    const L = b.location;
+    const vmu = L.venueMapUrl != null ? String(L.venueMapUrl).trim() : '';
     ex.location = {
-      address: b.location.address != null ? String(b.location.address) : '',
-      mapEmbedUrl: b.location.mapEmbedUrl ? String(b.location.mapEmbedUrl).trim() : null,
+      address: L.address != null ? String(L.address) : '',
+      mapEmbedUrl: L.mapEmbedUrl ? String(L.mapEmbedUrl).trim() : null,
+      venueMapUrl: vmu || null,
     };
   }
   if (Array.isArray(b.facilities)) {
@@ -1165,11 +1177,6 @@ function buildTicketEmailHtml({ name, eventName, ticketId, dataUrl, checkInUrl }
 </html>`;
 }
 
-async function generateInstapayQrDataUrl(paymentRef) {
-  // Payment QR for user to scan/approve (mocked). QR encodes a simple reference string.
-  return QRCode.toDataURL(String(paymentRef || ''), { width: 280, margin: 2 });
-}
-
 function getPaymentRefForBooking(bookingId) {
   return `INSTAPAY:${String(bookingId)}`;
 }
@@ -1556,7 +1563,10 @@ app.get('/api/booking-event/:id', async (req, res) => {
       : [{ ticketId: 'regular', ticketName: 'General Admission', ticketCategory: 'Regular', price: 0 }];
 
   const facilities = Array.isArray(base.facilities) ? base.facilities : base.venue ? [base.venue] : [];
-  const location = base.location && typeof base.location === 'object' ? base.location : { address: base.venue || '', mapEmbedUrl: null };
+  const location =
+    base.location && typeof base.location === 'object'
+      ? base.location
+      : { address: base.venue || '', mapEmbedUrl: null, venueMapUrl: null };
 
   res.json({
     ...base,
@@ -1625,7 +1635,9 @@ app.get('/api/auth/me', async (req, res) => {
 
   const { data: bookings } = await supabase
     .from('bookings')
-    .select('id, created_at, payment_method, price_paid, status, event_id, events(name, date, time, venue, image, image_card, image_detail, description, price)')
+    .select(
+      'id, created_at, payment_method, price_paid, status, event_id, instapay_sender_phone, events(name, date, time, venue, image, image_card, image_detail, description, price)'
+    )
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
@@ -1652,18 +1664,6 @@ app.get('/api/auth/me', async (req, res) => {
       }
     }
   }
-
-  const instapayPending = safeBookings.filter((b) => b.payment_method === 'instapay' && b.status === 'pending_payment');
-  const instapayQrByBookingId = {};
-  await Promise.all(
-    instapayPending.map(async (b) => {
-      try {
-        instapayQrByBookingId[b.id] = await generateInstapayQrDataUrl(getPaymentRefForBooking(b.id));
-      } catch {
-        instapayQrByBookingId[b.id] = '';
-      }
-    })
-  );
 
   res.json({
     user,
@@ -1694,13 +1694,16 @@ app.get('/api/auth/me', async (req, res) => {
         paymentStatus === 'Paid' ? attendeeTicketsByEventId.get(b.event_id) || [] : [];
       const ticketId = tickets.length ? tickets[0].ticketId : null;
       const ticketIds = tickets.map((t) => t.ticketId);
+      const instapayPendingRow = b.payment_method === 'instapay' && b.status === 'pending_payment';
 
       return {
         id: b.id,
         status: b.status,
         paymentMethod: b.payment_method,
         paymentStatus,
-        paymentQrDataUrl: instapayQrByBookingId[b.id] || null,
+        instapayPaymentUrl: instapayPendingRow ? INSTAPAY_IPN_PAYMENT_URL : null,
+        instapayQrImageUrl: instapayPendingRow ? INSTAPAY_QR_IMAGE_PATH : null,
+        instapaySenderPhone: b.instapay_sender_phone || null,
         ticketId,
         ticketIds,
         pricePaid: Number(b.price_paid || 0),
@@ -2528,16 +2531,24 @@ app.post('/api/checkout/confirm', async (req, res) => {
     return res.status(400).json({ error: 'Invalid payment method.' });
   }
 
+  const promoCodeRaw = String(req.body?.promoCode || '').trim();
+  let promo = null;
+  if (promoCodeRaw) {
+    promo = resolveActivePromoCode(promoCodeRaw);
+    if (!promo) return res.status(400).json({ error: 'Invalid or inactive promo code.' });
+  }
+  const pricing = pricePaidListForCartWithPromo(cart, promo);
+
   // Normalize method to the values used by the UI + admin
   const normalizedMethod =
     method === 'applepay' ? 'applepay' : method === 'instapay' ? 'instapay' : method === 'fawry' ? 'fawry' : 'card';
   const isInsta = normalizedMethod === 'instapay';
 
-  const rows = cart.items.map((i) => ({
+  const rows = cart.items.map((i, idx) => ({
     user_id: user.id,
     event_id: i.eventId,
     payment_method: normalizedMethod,
-    price_paid: Number(i.selectionsTotal || i.price || 0),
+    price_paid: Number(pricing.pricePaid[idx] != null ? pricing.pricePaid[idx] : i.selectionsTotal || i.price || 0),
     ticket_selections: i.ticketSelections || [],
     status: isInsta ? 'pending_payment' : 'paid',
   }));
@@ -2606,6 +2617,36 @@ app.post('/api/checkout/confirm', async (req, res) => {
   return res.json({ status: 'paid', paymentMethod: normalizedMethod, booked: insertedRows.map((r) => r.id) });
 });
 
+app.post('/api/checkout/preview-promo', async (req, res) => {
+  const user = await requireAuth(req, res);
+  if (!user) return;
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+
+  const cart = await getCartForUser(user.id);
+  if (!cart.items.length) return res.status(400).json({ error: 'Cart is empty.' });
+
+  const totalBefore = Number(cart.total || 0);
+  const code = String(req.body?.promoCode || '').trim();
+  let promo = null;
+  if (code) {
+    promo = resolveActivePromoCode(code);
+    if (!promo) return res.status(400).json({ error: 'Invalid or inactive promo code.' });
+  }
+
+  const lineCents = cart.items.map((i) => Math.round(Number(i.selectionsTotal || i.price || 0) * 100));
+  const totalCents = lineCents.reduce((a, b) => a + b, 0);
+  const discountCents = computePromoDiscountCents(totalCents, promo);
+  const totalAfter = Math.max(0, totalCents - discountCents) / 100;
+
+  res.json({
+    totalBefore,
+    discount: discountCents / 100,
+    totalAfter,
+    promoApplied: Boolean(promo),
+    promoCode: promo ? promo.code : null,
+  });
+});
+
 app.get('/api/checkout/session/:id', async (req, res) => {
   const user = await requireAuth(req, res);
   if (!user) return;
@@ -2657,7 +2698,12 @@ app.post('/api/payments/confirm', async (req, res) => {
   res.json({ status: 'succeeded', ...result });
 });
 
-// InstaPay QR for a specific pending booking (used by user profile + success UI)
+// Public: InstaPay deep link + static QR path (same for all customers)
+app.get('/api/instapay-info', (req, res) => {
+  res.json({ paymentUrl: INSTAPAY_IPN_PAYMENT_URL, qrImageUrl: INSTAPAY_QR_IMAGE_PATH });
+});
+
+// InstaPay payment details for a specific pending booking (ownership checked)
 app.get('/api/bookings/instapay-qr/:bookingId', async (req, res) => {
   const user = await requireAuth(req, res);
   if (!user) return;
@@ -2668,7 +2714,7 @@ app.get('/api/bookings/instapay-qr/:bookingId', async (req, res) => {
 
   const { data: booking, error } = await supabase
     .from('bookings')
-    .select('id, user_id, status, payment_method')
+    .select('id, user_id, status, payment_method, instapay_sender_phone')
     .eq('id', bookingId)
     .eq('user_id', user.id)
     .maybeSingle();
@@ -2679,8 +2725,53 @@ app.get('/api/bookings/instapay-qr/:bookingId', async (req, res) => {
   }
 
   const paymentRef = getPaymentRefForBooking(booking.id);
-  const qrDataUrl = await generateInstapayQrDataUrl(paymentRef);
-  res.json({ bookingId: booking.id, paymentRef, qrDataUrl });
+  res.json({
+    bookingId: booking.id,
+    paymentRef,
+    paymentUrl: INSTAPAY_IPN_PAYMENT_URL,
+    qrImageUrl: INSTAPAY_QR_IMAGE_PATH,
+    instapaySenderPhone: booking.instapay_sender_phone || null,
+  });
+});
+
+// User submits the phone number they paid from (pending InstaPay only; admin confirms later)
+app.post('/api/bookings/instapay-sender-phone', async (req, res) => {
+  const user = await requireAuth(req, res);
+  if (!user) return;
+  if (!supabase) return res.status(503).json({ error: 'Supabase not configured.' });
+
+  const bookingIdsRaw = req.body?.bookingIds;
+  const bookingIds = Array.isArray(bookingIdsRaw)
+    ? bookingIdsRaw.map((id) => String(id || '').trim()).filter(Boolean)
+    : [];
+  const senderPhone = String(req.body?.senderPhone || '').trim();
+  if (!bookingIds.length) return res.status(400).json({ error: 'bookingIds is required.' });
+  if (!senderPhone) return res.status(400).json({ error: 'senderPhone is required.' });
+  if (senderPhone.length > 40) return res.status(400).json({ error: 'Phone number is too long.' });
+
+  const { data: rows, error: fetchErr } = await supabase
+    .from('bookings')
+    .select('id, user_id, status, payment_method')
+    .in('id', bookingIds)
+    .eq('user_id', user.id);
+
+  if (fetchErr) return res.status(500).json({ error: 'Could not verify bookings.' });
+  const okRows = (rows || []).filter(
+    (r) => r && r.payment_method === 'instapay' && r.status === 'pending_payment'
+  );
+  if (!okRows.length) {
+    return res.status(400).json({ error: 'No matching pending InstaPay bookings for your account.' });
+  }
+
+  const okIds = okRows.map((r) => r.id);
+  const { error: updErr } = await supabase
+    .from('bookings')
+    .update({ instapay_sender_phone: senderPhone })
+    .in('id', okIds)
+    .eq('user_id', user.id);
+
+  if (updErr) return res.status(500).json({ error: 'Could not save phone number.' });
+  res.json({ ok: true, updated: okIds.length });
 });
 
 // ----- Admin: InstaPay bookings listing + manual confirmation -----
@@ -2695,7 +2786,9 @@ app.get('/api/admin/instapay-bookings', async (req, res) => {
 
   const { data: bookings, error } = await supabase
     .from('bookings')
-    .select('id, user_id, event_id, status, payment_method, price_paid, ticket_selections, created_at')
+    .select(
+      'id, user_id, event_id, status, payment_method, price_paid, ticket_selections, created_at, instapay_sender_phone'
+    )
     .eq('payment_method', 'instapay');
 
   if (error) {
@@ -2729,6 +2822,7 @@ app.get('/api/admin/instapay-bookings', async (req, res) => {
         ? b.ticket_selections.reduce((sum, s) => sum + Number(s.quantity || 0), 0)
         : 0,
       createdAt: b.created_at,
+      instapaySenderPhone: b.instapay_sender_phone || null,
       user: userById.get(b.user_id) || null,
       event: eventById.get(b.event_id) || null,
     }))
@@ -3100,6 +3194,7 @@ function getSiteConfig() {
     parsed.instagramUrl = igShown && ig.url ? ig.url : '';
     parsed.instagramLabel =
       igShown && ig.label ? ig.label : String(parsed.instagramLabel || 'Instagram').trim() || 'Instagram';
+    if (!Array.isArray(parsed.promoCodes)) parsed.promoCodes = [];
     return parsed;
   } catch (e) {
     const links = [
@@ -3124,12 +3219,73 @@ function getSiteConfig() {
       links: nav,
       headerLinks: nav.slice(),
       footerLinks: nav.slice(),
+      promoCodes: [],
     };
   }
 }
 
+function resolveActivePromoCode(input) {
+  const cfg = getSiteConfig();
+  const list = Array.isArray(cfg.promoCodes) ? cfg.promoCodes : [];
+  const u = String(input || '').trim().toUpperCase();
+  if (!u) return null;
+  for (const p of list) {
+    if (!p || typeof p !== 'object' || p.active === false) continue;
+    const c = String(p.code || '').trim().toUpperCase();
+    if (c !== u) continue;
+    const pct = p.percentOff != null ? Number(p.percentOff) : NaN;
+    const amt = p.amountOffEgp != null ? Number(p.amountOffEgp) : NaN;
+    if (Number.isFinite(pct) && pct > 0) return { code: c, percentOff: Math.min(100, Math.max(0, pct)) };
+    if (Number.isFinite(amt) && amt > 0) return { code: c, amountOffEgp: amt };
+  }
+  return null;
+}
+
+function computePromoDiscountCents(totalCents, promo) {
+  if (!promo || !Number.isFinite(totalCents) || totalCents <= 0) return 0;
+  if (promo.percentOff != null && promo.percentOff > 0) {
+    return Math.min(totalCents, Math.floor((totalCents * promo.percentOff) / 100));
+  }
+  if (promo.amountOffEgp != null && promo.amountOffEgp > 0) {
+    const off = Math.round(Number(promo.amountOffEgp) * 100);
+    return Math.min(totalCents, Math.max(0, off));
+  }
+  return 0;
+}
+
+function splitOrderLinePaidCents(lineSubtotalCents, payableTotalCents) {
+  const n = lineSubtotalCents.length;
+  if (!n) return [];
+  const sum = lineSubtotalCents.reduce((a, b) => a + b, 0);
+  if (sum <= 0) return lineSubtotalCents.map(() => 0);
+  const target = Math.min(Math.max(0, payableTotalCents), sum);
+  let acc = 0;
+  return lineSubtotalCents.map((w, i) => {
+    if (i === n - 1) return Math.max(0, target - acc);
+    const part = Math.floor((target * w) / sum);
+    acc += part;
+    return part;
+  });
+}
+
+function pricePaidListForCartWithPromo(cart, promo) {
+  const lineCents = cart.items.map((i) => Math.round(Number(i.selectionsTotal || i.price || 0) * 100));
+  const totalCents = lineCents.reduce((a, b) => a + b, 0);
+  const discountCents = computePromoDiscountCents(totalCents, promo);
+  const payableCents = Math.max(0, totalCents - discountCents);
+  const paidCents = splitOrderLinePaidCents(lineCents, payableCents);
+  return {
+    totalCents,
+    discountCents,
+    payableCents,
+    pricePaid: paidCents.map((c) => c / 100),
+  };
+}
+
 app.get('/api/site-config', (req, res) => {
-  res.json(getSiteConfig());
+  const c = getSiteConfig();
+  const { promoCodes: _omit, ...rest } = c;
+  res.json(rest);
 });
 
 app.put('/api/admin/site-config', (req, res) => {
@@ -3179,15 +3335,111 @@ app.put('/api/admin/site-config', (req, res) => {
             description: String(m.description || '').trim(),
           }))
       : prev.paymentMethods || defaultPaymentMethodsConfig(),
+    promoCodes: Array.isArray(body.promoCodes)
+      ? body.promoCodes
+          .filter((p) => p && String(p.code || '').trim())
+          .map((p) => {
+            const row = {
+              code: String(p.code || '').trim(),
+              active: p.active !== false,
+            };
+            if (p.percentOff != null) row.percentOff = Number(p.percentOff);
+            if (p.amountOffEgp != null) row.amountOffEgp = Number(p.amountOffEgp);
+            return row;
+          })
+      : Array.isArray(prev.promoCodes)
+        ? prev.promoCodes
+        : [],
   };
   try {
     fs.writeFileSync(SITE_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf8');
     res.json(config);
-  } catch (e) {
+   } catch (e) {
     console.error('Site config write error:', e.message);
     res.status(500).json({ error: 'Could not save site config.' });
   }
 });
+
+function readSiteConfigFileObject() {
+  try {
+    return JSON.parse(fs.readFileSync(SITE_CONFIG_PATH, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+/** Admin promo UI: percentage off cart total only; deduped by code (case-insensitive). */
+function normalizePromoCodesAdminPayload(list) {
+  if (!Array.isArray(list)) return [];
+  const byCode = new Map();
+  for (const p of list) {
+    if (!p || typeof p !== 'object') continue;
+    const code = String(p.code || '').trim().toUpperCase();
+    if (!code) continue;
+    const pct = Math.min(100, Math.max(0, Math.round(Number(p.percentOff) || 0)));
+    if (pct <= 0) continue;
+    byCode.set(code, { code, percentOff: pct, active: p.active !== false });
+  }
+  return Array.from(byCode.values());
+}
+
+app.get('/api/admin/promo-codes', async (req, res) => {
+  if (!isLocalhostRequest(req)) {
+    if (!process.env.ADMIN_API_KEY) {
+      return res.status(503).json({ error: 'ADMIN_API_KEY not set on server.' });
+    }
+    if (!isAdminRequest(req)) {
+      return res.status(401).json({ error: 'Unauthorized.' });
+    }
+  }
+  const cfg = getSiteConfig();
+  const raw = Array.isArray(cfg.promoCodes) ? cfg.promoCodes : [];
+  const promoCodes = raw
+    .filter((p) => p && String(p.code || '').trim())
+    .map((p) => ({
+      code: String(p.code || '').trim().toUpperCase(),
+      percentOff:
+        p.percentOff != null ? Math.min(100, Math.max(0, Math.round(Number(p.percentOff)))) : 0,
+      active: p.active !== false,
+    }))
+    .filter((p) => p.percentOff > 0);
+  res.json({ promoCodes });
+});
+
+function adminPromoCodesSaveHandler(req, res) {
+  if (!isLocalhostRequest(req)) {
+    if (!process.env.ADMIN_API_KEY) {
+      return res.status(503).json({ error: 'ADMIN_API_KEY not set on server.' });
+    }
+    if (!isAdminRequest(req)) {
+      return res.status(401).json({ error: 'Unauthorized.' });
+    }
+  }
+  const raw = readSiteConfigFileObject();
+  if (!raw || typeof raw !== 'object') {
+    return res.status(500).json({ error: 'Could not read site config file.' });
+  }
+  const normalized = normalizePromoCodesAdminPayload(req.body?.promoCodes);
+  raw.promoCodes = normalized;
+  try {
+    fs.writeFileSync(SITE_CONFIG_PATH, JSON.stringify(raw, null, 2), 'utf8');
+    res.json({ promoCodes: normalized });
+  } catch (e) {
+    console.error('Promo codes save error:', e.message);
+    const msg = String(e.message || '');
+    const readOnly =
+      /EROFS|read-only|EPERM|EINVAL/i.test(msg) ||
+      (process.env.VERCEL && /EACCES|ENOENT/i.test(msg));
+    return res.status(500).json({
+      error: readOnly
+        ? 'Cannot write site-config.json on this host (read-only filesystem, e.g. Vercel). Set ADMIN_API_KEY, edit promoCodes in the repo file, or run the admin on a VPS/Node server with a writable public folder.'
+        : 'Could not save promo codes.',
+    });
+  }
+}
+
+app.put('/api/admin/promo-codes', adminPromoCodesSaveHandler);
+app.post('/api/admin/promo-codes', adminPromoCodesSaveHandler);
 
 // ----- Admin events API (Supabase-backed) -----
 

@@ -25,32 +25,70 @@
     }
     .main{flex:1; width:100%; max-width:980px; margin:0 auto; padding:1.25rem;}
     h1{font-size:1.6rem; margin-bottom:0.35rem;}
-    .sub{color:var(--muted); margin-bottom:1rem;}
+    .sub{color:var(--muted); margin-bottom:1rem; line-height:1.5;}
     .card{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.25rem;}
-    .grid{display:grid; grid-template-columns: 1fr 1fr; gap:1rem;}
-    @media (max-width: 860px){ .grid{grid-template-columns:1fr;} }
+    .notice{
+      border:1px solid rgba(234,179,8,0.35);
+      background:rgba(234,179,8,0.1);
+      color:#fde68a;
+      border-radius:12px;
+      padding:0.85rem 1rem;
+      margin-bottom:1rem;
+      font-size:0.95rem;
+      line-height:1.5;
+    }
     .qrBox{
       border:1px solid var(--border); border-radius:14px;
-      padding:1rem; background:#0f0f12;
-      display:flex; flex-direction:column; gap:0.75rem;
+      padding:1.25rem; background:#0f0f12;
+      display:flex; flex-direction:column; gap:0.85rem;
       align-items:center;
       text-align:center;
+      max-width:420px;
+      margin:0 auto 1.25rem;
     }
-    .qrBox img{width:240px; height:auto; max-width:100%;}
+    .qrBox img{width:260px; height:auto; max-width:100%; border-radius:12px; background:#fff;}
     .meta{color:var(--muted); font-size:0.92rem;}
+    .pay-link{
+      display:inline-flex;
+      align-items:center;
+      gap:0.35rem;
+      color:var(--accent);
+      font-weight:700;
+      word-break:break-all;
+      text-decoration:none;
+    }
+    .pay-link:hover{text-decoration:underline;}
+    .bookings-list{
+      font-size:0.88rem;
+      color:var(--muted);
+      text-align:left;
+      width:100%;
+      max-width:420px;
+      margin:0 auto;
+    }
+    .bookings-list strong{color:var(--text);}
+    .field{margin-top:1rem; max-width:420px; margin-left:auto; margin-right:auto; text-align:left;}
+    .field label{display:block; font-weight:700; font-size:0.88rem; margin-bottom:0.35rem;}
+    .field input{
+      width:100%; padding:11px 12px; border-radius:10px; border:1px solid var(--border);
+      background:#0f0f12; color:var(--text); font:inherit;
+    }
+    .field input:focus{outline:none; border-color:var(--accent);}
     .btn{
       padding:12px 14px; border-radius:12px;
       border:none; background:var(--accent); color:white;
       font:inherit; font-weight:900; cursor:pointer;
+      width:100%; max-width:420px;
     }
     .btn:hover{background:var(--accent-hover);}
+    .btn:disabled{opacity:0.65; cursor:not-allowed;}
     .btn.secondary{background:transparent; border:1px solid var(--border); color:var(--text); font-weight:800;}
     .btn.secondary:hover{background:rgba(255,255,255,0.04);}
     .msg{margin-top:0.9rem; padding:10px 12px; border-radius:12px; display:none; font-size:0.92rem;}
     .msg.show{display:block;}
     .msg.error{border:1px solid rgba(239,68,68,0.35); background:rgba(239,68,68,0.12); color:#fecaca;}
     .msg.success{border:1px solid rgba(34,197,94,0.35); background:rgba(34,197,94,0.12); color:#bbf7d0;}
-    .row{display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1rem; align-items:center; justify-content:flex-start;}
+    .row{display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1rem; align-items:center; justify-content:center;}
   </style>
 </head>
 <body>
@@ -76,16 +114,37 @@
 
   <main class="main">
     <h1>InstaPay pending</h1>
-    <p class="sub">Your booking is waiting for manual payment confirmation. Admin will send your ticket via email after approval.</p>
+    <p class="sub">Pay with InstaPay using the QR code or link below, then enter the phone number you sent from. Your booking stays <strong>pending</strong> until an admin confirms the payment and your tickets are issued.</p>
 
     <div class="card">
-      <div class="meta" style="margin-bottom:0.75rem;">Scan/track these references in InstaPay (mocked QR):</div>
-      <div id="qrs" class="grid"></div>
-      <div id="empty" class="meta" style="display:none;">No pending InstaPay bookings found.</div>
+      <div class="notice" role="status">
+        Waiting for confirmation from admin. You will receive your ticket by email after approval.
+      </div>
+
+      <div id="empty" class="meta" style="display:none; text-align:center;">No pending InstaPay bookings found.</div>
+
+      <div id="mainContent" style="display:none;">
+        <div class="qrBox">
+          <div style="font-weight:800;">Scan with your banking app</div>
+          <img id="instapayQrImg" src="/instapay-ipn-qr.png" alt="InstaPay IPN QR code">
+          <div class="meta">Or open the payment link:</div>
+          <a class="pay-link" id="instapayPayLink" href="#" target="_blank" rel="noopener noreferrer"></a>
+        </div>
+
+        <div class="bookings-list" id="bookingRefs"></div>
+
+        <div class="field">
+          <label for="senderPhone">Phone number you paid from</label>
+          <input type="text" id="senderPhone" name="senderPhone" autocomplete="tel" placeholder="e.g. 01xxxxxxxxx">
+        </div>
+        <div style="max-width:420px; margin:0.75rem auto 0;">
+          <button type="button" class="btn" id="btnSavePhone">Save payment details</button>
+        </div>
+      </div>
 
       <div class="row">
-        <a class="btn secondary" href="/profile" style="text-decoration:none; display:inline-flex;">Go to profile</a>
-        <a class="btn" href="/events" style="text-decoration:none; display:inline-flex;">Book more events</a>
+        <a class="btn secondary" href="/profile" style="text-decoration:none; display:inline-flex; max-width:200px; justify-content:center;">Go to profile</a>
+        <a class="btn secondary" href="/events" style="text-decoration:none; display:inline-flex; max-width:200px; justify-content:center;">Book more events</a>
       </div>
 
       <div id="msg" class="msg"></div>
@@ -114,9 +173,14 @@
     const idsRaw = params.get('bookingIds') || '';
     const ids = idsRaw ? idsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
 
-    const qrsEl = document.getElementById('qrs');
     const emptyEl = document.getElementById('empty');
+    const mainEl = document.getElementById('mainContent');
     const msgEl = document.getElementById('msg');
+    const payLinkEl = document.getElementById('instapayPayLink');
+    const qrImgEl = document.getElementById('instapayQrImg');
+    const bookingRefsEl = document.getElementById('bookingRefs');
+    const senderPhoneEl = document.getElementById('senderPhone');
+    const btnSavePhone = document.getElementById('btnSavePhone');
 
     function show(type, text){
       msgEl.textContent = text || '';
@@ -125,7 +189,7 @@
     }
 
     async function requireAuth(){
-      const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+      const me = await fetch('/api/auth/me', { credentials: 'same-origin' }).then(r => r.json()).catch(() => null);
       if (!me || !me.user) {
         location.href = '/auth?next=' + encodeURIComponent('/instapay-success?bookingIds=' + encodeURIComponent(idsRaw));
         return false;
@@ -133,41 +197,88 @@
       return true;
     }
 
-    async function loadQrForBookingId(id){
-      const r = await fetch('/api/bookings/instapay-qr/' + encodeURIComponent(id));
+    async function loadInstapayInfo(){
+      const r = await fetch('/api/instapay-info');
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(d.error || 'Could not load QR.');
+      if (!r.ok || !d.paymentUrl) throw new Error(d.error || 'Could not load InstaPay info.');
       return d;
+    }
+
+    async function verifyBookings(){
+      const results = await Promise.all(
+        ids.map(id =>
+          fetch('/api/bookings/instapay-qr/' + encodeURIComponent(id), { credentials: 'same-origin' })
+            .then(r => r.json().then(data => ({ ok: r.ok, data })))
+            .catch(() => ({ ok: false, data: {} }))
+        )
+      );
+      const ok = results.filter(x => x.ok && x.data && x.data.bookingId);
+      return ok.map(x => x.data);
     }
 
     (async function init(){
       if (!await requireAuth()) return;
       if (!ids.length) {
         emptyEl.style.display = 'block';
-        qrsEl.innerHTML = '';
         return;
       }
-      try{
-        const results = await Promise.all(ids.map(id => loadQrForBookingId(id).catch(() => null)));
-        const filtered = results.filter(Boolean);
-        if (!filtered.length) {
+      try {
+        const info = await loadInstapayInfo();
+        payLinkEl.href = info.paymentUrl;
+        payLinkEl.textContent = info.paymentUrl;
+        if (info.qrImageUrl) {
+          qrImgEl.src = info.qrImageUrl;
+        }
+        const rows = await verifyBookings();
+        if (!rows.length) {
           emptyEl.style.display = 'block';
-          qrsEl.innerHTML = '';
           return;
         }
-        qrsEl.innerHTML = filtered.map(r => {
-          return '<div class="qrBox">' +
-            '<div style="font-weight:1000;">InstaPay payment QR</div>' +
-            '<div class="meta" style="word-break:break-word;">' + (r.paymentRef || '') + '</div>' +
-            '<img alt="InstaPay payment QR" src="' + r.qrDataUrl + '">' +
-            '<div class="meta">Booking ID: ' + r.bookingId + '</div>' +
-          '</div>';
-        }).join('');
-      } catch (e){
-        show('error', e.message || 'Failed to load QRs.');
+        mainEl.style.display = 'block';
+        const phones = rows.map(r => r.instapaySenderPhone).filter(Boolean);
+        if (phones.length) {
+          senderPhoneEl.value = phones[0];
+        }
+        bookingRefsEl.innerHTML =
+          '<div style="margin-bottom:0.5rem;font-weight:700;color:var(--text);">Booking reference' + (rows.length > 1 ? 's' : '') + '</div>' +
+          rows
+            .map(
+              (r) =>
+                '<div style="margin:0.25rem 0;"><strong>#' + r.bookingId + '</strong>' +
+                (r.paymentRef ? ' · <span style="font-size:0.85rem;">' + r.paymentRef + '</span>' : '') +
+                '</div>'
+            )
+            .join('');
+      } catch (e) {
+        show('error', e.message || 'Something went wrong.');
+        emptyEl.style.display = 'block';
       }
     })();
+
+    btnSavePhone.addEventListener('click', async function () {
+      show('', '');
+      const senderPhone = senderPhoneEl.value.trim();
+      if (!senderPhone) {
+        show('error', 'Enter the phone number you used to send the payment.');
+        return;
+      }
+      btnSavePhone.disabled = true;
+      try {
+        const r = await fetch('/api/bookings/instapay-sender-phone', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingIds: ids, senderPhone }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || 'Could not save.');
+        show('success', 'Saved. We will match your payment using this number. Please wait for admin confirmation.');
+      } catch (e) {
+        show('error', e.message || 'Could not save.');
+      } finally {
+        btnSavePhone.disabled = false;
+      }
+    });
   </script>
 </body>
 </html>
-

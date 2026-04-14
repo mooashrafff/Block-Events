@@ -103,6 +103,7 @@ create table if not exists public.bookings (
   payment_method text, -- visa | instapay | free
   price_paid numeric not null default 0,
   ticket_selections jsonb not null default '[]'::jsonb,
+  instapay_sender_phone text, -- phone the customer paid from (InstaPay pending flow)
    created_at timestamptz not null default now()
 );
 create index if not exists bookings_user_id_idx on public.bookings (user_id, created_at desc);

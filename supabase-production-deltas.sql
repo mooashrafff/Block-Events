@@ -99,6 +99,11 @@ begin
   end if;
 end $$;
 
+-- -----------------------------------------------------------------------------
+-- InstaPay: store sender phone for manual admin confirmation
+-- -----------------------------------------------------------------------------
+alter table public.bookings add column if not exists instapay_sender_phone text;
+
 -- =============================================================================
 -- Done. Verify: no errors in the SQL Editor output.
 -- =============================================================================
