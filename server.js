@@ -340,12 +340,12 @@ async function persistAvatarAndUrl(userId, buffer, mimetype) {
   return `${base}/uploads/avatars/${localName}`;
 }
 
-/** When Supabase auth is enabled, HTML pages that expose the catalog require a session (Tazkarti-style gateway). */
+/** Require login for checkout/account flows. Public catalog (events, event pages) stays browsable without a session. */
 async function redirectIfNotLoggedIn(req, res) {
   if (!supabase) return false;
   const user = await getAuthUserFromRequest(req);
   if (user) return false;
-  const next = encodeURIComponent(req.originalUrl || '/events');
+  const next = encodeURIComponent(req.originalUrl || '/');
   res.redirect(302, `/auth?next=${next}`);
   return true;
 }
@@ -360,15 +360,7 @@ try {
 
 // Page routes (before static so /events, /contact, /my-tickets don't 404)
 app.get('/events', (req, res) => {
-  redirectIfNotLoggedIn(req, res)
-    .then((redirected) => {
-      if (redirected) return;
-      res.sendFile(path.join(__dirname, 'public', 'events.html'));
-    })
-    .catch((e) => {
-      console.error(e);
-      if (!res.headersSent) res.status(500).send('Could not load page.');
-    });
+  res.sendFile(path.join(__dirname, 'public', 'events.html'));
 });
 app.get('/auth', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'auth.html'));
@@ -467,21 +459,55 @@ app.get('/scan/:scannerId', (req, res) => {
 // Static files are registered after all API routes (see bottom of file) so POST /api/*
 // and other API calls are never shadowed and behave the same locally and on Vercel.
 
+const EVENTS_FILE_PATH = path.join(__dirname, 'public', 'events.json');
+let eventsJsonCache = { mtimeMs: null, data: null };
+let eventThumbCache = new Map(); // id -> { value: string, expiresAt: number }
+
+function getCachedThumb(id) {
+  const key = String(id || '');
+  const hit = eventThumbCache.get(key);
+  if (!hit) return null;
+  if (Date.now() > hit.expiresAt) {
+    eventThumbCache.delete(key);
+    return null;
+  }
+  return hit.value;
+}
+
+function setCachedThumb(id, value, ttlMs) {
+  const key = String(id || '');
+  if (!key) return;
+  eventThumbCache.set(key, {
+    value: value || '/block-logo.png',
+    expiresAt: Date.now() + (Number(ttlMs) > 0 ? Number(ttlMs) : 120000),
+  });
+}
+
+function invalidateEventsJsonCache() {
+  eventsJsonCache = { mtimeMs: null, data: null };
+  eventThumbCache.clear();
+}
+
 // Events from local JSON (fallback if Supabase/events table not used)
 function getEventsFromFile() {
   try {
-    const raw = fs.readFileSync(path.join(__dirname, 'public', 'events.json'), 'utf8');
-    return JSON.parse(raw);
+    const st = fs.statSync(EVENTS_FILE_PATH);
+    if (eventsJsonCache.data != null && eventsJsonCache.mtimeMs === st.mtimeMs) {
+      return eventsJsonCache.data;
+    }
+    const raw = fs.readFileSync(EVENTS_FILE_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    eventsJsonCache = { mtimeMs: st.mtimeMs, data: parsed };
+    return parsed;
   } catch (e) {
     return [];
   }
 }
 
-const EVENTS_FILE_PATH = path.join(__dirname, 'public', 'events.json');
-
 function setEventsToFile(events) {
   try {
     fs.writeFileSync(EVENTS_FILE_PATH, JSON.stringify(events || [], null, 2), 'utf8');
+    invalidateEventsJsonCache();
     return true;
   } catch (e) {
     console.error('Could not write events.json:', e.message);
@@ -543,11 +569,47 @@ function normalizeEventRules(input) {
   };
 }
 
+function rawExtraToObject(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'string') {
+    try {
+      const o = JSON.parse(raw);
+      return o && typeof o === 'object' && !Array.isArray(o) ? o : {};
+    } catch {
+      return {};
+    }
+  }
+  if (typeof raw === 'object' && !Array.isArray(raw)) return raw;
+  return {};
+}
+
+/** Merge image_* / image from JSON `extra` when top-level columns are empty (legacy rows, imports). */
+function eventRowWithExtraImages(row) {
+  if (!row || typeof row !== 'object') return row;
+  const ex = rawExtraToObject(row.extra);
+  function pick(key) {
+    const a = row[key];
+    const b = ex[key];
+    const sa = a != null && String(a).trim() ? String(a).trim() : '';
+    const sb = b != null && String(b).trim() ? String(b).trim() : '';
+    if (sa) return sa;
+    if (sb) return sb;
+    return a != null ? a : b != null ? b : null;
+  }
+  return {
+    ...row,
+    image: pick('image'),
+    image_card: pick('image_card'),
+    image_detail: pick('image_detail'),
+  };
+}
+
 function parseEventExtra(raw) {
-  if (!raw || typeof raw !== 'object') return {};
+  const rawObj = rawExtraToObject(raw);
+  if (!rawObj || typeof rawObj !== 'object') return {};
   const out = {};
-  if (Array.isArray(raw.tickets)) {
-    out.tickets = raw.tickets.map((t, i) => ({
+  if (Array.isArray(rawObj.tickets)) {
+    out.tickets = rawObj.tickets.map((t, i) => ({
       ticketId: String((t && (t.ticketId || t.id)) || `t${i + 1}`),
       ticketName: String((t && (t.ticketName || t.name)) || `Category ${i + 1}`),
       ticketCategory: t && t.ticketCategory != null ? String(t.ticketCategory) : null,
@@ -561,11 +623,11 @@ function parseEventExtra(raw) {
       soldOut: Boolean(t && t.soldOut),
     }));
   }
-  if (Array.isArray(raw.gallery)) {
-    out.gallery = raw.gallery.map((u) => String(u || '').trim()).filter(Boolean);
+  if (Array.isArray(rawObj.gallery)) {
+    out.gallery = rawObj.gallery.map((u) => String(u || '').trim()).filter(Boolean);
   }
-  if (raw.location && typeof raw.location === 'object') {
-    const le = raw.location;
+  if (rawObj.location && typeof rawObj.location === 'object') {
+    const le = rawObj.location;
     const vmu = le.venueMapUrl != null ? String(le.venueMapUrl).trim() : '';
     out.location = {
       address: le.address != null ? String(le.address) : '',
@@ -573,10 +635,10 @@ function parseEventExtra(raw) {
       venueMapUrl: vmu || null,
     };
   }
-  if (Array.isArray(raw.facilities)) {
-    out.facilities = raw.facilities.map((f) => String(f || '').trim()).filter(Boolean);
+  if (Array.isArray(rawObj.facilities)) {
+    out.facilities = rawObj.facilities.map((f) => String(f || '').trim()).filter(Boolean);
   }
-  if (raw.published === false || raw.published === 'false' || raw.published === 0 || raw.published === '0') {
+  if (rawObj.published === false || rawObj.published === 'false' || rawObj.published === 0 || rawObj.published === '0') {
     out.published = false;
   }
   return out;
@@ -664,17 +726,18 @@ function mapSupabaseEventRowToAdmin(row) {
   return { ...rest, ...flat };
 }
 
-/** Public API + file rows: list/cards use imageCard, detail hero uses imageHero; `image` stays as legacy fallback URL. */
+/** Public API + file rows: list/cards use imageCard, detail hero uses imageHero; `image` is a unified primary URL. */
 function eventImageFields(row) {
   const r = row || {};
   const legacyRaw = r.image != null && String(r.image).trim() ? String(r.image).trim() : '';
-  const def = legacyRaw || '/block-logo.png';
   const icRaw = r.image_card != null && String(r.image_card).trim() ? String(r.image_card).trim() : '';
   const idRaw = r.image_detail != null && String(r.image_detail).trim() ? String(r.image_detail).trim() : '';
+  const logo = '/block-logo.png';
+  const unified = idRaw || icRaw || legacyRaw || logo;
   return {
-    image: def,
-    imageCard: icRaw || def,
-    imageHero: idRaw || def,
+    image: unified,
+    imageCard: icRaw || legacyRaw || idRaw || logo,
+    imageHero: idRaw || icRaw || legacyRaw || logo,
   };
 }
 
@@ -697,7 +760,7 @@ function mapEventRowToPublic(row) {
   if (!row) return null;
   const id = row.slug || row.id;
   const price = row.price != null && row.price !== '' ? Number(row.price) : 0;
-  const imgs = eventImageFields(row);
+  const imgs = eventImageFields(eventRowWithExtraImages(row));
   const base = {
     id,
     name: row.name,
@@ -719,7 +782,7 @@ function mapFileEventToPublic(e) {
   if (!e) return null;
   const id = e.slug || e.id;
   const price = e.price != null && e.price !== '' ? Number(e.price) : 0;
-  const imgs = eventImageFields(e);
+  const imgs = eventImageFields(eventRowWithExtraImages(e));
   const base = {
     id,
     name: e.name,
@@ -737,19 +800,110 @@ function mapFileEventToPublic(e) {
   return mergePublicEventExtras(base, e.extra, e);
 }
 
-// Prefer Supabase events table; fall back to JSON file
-async function listEventsForPublic() {
+/** List/card API: no image BLOB columns — keeps JSON tiny; use /api/event-thumbs to hydrate artwork. */
+function mapEventRowToPublicLite(row) {
+  if (!row) return null;
+  const id = row.slug || row.id;
+  const price = row.price != null && row.price !== '' ? Number(row.price) : 0;
+  const logo = '/block-logo.png';
+  const base = {
+    id,
+    name: row.name,
+    date: row.date,
+    time: row.time,
+    venue: row.venue,
+    category: row.category,
+    image: logo,
+    imageCard: logo,
+    imageHero: logo,
+    description: row.description,
+    price,
+    type: price > 0 ? 'paid' : 'free',
+  };
+  return mergePublicEventExtras(base, row.extra, null);
+}
+
+function mapFileEventToPublicLite(e) {
+  if (!e) return null;
+  const id = e.slug || e.id;
+  const price = e.price != null && e.price !== '' ? Number(e.price) : 0;
+  const logo = '/block-logo.png';
+  const base = {
+    id,
+    name: e.name,
+    date: e.date,
+    time: e.time,
+    venue: e.venue,
+    category: e.category,
+    image: logo,
+    imageCard: logo,
+    imageHero: logo,
+    description: e.description,
+    price,
+    type: price > 0 ? 'paid' : 'free',
+  };
+  return mergePublicEventExtras(base, e.extra, e);
+}
+
+function primaryImageFromRawRow(row) {
+  if (!row) return '/block-logo.png';
+  const imgs = eventImageFields(eventRowWithExtraImages(row));
+  return imgs.imageHero || imgs.imageCard || imgs.image || '/block-logo.png';
+}
+
+function isProbablyUuid(s) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(s || ''));
+}
+
+async function getRawEventRowForImages(id) {
+  const idStr = String(id || '').trim();
+  if (!idStr) return null;
   if (supabase) {
     try {
+      const sel = 'id, slug, image, image_card, image_detail, extra';
       const { data, error } = await supabase
         .from('events')
-        .select('id, slug, name, date, time, venue, category, image, image_card, image_detail, description, price, sort_order, created_at, extra')
+        .select(sel)
+        .or(`id.eq.${idStr},slug.eq.${idStr}`)
+        .limit(1)
+        .maybeSingle();
+      if (!error && data) return data;
+      const slugVariants = [idStr, idStr.replace(/_/g, '-'), idStr.replace(/-/g, '_')];
+      for (const v of slugVariants) {
+        const { data: data2, error: error2 } = await supabase
+          .from('events')
+          .select(sel)
+          .ilike('slug', v)
+          .limit(1)
+          .maybeSingle();
+        if (!error2 && data2) return data2;
+      }
+    } catch (e) {
+      console.error('getRawEventRowForImages:', e.message);
+    }
+  }
+  const fileList = getEventsFromFile() || [];
+  return fileList.find((e) => e && (e.id === idStr || e.slug === idStr)) || null;
+}
+
+// Prefer Supabase events table; fall back to JSON file
+async function listEventsForPublic(opts = {}) {
+  const lite = opts.lite === true;
+  if (supabase) {
+    try {
+      const columns = lite
+        ? 'id, slug, name, date, time, venue, category, description, price, sort_order, created_at, extra'
+        : 'id, slug, name, date, time, venue, category, image, image_card, image_detail, description, price, sort_order, created_at, extra';
+      const { data, error } = await supabase
+        .from('events')
+        .select(columns)
         .order('sort_order', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: false });
       if (!error && data && data.length) {
+        const mapper = lite ? mapEventRowToPublicLite : mapEventRowToPublic;
         return data
           .filter((row) => parseEventExtra(row.extra).published !== false)
-          .map(mapEventRowToPublic);
+          .map(mapper);
       }
       if (error) {
         console.error('Supabase events error:', error.message);
@@ -759,7 +913,8 @@ async function listEventsForPublic() {
     }
   }
   const fileList = getEventsFromFile() || [];
-  return fileList.map(mapFileEventToPublic).filter((ev) => ev && ev.published !== false);
+  const mapper = lite ? mapFileEventToPublicLite : mapFileEventToPublic;
+  return fileList.map(mapper).filter((ev) => ev && ev.published !== false);
 }
 
 async function getEventById(id) {
@@ -1524,14 +1679,155 @@ async function queryAdminAttendeesRows(eventId, eventName) {
 // ----- Routes -----
 
 app.get('/api/events', async (req, res) => {
+  const compact =
+    String(req.query.compact || '').toLowerCase() === '1' ||
+    String(req.query.compact || '').toLowerCase() === 'true';
+  const events = await listEventsForPublic({ lite: compact });
+  const list = Array.isArray(events) ? events : [];
+
+  if (compact) {
+    const slim = list.map((ev) => {
+      const image = ev?.imageCard || ev?.imageHero || ev?.image || '/block-logo.png';
+      const desc = String(ev?.description || '');
+      return {
+        id: ev?.id,
+        name: ev?.name,
+        date: ev?.date,
+        time: ev?.time,
+        venue: ev?.venue,
+        category: ev?.category || null,
+        price: Number(ev?.price || 0),
+        type: ev?.type || (Number(ev?.price || 0) > 0 ? 'paid' : 'free'),
+        image,
+        description: desc.length > 400 ? `${desc.slice(0, 400)}…` : desc,
+      };
+    });
+    res.set('Cache-Control', 'public, max-age=60');
+    return res.json(slim);
+  }
+
+  res.set('Cache-Control', 'public, max-age=15');
+  res.json(list);
+});
+
+app.get('/api/event-thumb/:id', async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  if (!id) return res.status(400).json({ error: 'id is required.' });
+  const cached = getCachedThumb(id);
+  if (cached) {
+    res.set('Cache-Control', 'public, max-age=300');
+    return res.json({ image: cached });
+  }
+  const row = await getRawEventRowForImages(id);
+  if (!row) return res.status(404).json({ error: 'Event not found.' });
+  const img = primaryImageFromRawRow(row);
+  setCachedThumb(id, img, 5 * 60 * 1000);
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json({ image: img });
+});
+
+app.get('/api/event-thumbs', async (req, res) => {
+  const ids = String(req.query.ids || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 24);
+  if (!ids.length) return res.json({});
+
+  const out = {};
+  const missing = [];
+  ids.forEach((id) => {
+    const cached = getCachedThumb(id);
+    if (cached) out[id] = cached;
+    else {
+      out[id] = '/block-logo.png';
+      missing.push(id);
+    }
+  });
+  if (!missing.length) {
+    res.set('Cache-Control', 'public, max-age=300');
+    return res.json(out);
+  }
+
   if (supabase) {
-    const user = await getAuthUserFromRequest(req);
-    if (!user) {
-      return res.status(401).json({ error: 'Sign in required.', code: 'AUTH_REQUIRED' });
+    try {
+      const uuids = [...new Set(missing.filter(isProbablyUuid))];
+      const slugs = [...new Set(missing.filter((x) => !isProbablyUuid(x)))];
+      const rowByKey = new Map();
+      const ingest = (rows) => {
+        (rows || []).forEach((r) => {
+          if (r && r.id != null) rowByKey.set(String(r.id), r);
+          if (r && r.slug) rowByKey.set(String(r.slug).toLowerCase(), r);
+        });
+      };
+      const sel = 'id, slug, image, image_card, image_detail, extra';
+      if (uuids.length) {
+        const { data } = await supabase.from('events').select(sel).in('id', uuids);
+        ingest(data);
+      }
+      if (slugs.length) {
+        const { data } = await supabase.from('events').select(sel).in('slug', slugs);
+        ingest(data);
+      }
+      for (const id of missing) {
+        const row =
+          rowByKey.get(String(id)) ||
+          rowByKey.get(String(id).toLowerCase()) ||
+          null;
+        if (row) {
+          const img = primaryImageFromRawRow(row);
+          out[id] = img;
+          setCachedThumb(id, img, 5 * 60 * 1000);
+        }
+      }
+    } catch (e) {
+      console.error('event-thumbs:', e.message);
+    }
+    res.set('Cache-Control', 'public, max-age=300');
+    return res.json(out);
+  }
+
+  const fileList = getEventsFromFile() || [];
+  for (const id of missing) {
+    const hit = fileList.find((e) => e && (e.id === id || e.slug === id));
+    if (hit) {
+      const img = primaryImageFromRawRow(hit);
+      out[id] = img;
+      setCachedThumb(id, img, 5 * 60 * 1000);
     }
   }
-  const events = await listEventsForPublic();
-  res.json(events || []);
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json(out);
+});
+
+app.get('/api/event-image/:id', async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  if (!id) return res.status(400).send('id is required');
+  const row = await getRawEventRowForImages(id);
+  if (!row) return res.status(404).send('Event not found');
+  const img = String(primaryImageFromRawRow(row) || '').trim();
+  if (!img) return res.status(404).send('No image');
+
+  // Convert data URL to real image response so clients don't need to decode huge data URIs.
+  const m = img.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (m) {
+    const mime = m[1];
+    const b64 = m[2];
+    try {
+      const buf = Buffer.from(b64, 'base64');
+      res.set('Cache-Control', 'public, max-age=300');
+      res.set('Content-Type', mime);
+      return res.send(buf);
+    } catch (e) {
+      // fall through to redirect fallback
+    }
+  }
+
+  // If it's a normal URL/path, redirect to it.
+  if (/^https?:\/\//i.test(img) || img.startsWith('/')) {
+    return res.redirect(img);
+  }
+  res.status(404).send('Invalid image source');
 });
 
 // Booking event details for the TicketsMarche-style flow
@@ -2534,7 +2830,7 @@ app.post('/api/checkout/confirm', async (req, res) => {
   const promoCodeRaw = String(req.body?.promoCode || '').trim();
   let promo = null;
   if (promoCodeRaw) {
-    promo = resolveActivePromoCode(promoCodeRaw);
+    promo = await resolveActivePromoCodeAsync(promoCodeRaw);
     if (!promo) return res.status(400).json({ error: 'Invalid or inactive promo code.' });
   }
   const pricing = pricePaidListForCartWithPromo(cart, promo);
@@ -2629,7 +2925,7 @@ app.post('/api/checkout/preview-promo', async (req, res) => {
   const code = String(req.body?.promoCode || '').trim();
   let promo = null;
   if (code) {
-    promo = resolveActivePromoCode(code);
+    promo = await resolveActivePromoCodeAsync(code);
     if (!promo) return res.status(400).json({ error: 'Invalid or inactive promo code.' });
   }
 
@@ -2947,15 +3243,7 @@ app.get('/event/checkout', (req, res) => {
 });
 
 app.get('/event/:id', (req, res) => {
-  redirectIfNotLoggedIn(req, res)
-    .then((redirected) => {
-      if (redirected) return;
-      res.sendFile(path.join(__dirname, 'public', 'event-details.html'));
-    })
-    .catch((e) => {
-      console.error(e);
-      if (!res.headersSent) res.status(500).send('Could not load page.');
-    });
+  res.sendFile(path.join(__dirname, 'public', 'event-details.html'));
 });
 
 app.get('/', (req, res) => {
@@ -2963,27 +3251,11 @@ app.get('/', (req, res) => {
 });
 
 app.get('/event', (req, res) => {
-  redirectIfNotLoggedIn(req, res)
-    .then((redirected) => {
-      if (redirected) return;
-      res.sendFile(path.join(__dirname, 'public', 'event.html'));
-    })
-    .catch((e) => {
-      console.error(e);
-      if (!res.headersSent) res.status(500).send('Could not load page.');
-    });
+  res.sendFile(path.join(__dirname, 'public', 'event.html'));
 });
 
 app.get('/register', (req, res) => {
-  redirectIfNotLoggedIn(req, res)
-    .then((redirected) => {
-      if (redirected) return;
-      res.sendFile(path.join(__dirname, 'public', 'register.html'));
-    })
-    .catch((e) => {
-      console.error(e);
-      if (!res.headersSent) res.status(500).send('Could not load page.');
-    });
+  res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });
 
 app.post('/api/register', async (req, res) => {
@@ -3224,12 +3496,11 @@ function getSiteConfig() {
   }
 }
 
-function resolveActivePromoCode(input) {
-  const cfg = getSiteConfig();
-  const list = Array.isArray(cfg.promoCodes) ? cfg.promoCodes : [];
+function resolvePromoInList(list, input) {
+  const arr = Array.isArray(list) ? list : [];
   const u = String(input || '').trim().toUpperCase();
   if (!u) return null;
-  for (const p of list) {
+  for (const p of arr) {
     if (!p || typeof p !== 'object' || p.active === false) continue;
     const c = String(p.code || '').trim().toUpperCase();
     if (c !== u) continue;
@@ -3239,6 +3510,66 @@ function resolveActivePromoCode(input) {
     if (Number.isFinite(amt) && amt > 0) return { code: c, amountOffEgp: amt };
   }
   return null;
+}
+
+/** When Supabase is configured, promo codes may live in public.app_settings (Vercel-safe). */
+async function fetchPromoCodesFromSupabase() {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('promo_codes')
+      .eq('id', 'global')
+      .maybeSingle();
+    if (error) {
+      const msg = String(error.message || '');
+      if (/does not exist|42P01|Could not find the table/i.test(msg)) {
+        console.warn('app_settings missing — run app_settings block in supabase-production-deltas.sql');
+        return null;
+      }
+      console.error('app_settings promo read:', error.message);
+      return null;
+    }
+    if (!data) return [];
+    return Array.isArray(data.promo_codes) ? data.promo_codes : [];
+  } catch (e) {
+    console.error('app_settings promo read exception:', e.message);
+    return null;
+  }
+}
+
+async function upsertPromoCodesToSupabase(codes) {
+  if (!supabase) throw new Error('Supabase not configured.');
+  const { error } = await supabase.from('app_settings').upsert(
+    {
+      id: 'global',
+      promo_codes: codes,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'id' },
+  );
+  if (error) throw new Error(error.message);
+}
+
+async function getPromoCodesListForResolution() {
+  if (supabase) {
+    const fromDb = await fetchPromoCodesFromSupabase();
+    if (fromDb !== null) return fromDb;
+  }
+  const cfg = getSiteConfig();
+  return Array.isArray(cfg.promoCodes) ? cfg.promoCodes : [];
+}
+
+async function resolveActivePromoCodeAsync(input) {
+  const list = await getPromoCodesListForResolution();
+  return resolvePromoInList(list, input);
+}
+
+/** File-based promo list only (sync). Prefer resolveActivePromoCodeAsync in async routes when Supabase is on. */
+function resolveActivePromoCode(input) {
+  const cfg = getSiteConfig();
+  const list = Array.isArray(cfg.promoCodes) ? cfg.promoCodes : [];
+  return resolvePromoInList(list, input);
 }
 
 function computePromoDiscountCents(totalCents, promo) {
@@ -3392,8 +3723,14 @@ app.get('/api/admin/promo-codes', async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized.' });
     }
   }
-  const cfg = getSiteConfig();
-  const raw = Array.isArray(cfg.promoCodes) ? cfg.promoCodes : [];
+  let raw = null;
+  if (supabase) {
+    raw = await fetchPromoCodesFromSupabase();
+  }
+  if (raw === null) {
+    const cfg = getSiteConfig();
+    raw = Array.isArray(cfg.promoCodes) ? cfg.promoCodes : [];
+  }
   const promoCodes = raw
     .filter((p) => p && String(p.code || '').trim())
     .map((p) => ({
@@ -3406,7 +3743,7 @@ app.get('/api/admin/promo-codes', async (req, res) => {
   res.json({ promoCodes });
 });
 
-function adminPromoCodesSaveHandler(req, res) {
+async function adminPromoCodesSaveHandler(req, res) {
   if (!isLocalhostRequest(req)) {
     if (!process.env.ADMIN_API_KEY) {
       return res.status(503).json({ error: 'ADMIN_API_KEY not set on server.' });
@@ -3415,14 +3752,30 @@ function adminPromoCodesSaveHandler(req, res) {
       return res.status(401).json({ error: 'Unauthorized.' });
     }
   }
-  const raw = readSiteConfigFileObject();
-  if (!raw || typeof raw !== 'object') {
-    return res.status(500).json({ error: 'Could not read site config file.' });
-  }
   const normalized = normalizePromoCodesAdminPayload(req.body?.promoCodes);
-  raw.promoCodes = normalized;
+
+  if (supabase) {
+    try {
+      await upsertPromoCodesToSupabase(normalized);
+      return res.json({ promoCodes: normalized });
+    } catch (e) {
+      console.error('Promo codes save (Supabase):', e.message);
+      const msg = String(e.message || '');
+      const missingTable = /does not exist|42P01|Could not find the table/i.test(msg);
+      return res.status(500).json({
+        error: missingTable
+          ? 'Add the app_settings table in Supabase: open supabase-production-deltas.sql, run the “Promo codes / app_settings” block in SQL Editor, then save again.'
+          : msg || 'Could not save promo codes.',
+      });
+    }
+  }
+
+  const raw = readSiteConfigFileObject();
+  const base =
+    raw && typeof raw === 'object' ? { ...raw } : JSON.parse(JSON.stringify(getSiteConfig()));
+  base.promoCodes = normalized;
   try {
-    fs.writeFileSync(SITE_CONFIG_PATH, JSON.stringify(raw, null, 2), 'utf8');
+    fs.writeFileSync(SITE_CONFIG_PATH, JSON.stringify(base, null, 2), 'utf8');
     res.json({ promoCodes: normalized });
   } catch (e) {
     console.error('Promo codes save error:', e.message);
@@ -3432,14 +3785,24 @@ function adminPromoCodesSaveHandler(req, res) {
       (process.env.VERCEL && /EACCES|ENOENT/i.test(msg));
     return res.status(500).json({
       error: readOnly
-        ? 'Cannot write site-config.json on this host (read-only filesystem, e.g. Vercel). Set ADMIN_API_KEY, edit promoCodes in the repo file, or run the admin on a VPS/Node server with a writable public folder.'
+        ? 'Cannot write site-config.json on this host (read-only filesystem, e.g. Vercel). Configure Supabase (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY), run the app_settings SQL in supabase-production-deltas.sql, then save again.'
         : 'Could not save promo codes.',
     });
   }
 }
 
-app.put('/api/admin/promo-codes', adminPromoCodesSaveHandler);
-app.post('/api/admin/promo-codes', adminPromoCodesSaveHandler);
+app.put('/api/admin/promo-codes', (req, res) => {
+  adminPromoCodesSaveHandler(req, res).catch((e) => {
+    console.error('adminPromoCodesSaveHandler:', e);
+    if (!res.headersSent) res.status(500).json({ error: 'Could not save promo codes.' });
+  });
+});
+app.post('/api/admin/promo-codes', (req, res) => {
+  adminPromoCodesSaveHandler(req, res).catch((e) => {
+    console.error('adminPromoCodesSaveHandler:', e);
+    if (!res.headersSent) res.status(500).json({ error: 'Could not save promo codes.' });
+  });
+});
 
 // ----- Admin events API (Supabase-backed) -----
 
@@ -3727,8 +4090,13 @@ app.post('/api/admin/events/reorder', async (req, res) => {
   }
 
   try {
-    const updates = order.map((id, index) => ({ id, sort_order: index + 1 }));
-    const { error } = await supabase.from('events').upsert(updates, { onConflict: 'id' });
+    // Use UPDATE only — upsert with partial rows can hit the INSERT path and violate NOT NULL on `name`.
+    const results = await Promise.all(
+      order.map((id, index) =>
+        supabase.from('events').update({ sort_order: index + 1 }).eq('id', id)
+      )
+    );
+    const error = results.find((r) => r.error)?.error;
     if (error) {
       console.error('Supabase admin reorder events error:', error.message);
       // fallback to file reorder

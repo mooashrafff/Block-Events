@@ -420,7 +420,7 @@
           }
         };
 
-      eventImage.src = event.imageHero || event.image || '/block-logo.png';
+      eventImage.src = event.imageHero || event.imageCard || event.image || '/block-logo.png';
       eventImage.alt = event.name;
       if (event.description) {
         aboutWrap.style.display = 'block';
@@ -429,7 +429,7 @@
       if (others && others.length > 0) {
         upcomingWrap.style.display = 'block';
         upcomingCarousel.innerHTML = others.map(function (e) {
-          return '<a href="/event?id=' + encodeURIComponent(e.id) + '" class="event-card-link">' +
+          return '<a href="/event?id=' + encodeURIComponent(e.id) + '" class="event-card-link" data-eid="' + encodeURIComponent(e.id) + '">' +
             '<article class="event-card">' +
             '<div class="event-card-image-wrap">' +
             '<img class="event-card-image" src="' + (e.imageCard || e.image || '/block-logo.png') + '" alt="' + e.name.replace(/"/g, '&quot;') + '">' +
@@ -441,6 +441,25 @@
             '</div></article></a>';
         }).join('');
       }
+
+      var thumbIds = [event.id].concat((others || []).map(function (o) { return o.id; })).filter(Boolean);
+      if (thumbIds.length) {
+        fetch('/api/event-thumbs?ids=' + encodeURIComponent(thumbIds.join(',')))
+          .then(function (r) { return r.json(); })
+          .then(function (map) {
+            if (!map || typeof map !== 'object') return;
+            if (map[event.id]) eventImage.src = map[event.id];
+            if (upcomingCarousel) {
+              upcomingCarousel.querySelectorAll('a.event-card-link[data-eid]').forEach(function (link) {
+                var id = decodeURIComponent(link.getAttribute('data-eid') || '');
+                if (!id || !map[id]) return;
+                var im = link.querySelector('.event-card-image');
+                if (im) im.src = map[id];
+              });
+            }
+          })
+          .catch(function () {});
+      }
     }
     async function loadEvent() {
       if (!eventId) {
@@ -449,15 +468,15 @@
       }
       var events = null;
       try {
-        var res = await fetch('/api/events');
+        var res = await fetch('/api/events?compact=1');
         var data = await res.json();
         if (res.ok && Array.isArray(data)) events = data;
       } catch (e) {}
       if (!events || events.length === 0) {
         try {
-          var res2 = await fetch('events.json');
+          var res2 = await fetch('/api/events');
           var data2 = await res2.json();
-          if (Array.isArray(data2)) events = data2;
+          if (res2.ok && Array.isArray(data2)) events = data2;
         } catch (e2) {}
       }
       if (!events || events.length === 0) events = fallbackEvents;

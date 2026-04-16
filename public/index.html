@@ -45,6 +45,10 @@
       --featured-panel: #1a1a1a;
       --featured-gold: #e5c76b;
       --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+      --event-pic-neon-ring: 2px;
+    }
+    @keyframes event-pic-neon-spin {
+      to { transform: rotate(360deg); }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     img { max-width: 100%; height: auto; }
@@ -453,18 +457,55 @@
     .featured-image-wrap {
       position: relative;
       min-height: 260px;
-      background: #2a2a2a;
+      background: var(--featured-bg);
       overflow: hidden;
       border-radius: 0 20px 20px 0;
+      isolation: isolate;
+      box-shadow:
+        inset 0 0 32px rgba(0, 102, 255, 0.12),
+        0 0 28px rgba(0, 120, 255, 0.28);
+    }
+    .featured-image-wrap::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      border-radius: inherit;
+      background: conic-gradient(
+        from 0deg,
+        #0066ff,
+        #00c8ff,
+        #66aaff,
+        #0066ff,
+        #003dcc,
+        #00e5ff,
+        #0066ff
+      );
+      animation: event-pic-neon-spin 4s linear infinite;
+      transform-origin: center;
+    }
+    .featured-image-wrap::after {
+      content: '';
+      position: absolute;
+      inset: var(--event-pic-neon-ring);
+      z-index: 0;
+      border-radius: 0 18px 18px 0;
+      background: var(--featured-bg);
     }
     .featured-image {
       position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
+      left: var(--event-pic-neon-ring);
+      top: var(--event-pic-neon-ring);
+      right: var(--event-pic-neon-ring);
+      bottom: var(--event-pic-neon-ring);
+      z-index: 1;
+      width: calc(100% - 2 * var(--event-pic-neon-ring));
+      height: calc(100% - 2 * var(--event-pic-neon-ring));
+      max-width: none;
+      object-fit: cover;
       object-position: center;
       display: block;
+      border-radius: 0 16px 16px 0;
     }
 
     .section-title {
@@ -559,19 +600,56 @@
       flex: 0 0 240px;
       width: 240px;
       min-height: 200px;
-      background: #2a2a2a;
+      background: #121212;
       overflow: hidden;
       border-radius: 12px 0 0 12px;
       align-self: stretch;
+      isolation: isolate;
+      box-shadow:
+        inset 0 0 24px rgba(0, 102, 255, 0.1),
+        0 0 22px rgba(0, 120, 255, 0.22);
+    }
+    .event-card-image-wrap::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      border-radius: inherit;
+      background: conic-gradient(
+        from 0deg,
+        #0066ff,
+        #00c8ff,
+        #66aaff,
+        #0066ff,
+        #003dcc,
+        #00e5ff,
+        #0066ff
+      );
+      animation: event-pic-neon-spin 4s linear infinite;
+      transform-origin: center;
+    }
+    .event-card-image-wrap::after {
+      content: '';
+      position: absolute;
+      inset: var(--event-pic-neon-ring);
+      z-index: 0;
+      border-radius: 10px 0 0 10px;
+      background: #121212;
     }
     .event-card-image {
       position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
+      left: var(--event-pic-neon-ring);
+      top: var(--event-pic-neon-ring);
+      right: var(--event-pic-neon-ring);
+      bottom: var(--event-pic-neon-ring);
+      z-index: 1;
+      width: calc(100% - 2 * var(--event-pic-neon-ring));
+      height: calc(100% - 2 * var(--event-pic-neon-ring));
+      max-width: none;
+      object-fit: cover;
       object-position: center;
       display: block;
+      border-radius: 8px 0 0 8px;
     }
     .event-card-body {
       padding: 1.25rem;
@@ -1072,8 +1150,154 @@
       display: block !important;
     }
 
+    /* Mobile / small tablets: lean header + stacked hero (≥900px keeps full desktop chrome + two-column hero) */
+    @media (max-width: 899px) {
+      body.home-landing .site-chrome-header__nav-band {
+        display: none !important;
+      }
+      body.home-landing .site-chrome-header__top-inner {
+        flex-direction: row !important;
+        align-items: center !important;
+        flex-wrap: nowrap;
+        gap: 0.35rem 0.5rem;
+        padding: 0.4rem clamp(0.45rem, 3vw, 0.85rem) !important;
+      }
+      body.home-landing .site-chrome-header__logo-wrap {
+        flex: 0 1 auto;
+        min-width: 0;
+      }
+      body.home-landing .site-chrome-header__logo-img {
+        height: 34px !important;
+        max-width: min(112px, 36vw) !important;
+      }
+      body.home-landing .site-chrome-header__utils {
+        margin-left: 0 !important;
+        margin-inline-start: auto !important;
+        width: auto !important;
+        flex: 1 1 auto;
+        justify-content: flex-end !important;
+        flex-wrap: nowrap;
+        gap: 0.15rem 0.35rem;
+        min-width: 0;
+      }
+      body.home-landing .site-chrome-header__social {
+        display: none;
+      }
+      body.home-landing .site-chrome-lang__btn {
+        padding: 0.28rem 0.38rem !important;
+        font-size: 0.74rem !important;
+        gap: 0.25rem !important;
+      }
+      body.home-landing .site-chrome-lang__chev {
+        display: none;
+      }
+      body.home-landing .site-chrome-header__account-link,
+      body.home-landing .site-chrome-header__signin {
+        font-size: 0.7rem !important;
+        padding: 0.28rem 0.42rem !important;
+        white-space: nowrap;
+      }
+
+      .landing-hero__main {
+        padding-top: calc(3.25rem + env(safe-area-inset-top, 0px));
+        padding-left: clamp(0.85rem, 4vw, 1.25rem);
+        padding-right: clamp(0.85rem, 4vw, 1.25rem);
+        padding-bottom: 1rem;
+        align-items: flex-start;
+      }
+      .landing-hero__grid {
+        gap: 1.25rem;
+      }
+      .landing-eyebrow {
+        font-size: 0.7rem;
+        margin-bottom: 0.45rem;
+      }
+      .landing-hero__copy h1 {
+        font-size: clamp(1.55rem, 6.8vw, 2.05rem);
+        margin-bottom: 0.65rem;
+      }
+      .landing-hero__copy > p.landing-lead {
+        font-size: 0.92rem;
+        line-height: 1.55;
+        margin-bottom: 1.05rem;
+      }
+      .landing-cta-row {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        max-width: 100%;
+        margin-bottom: 1rem;
+        gap: 0.5rem;
+      }
+      .landing-btn-primary,
+      .landing-btn-secondary {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding-top: 0.78rem;
+        padding-bottom: 0.78rem;
+        font-size: 0.95rem;
+      }
+      .landing-cta-meta {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.2rem;
+        text-align: center;
+        font-size: 0.86rem;
+      }
+      .landing-trust {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.4rem;
+        width: 100%;
+        max-width: 20.5rem;
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 1rem;
+      }
+      .landing-trust span {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        text-align: center;
+        font-size: 0.78rem;
+        padding: 0.42rem 0.65rem;
+      }
+      .landing-visual {
+        min-height: 0;
+        border-radius: 16px;
+      }
+      .landing-visual__inner {
+        padding: 1.1rem;
+        gap: 0.75rem;
+      }
+      .landing-visual__card {
+        padding: 0.8rem 0.95rem;
+      }
+      .landing-visual__card strong {
+        font-size: 0.88rem;
+      }
+      .landing-visual__card span {
+        font-size: 0.8rem;
+      }
+      .landing-header-menu {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+      }
+      .landing-footer {
+        padding-top: 0.75rem;
+        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+        font-size: 0.68rem;
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .landing-visual::before {
+        animation: none;
+      }
+      .featured-image-wrap::before,
+      .event-card-image-wrap::before {
         animation: none;
       }
     }
@@ -1081,6 +1305,8 @@
       .featured-box { grid-template-columns: 1fr; min-height: auto; }
       .featured-panel { border-radius: 20px 20px 0 0; }
       .featured-image-wrap { border-radius: 0; min-height: 200px; }
+      .featured-image-wrap::after { border-radius: 0; }
+      .featured-image { border-radius: 0; }
       .tk-subbar-inner { flex-direction: column; align-items: stretch; }
       .tk-main-nav {
         justify-content: space-between;
@@ -1103,6 +1329,12 @@
         max-height: 200px;
         height: 180px;
         border-radius: 12px 12px 0 0;
+      }
+      .event-card-image-wrap::after {
+        border-radius: 10px 10px 0 0;
+      }
+      .event-card-image {
+        border-radius: 8px 8px 0 0;
       }
       .featured-panel { padding: 1.25rem; }
       .featured-panel h2 { font-size: 1.25rem; }
@@ -1175,6 +1407,7 @@
     <nav class="home-drawer__nav">
       <a href="/" data-i18n="drawerHome">Home</a>
       <a href="/events" data-i18n="drawerEvents">Events</a>
+      <a href="/my-tickets" data-i18n="drawerTickets">My tickets</a>
       <a href="/about-us" data-i18n="drawerAbout">About Block</a>
       <a href="/faq" data-i18n="drawerFaq">FAQ</a>
       <a href="/contact" data-i18n="drawerContact">Contact Us</a>
@@ -1327,7 +1560,7 @@
           menuTitle: 'Menu', searchPh: 'Search for events...', organizedBy: 'Organized by <strong>BLOCK</strong>',
           bookNow: 'Book Now', moreInfo: 'More Info', eventsHeading: 'Events', viewAllEvents: 'View All Events',
           loadingEvents: 'Loading events…', noMatch: 'No events match your search.',
-          drawerHome: 'Home', drawerEvents: 'Events', drawerAbout: 'About Block', drawerFaq: 'FAQ', drawerContact: 'Contact Us',
+          drawerHome: 'Home', drawerEvents: 'Events', drawerTickets: 'My tickets', drawerAbout: 'About Block', drawerFaq: 'FAQ', drawerContact: 'Contact Us',
           landingEyebrow: 'BLOCK',
           landingHeadline: 'Your night out, sorted.',
           landingSub: 'Browse what’s on, compare ticket tiers, and book in a few taps — the same bold BLOCK look as the rest of the site.',
@@ -1351,7 +1584,7 @@
           menuTitle: 'القائمة', searchPh: 'ابحث عن الفعاليات...', organizedBy: 'تنظيم <strong>BLOCK</strong>',
           bookNow: 'احجز الآن', moreInfo: 'المزيد', eventsHeading: 'الفعاليات', viewAllEvents: 'كل الفعاليات',
           loadingEvents: 'جاري تحميل الفعاليات…', noMatch: 'لا توجد فعاليات مطابقة.',
-          drawerHome: 'الرئيسية', drawerEvents: 'الفعاليات', drawerAbout: 'عن BLOCK', drawerFaq: 'الأسئلة الشائعة', drawerContact: 'اتصل بنا',
+          drawerHome: 'الرئيسية', drawerEvents: 'الفعاليات', drawerTickets: 'تذاكري', drawerAbout: 'عن BLOCK', drawerFaq: 'الأسئلة الشائعة', drawerContact: 'اتصل بنا',
           landingEyebrow: 'BLOCK',
           landingHeadline: 'خطط لأمسيتك بسهولة.',
           landingSub: 'تصفح الفعاليات، قارن فئات التذاكر، واحجز بخطوات قليلة — بنفس أسلوب BLOCK الداكن والواضح.',
@@ -1408,6 +1641,7 @@
     const featuredImage = document.getElementById('featuredImage');
 
     let allEvents = [];
+    var LS_EVENTS_COMPACT_KEY = 'block_events_compact_v1';
 
     function noMatchMsg() {
       return document.documentElement.lang === 'ar' ? 'لا توجد فعاليات مطابقة.' : 'No events match your search.';
@@ -1421,7 +1655,7 @@
       featuredVenue.textContent = event.venue;
       featuredBookBtn.href = '/event/' + encodeURIComponent(event.id);
       featuredMoreLink.href = '/event/' + encodeURIComponent(event.id);
-      featuredImage.src = event.imageHero || event.image || '/block-logo.png';
+      featuredImage.src = event.imageHero || event.imageCard || event.image || '/block-logo.png';
       featuredImage.alt = event.name;
     }
 
@@ -1440,7 +1674,7 @@
         <a href="/event/${encodeURIComponent(event.id)}" class="event-card-link" data-id="${event.id}" title="View event details">
           <article class="event-card">
             <div class="event-card-image-wrap">
-              <img class="event-card-image" src="${event.imageCard || event.image || '/block-logo.png'}" alt="${event.name}">
+              <img class="event-card-image" src="${event.imageCard || event.image || '/block-logo.png'}" alt="${event.name}" loading="lazy" decoding="async">
             </div>
             <div class="event-card-body">
               <h3 class="event-card-title">${event.name}</h3>
@@ -1471,18 +1705,70 @@
       { id: 'comedy-show', name: 'Konafa ADHD Interactive Comedy Show', date: 'Feb 27', time: '09:00 PM', venue: 'El Rihany Theater', image: '/block-logo.png', description: 'Interactive comedy night at El Rihany Theater.' },
       { id: 'zed-park', name: 'ZED PARK', date: 'Feb 19 to Mar 19', time: '08:00 PM', venue: 'Zed Park, Elsheikh Zayed', image: '/block-logo.png', description: 'Live events at Zed Park throughout the season.' }
     ];
+    function hydrateHomeEventArtwork(events, limit) {
+      if (!events || !events.length || !container) return;
+      var max = Number(limit || 0) > 0 ? Number(limit || 0) : events.length;
+      var ids = events.slice(0, max).map(function (e) { return e.id; }).filter(Boolean);
+      if (!ids.length) return;
+      fetch('/api/event-thumbs?ids=' + encodeURIComponent(ids.join(',')))
+        .then(function (r) { return r.json(); })
+        .then(function (map) {
+          if (!map || typeof map !== 'object') return;
+          var first = events[0];
+          if (first && map[first.id] && featuredImage) {
+            featuredImage.src = map[first.id];
+          }
+          container.querySelectorAll('a.event-card-link').forEach(function (link) {
+            var id = link.getAttribute('data-id');
+            if (!id || !map[id]) return;
+            var im = link.querySelector('.event-card-image');
+            if (im) im.src = map[id];
+          });
+        })
+        .catch(function () {});
+    }
+
+    function readCachedCompactEvents() {
+      try {
+        var raw = localStorage.getItem(LS_EVENTS_COMPACT_KEY);
+        if (!raw) return null;
+        var parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.events)) return null;
+        // Expire after 10 minutes to avoid stale listings.
+        if (parsed.savedAt && Date.now() - Number(parsed.savedAt) > 10 * 60 * 1000) return null;
+        return parsed.events;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function writeCachedCompactEvents(events) {
+      try {
+        localStorage.setItem(LS_EVENTS_COMPACT_KEY, JSON.stringify({ savedAt: Date.now(), events: events || [] }));
+      } catch (e) {}
+    }
+
     async function loadEvents() {
       var events = null;
+      // Render instantly from cache (if any), then refresh in background.
+      var cached = readCachedCompactEvents();
+      if (cached && cached.length) {
+        allEvents = cached;
+        renderFeatured(cached[0]);
+        renderCards(cached);
+        setupCarousel(cached);
+        hydrateHomeEventArtwork(cached, 6);
+      }
       try {
-        var res = await fetch('/api/events');
+        var res = await fetch('/api/events?compact=1');
         var data = await res.json();
         if (res.ok && Array.isArray(data)) events = data;
       } catch (e) {}
       if (!events || events.length === 0) {
         try {
-          var res2 = await fetch('events.json');
-          var data2 = await res2.json();
-          if (Array.isArray(data2)) events = data2;
+          var resFull = await fetch('/api/events');
+          var dataFull = await resFull.json();
+          if (resFull.ok && Array.isArray(dataFull)) events = dataFull;
         } catch (e2) {}
       }
       if (!events || events.length === 0) events = fallbackEvents;
@@ -1490,6 +1776,12 @@
       renderFeatured(events[0]);
       renderCards(events);
       setupCarousel(events);
+      // Save compact payload for next load.
+      writeCachedCompactEvents(events);
+      // Hydrate top few images immediately, rest when idle.
+      hydrateHomeEventArtwork(events, 8);
+      var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 900); };
+      idle(function () { hydrateHomeEventArtwork(events); });
     }
     function startHomeApp() {
       loadEvents();

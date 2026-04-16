@@ -567,7 +567,7 @@
         var minP = Number(event.price || 0);
         var priceLabel = minP > 0 ? '<strong>' + minP.toFixed(0) + ' EGP</strong>' : '<strong>FREE</strong>';
         return (
-          '<article class="event-row">' +
+          '<article class="event-row" data-eid="' + escapeHtml(event.id) + '">' +
             '<div class="event-row-image-wrap">' +
               '<img src="' + escapeHtml(event.imageCard || event.image || '/block-logo.png') + '" alt="">' +
               '<span class="badge-tickets">Tickets available at BLOCK</span>' +
@@ -590,6 +590,24 @@
           openRulesForEvent(pendingBuyEventId);
         });
       });
+
+      var articles = container.querySelectorAll('article.event-row[data-eid]');
+      var ids = Array.prototype.slice.call(articles).map(function (a) {
+        return a.getAttribute('data-eid');
+      }).filter(Boolean);
+      if (!ids.length) return;
+      fetch('/api/event-thumbs?ids=' + encodeURIComponent(ids.join(',')))
+        .then(function (r) { return r.json(); })
+        .then(function (map) {
+          if (!map || typeof map !== 'object') return;
+          Array.prototype.forEach.call(articles, function (art) {
+            var id = art.getAttribute('data-eid');
+            if (!id || !map[id]) return;
+            var im = art.querySelector('.event-row-image-wrap img');
+            if (im) im.src = map[id];
+          });
+        })
+        .catch(function () {});
     }
 
     function openRulesForEvent(eventId) {
@@ -673,7 +691,7 @@
     });
 
     function loadEvents() {
-      fetch('/api/events')
+      fetch('/api/events?compact=1')
         .then(function (r) { return r.json(); })
         .then(function (events) {
           if (!Array.isArray(events)) events = [];

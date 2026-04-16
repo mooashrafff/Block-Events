@@ -318,7 +318,7 @@
     async function loadEvent() {
       if (!eventId) return;
       try {
-        const res = await fetch('/api/events');
+        const res = await fetch('/api/events?compact=1');
         const events = await res.json();
         const event = Array.isArray(events) ? events.find((e) => e.id === eventId) : null;
         if (event) {

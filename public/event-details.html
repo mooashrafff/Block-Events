@@ -26,6 +26,10 @@
       --danger: #f87171;
       --accordion: #0066ff;
       --shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+      --event-pic-neon-ring: 2px;
+    }
+    @keyframes event-pic-neon-spin {
+      to { transform: rotate(360deg); }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -154,7 +158,7 @@
     .tk-drawer a:hover { background: var(--accent-soft); color: var(--accent); }
 
     .hero-wrap {
-      max-width: min(1100px, 96vw);
+      max-width: min(720px, 96vw);
       margin: 1.25rem auto 0;
       padding: 0 clamp(0.75rem, 3vw, 1.5rem);
     }
@@ -163,18 +167,27 @@
       position: relative;
       border-radius: 12px;
       overflow: hidden;
-      height: clamp(300px, 38vw, 420px);
-      min-height: 300px;
-      max-height: 420px;
-      background: #2a2a2a;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      min-height: 280px;
+      max-height: 560px;
+      background: #121212;
+      border: 1px solid var(--border);
       box-shadow: var(--shadow);
+    }
+    @supports not (aspect-ratio: 16 / 9) {
+      .hero {
+        height: clamp(280px, 44vw, 560px);
+      }
     }
     .hero img {
       position: absolute;
       inset: 0;
+      z-index: 1;
       width: 100%;
       height: 100%;
-      object-fit: contain;
+      max-width: none;
+      object-fit: cover;
       object-position: center;
       display: block;
     }
@@ -182,6 +195,7 @@
       position: absolute;
       bottom: 14px;
       right: 14px;
+      z-index: 2;
       background: var(--cta);
       color: #fff;
       font-size: 0.72rem;
@@ -191,9 +205,8 @@
     }
     @media (max-width: 600px) {
       .hero {
-        height: clamp(220px, 48vw, 320px);
-        min-height: 220px;
-        max-height: 320px;
+        aspect-ratio: 16 / 9;
+        min-height: 210px;
       }
     }
 
@@ -386,9 +399,11 @@
     .modal-hero img {
       position: absolute;
       inset: 0;
+      z-index: 1;
       width: 100%;
       height: 100%;
-      object-fit: contain;
+      max-width: none;
+      object-fit: cover;
       object-position: center;
       display: block;
     }
@@ -501,6 +516,7 @@
       border: 1px solid rgba(248, 113, 113, 0.35);
     }
     .err-banner.show { display: block; }
+
   </style>
 </head>
 <body>
@@ -529,8 +545,8 @@
   <p id="errBanner" class="err-banner"></p>
 
   <div class="hero-wrap" id="heroWrap" style="display:none;">
-    <div class="hero">
-      <img id="heroImg" src="" alt="">
+    <div class="hero" id="heroBox">
+      <img id="heroImg" alt="">
       <span class="hero-badge">Tickets available at BLOCK</span>
     </div>
   </div>
@@ -597,7 +613,7 @@
   <!-- Booking: all categories + steppers -->
   <div id="bookOverlay" class="modal-overlay">
     <div class="modal-sheet">
-      <div class="modal-hero"><img id="modalHeroImg" src="" alt=""></div>
+      <div class="modal-hero"><img id="modalHeroImg" alt=""></div>
       <div class="modal-body">
         <h3 id="modalEventTitle">—</h3>
         <div class="modal-kv"><span class="k">Venue</span><span id="modalVenue">—</span></div>
@@ -647,6 +663,72 @@
 
     function escapeHtml(s) {
       return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function heroImageCandidates(data) {
+      var urls = [
+        data.imageHero,
+        data.imageCard,
+        data.image,
+        data.image_card,
+        data.image_detail,
+      ];
+      if (Array.isArray(data.gallery)) {
+        data.gallery.forEach(function (u) {
+          urls.push(u);
+        });
+      }
+      urls.push('/block-logo.png');
+      var out = [];
+      var seen = {};
+      urls.forEach(function (u) {
+        if (u == null) return;
+        var s = String(u).trim();
+        if (!s || seen[s]) return;
+        seen[s] = true;
+        out.push(s);
+      });
+      return out.length ? out : ['/block-logo.png'];
+    }
+
+    function eventImageApiUrl(id) {
+      var eid = String(id || '').trim();
+      if (!eid) return '';
+      return '/api/event-image/' + encodeURIComponent(eid) + '?v=' + Date.now();
+    }
+
+    function setImageWithFallbackAsync(img, candidates) {
+      if (!img || !Array.isArray(candidates) || !candidates.length) return Promise.resolve();
+      var list = candidates
+        .map(function (c) { return String(c || '').trim(); })
+        .filter(Boolean);
+      if (!list.length) {
+        img.src = '/block-logo.png';
+        return Promise.resolve();
+      }
+      return new Promise(function (resolve) {
+        var i = 0;
+        function tryNext() {
+          if (i >= list.length) {
+            img.onerror = null;
+            img.onload = null;
+            img.src = '/block-logo.png';
+            resolve();
+            return;
+          }
+          var src = list[i++];
+          img.onload = function () {
+            img.onload = null;
+            img.onerror = null;
+            resolve();
+          };
+          img.onerror = function () {
+            tryNext();
+          };
+          img.src = src;
+        }
+        tryNext();
+      });
     }
 
     function moneyFmt(n) {
@@ -745,7 +827,8 @@
       quantities = {};
       tickets.forEach(function (t) { quantities[t.id] = 0; });
 
-      document.getElementById('modalHeroImg').src = event.imageHero || event.image || '/block-logo.png';
+      var modalCandidates = [eventImageApiUrl(event.id), eventImageApiUrl(getEventIdFromPath())].concat(heroImageCandidates(event));
+      setImageWithFallbackAsync(document.getElementById('modalHeroImg'), modalCandidates);
       document.getElementById('modalEventTitle').textContent = event.name || 'Event';
       document.getElementById('modalVenue').textContent = event.venue || '—';
       document.getElementById('modalDate').textContent = [event.date, event.time].filter(Boolean).join(' · ') || '—';
@@ -903,8 +986,10 @@
 
         document.getElementById('heroWrap').style.display = 'block';
         document.getElementById('mainContent').style.display = 'block';
-        document.getElementById('heroImg').src = data.imageHero || data.image || '/block-logo.png';
         document.getElementById('heroImg').alt = data.name || '';
+        document.getElementById('heroBox').setAttribute('aria-label', data.name || 'Event');
+        var heroCandidates = [eventImageApiUrl(eventId), eventImageApiUrl(data.id)].concat(heroImageCandidates(data));
+        await setImageWithFallbackAsync(document.getElementById('heroImg'), heroCandidates);
         document.title = (data.name || 'Event') + ' – BLOCK';
 
         document.getElementById('eventTitle').textContent = data.name || 'Event';
@@ -980,6 +1065,7 @@
         document.getElementById('errBanner').classList.add('show');
       }
     })();
+
   </script>
 </body>
 </html>

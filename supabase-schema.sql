@@ -245,4 +245,15 @@ alter table public.scanner_scan_logs add column if not exists operator_name text
 -- after insert on public.attendees
 -- for each row execute procedure public.notify_send_ticket_email();
 
+-- Key/value style settings (promo codes for checkout; writable on Vercel via Supabase)
+create table if not exists public.app_settings (
+  id text primary key default 'global',
+  promo_codes jsonb not null default '[]'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.app_settings (id, promo_codes)
+values ('global', '[]'::jsonb)
+on conflict (id) do nothing;
+
 -- Tables are ready. Your server uses SUPABASE_SERVICE_ROLE_KEY and has full access.

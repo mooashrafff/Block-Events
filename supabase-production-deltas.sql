@@ -104,6 +104,21 @@ end $$;
 -- -----------------------------------------------------------------------------
 alter table public.bookings add column if not exists instapay_sender_phone text;
 
+-- -----------------------------------------------------------------------------
+-- Promo codes (admin UI) — persisted for serverless hosts (e.g. Vercel) where
+-- public/site-config.json is not writable. Node reads/writes this table when
+-- SUPABASE_SERVICE_ROLE_KEY is set.
+-- -----------------------------------------------------------------------------
+create table if not exists public.app_settings (
+  id text primary key default 'global',
+  promo_codes jsonb not null default '[]'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.app_settings (id, promo_codes)
+values ('global', '[]'::jsonb)
+on conflict (id) do nothing;
+
 -- =============================================================================
 -- Done. Verify: no errors in the SQL Editor output.
 -- =============================================================================
