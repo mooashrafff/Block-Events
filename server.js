@@ -538,6 +538,46 @@ function setEventRulesToFile(rulesMap) {
   }
 }
 
+/** Supabase-backed event rules (Vercel-safe). Stored in public.app_settings.event_rules jsonb */
+async function fetchEventRulesFromSupabase() {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('event_rules')
+      .eq('id', 'global')
+      .maybeSingle();
+    if (error) {
+      const msg = String(error.message || '');
+      if (/column .*event_rules|does not exist|42P01|Could not find the table/i.test(msg)) {
+        console.warn('app_settings.event_rules missing — run latest supabase-production-deltas.sql');
+        return null;
+      }
+      console.error('app_settings rules read:', error.message);
+      return null;
+    }
+    if (!data || !data.event_rules || typeof data.event_rules !== 'object') return {};
+    return data.event_rules;
+  } catch (e) {
+    console.error('app_settings rules read exception:', e.message);
+    return null;
+  }
+}
+
+async function upsertEventRulesToSupabase(rulesMap) {
+  if (!supabase) throw new Error('Supabase not configured.');
+  const payload = rulesMap && typeof rulesMap === 'object' ? rulesMap : {};
+  const { error } = await supabase.from('app_settings').upsert(
+    {
+      id: 'global',
+      event_rules: payload,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'id' },
+  );
+  if (error) throw new Error(error.message || 'Could not save rules.');
+}
+
 function getDefaultEventRules() {
   return {
     startTime: '7:00 PM',
@@ -1896,7 +1936,13 @@ app.get('/api/admin/booking-event-rules/:id', async (req, res) => {
   const base = await getEventById(id);
   if (!base) return res.status(404).json({ error: 'Event not found.' });
 
-  const rulesMap = getEventRulesFromFile();
+  let rulesMap = null;
+  if (supabase) {
+    rulesMap = await fetchEventRulesFromSupabase();
+  }
+  if (!rulesMap || typeof rulesMap !== 'object') {
+    rulesMap = getEventRulesFromFile();
+  }
   const rulesKey = base.id || id;
   const rules = normalizeEventRules(rulesMap[rulesKey] || rulesMap[id] || null);
 
@@ -1913,12 +1959,30 @@ app.put('/api/admin/booking-event-rules/:id', async (req, res) => {
   const base = await getEventById(id);
   if (!base) return res.status(404).json({ error: 'Event not found.' });
 
-  const rulesMap = getEventRulesFromFile();
+  let rulesMap = null;
+  if (supabase) {
+    rulesMap = await fetchEventRulesFromSupabase();
+  }
+  if (!rulesMap || typeof rulesMap !== 'object') {
+    rulesMap = getEventRulesFromFile();
+  }
   const rulesKey = base.id || id;
   const normalized = normalizeEventRules(req.body);
   rulesMap[rulesKey] = normalized;
-  const ok = setEventRulesToFile(rulesMap);
-  if (!ok) return res.status(500).json({ error: 'Could not save rules.' });
+  if (supabase) {
+    try {
+      await upsertEventRulesToSupabase(rulesMap);
+    } catch (e) {
+      return res.status(500).json({
+        error:
+          'Could not save rules in Supabase. Run the app_settings event_rules block in supabase-production-deltas.sql and redeploy.',
+        details: e.message || 'Unknown error',
+      });
+    }
+  } else {
+    const ok = setEventRulesToFile(rulesMap);
+    if (!ok) return res.status(500).json({ error: 'Could not save rules.' });
+  }
 
   res.json({ success: true, rules: normalized });
 });

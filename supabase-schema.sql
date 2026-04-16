@@ -249,6 +249,7 @@ alter table public.scanner_scan_logs add column if not exists operator_name text
 create table if not exists public.app_settings (
   id text primary key default 'global',
   promo_codes jsonb not null default '[]'::jsonb,
+  event_rules jsonb not null default '{}'::jsonb,
   updated_at timestamptz not null default now()
 );
 

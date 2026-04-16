@@ -115,6 +115,9 @@ create table if not exists public.app_settings (
   updated_at timestamptz not null default now()
 );
 
+alter table public.app_settings
+  add column if not exists event_rules jsonb not null default '{}'::jsonb;
+
 insert into public.app_settings (id, promo_codes)
 values ('global', '[]'::jsonb)
 on conflict (id) do nothing;
