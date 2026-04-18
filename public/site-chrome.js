@@ -349,8 +349,9 @@
   }
 
   function injectLanguageSwitcher() {
-    var globeSvg =
-      '<svg class="site-chrome-lang__globe" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M2 12h20"/><path stroke-linecap="round" d="M12 2c2.6 3.4 4 6.1 4 10s-1.4 6.6-4 10c-2.6-3.4-4-6.1-4-10s1.4-6.6 4-10z"/></svg>';
+    /* Translate/languages glyph — avoids a circular “globe” beside the logo in RTL */
+    var langIconSvg =
+      '<svg class="site-chrome-lang__icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>';
 
     document.querySelectorAll('.site-chrome-header__top-inner').forEach(function (row) {
       if (row.querySelector('.site-chrome-header__utils')) return;
@@ -365,7 +366,7 @@
       langWrap.className = 'site-chrome-lang';
       langWrap.innerHTML =
         '<button type="button" class="site-chrome-lang__btn" aria-haspopup="listbox" aria-expanded="false" aria-label="Choose language">' +
-        globeSvg +
+        langIconSvg +
         '<span class="site-chrome-lang__label">English</span>' +
         '<span class="site-chrome-lang__chev" aria-hidden="true">▼</span>' +
         '</button>' +

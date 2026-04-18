@@ -170,7 +170,7 @@ body:has(.site-chrome-footer):not(.home-landing) > .page-main {
   height: 18px;
 }
 
-/* Tazkarti-style language control: globe + label + chevron, no box until hover */
+/* Language control: icon + label + chevron, no box until hover */
 .site-chrome-lang {
   position: relative;
 }
@@ -204,7 +204,7 @@ body:has(.site-chrome-footer):not(.home-landing) > .page-main {
   background: transparent !important;
 }
 
-.site-chrome-lang__globe {
+.site-chrome-lang__icon {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
@@ -1579,7 +1579,7 @@ body.block-ticket-loader-open {
   opacity: 1 !important;
 }
 
-.site-chrome-header .site-chrome-lang__globe {
+.site-chrome-header .site-chrome-lang__icon {
   stroke: #ffffff !important;
   opacity: 1 !important;
 }
@@ -1598,7 +1598,7 @@ body.chrome-on-light .site-chrome-header .site-chrome-header__signout::before {
   background: #0a0a0a !important;
 }
 
-body.chrome-on-light .site-chrome-header .site-chrome-lang__globe {
+body.chrome-on-light .site-chrome-header .site-chrome-lang__icon {
   stroke: #0a0a0a !important;
 }
 

@@ -5,3 +5,4 @@ public/uploads/
 !package.json
 !package-lock.json
 !vercel.json
+!public/country-dial-codes.json

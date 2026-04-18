@@ -228,6 +228,15 @@
       margin-bottom: 0.75rem;
     }
     .loc-link:hover { text-decoration: underline; }
+    /* Hero/content gradient reads lighter on small viewports; keep venue link readable */
+    @media (max-width: 1024px) {
+      .loc-link {
+        color: #0a0a0a;
+      }
+      .loc-link:hover {
+        color: #000;
+      }
+    }
     .date-block { font-weight: 700; margin-bottom: 1.25rem; }
     .desc {
       color: var(--muted);

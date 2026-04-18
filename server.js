@@ -612,6 +612,18 @@ async function upsertEventRulesToSupabase(rulesMap) {
   if (error) throw new Error(error.message || 'Could not save rules.');
 }
 
+/** Same source order as admin routes: Supabase app_settings.event_rules, else event-rules.json */
+async function getEventRulesMapResolved() {
+  let rulesMap = null;
+  if (supabase) {
+    rulesMap = await fetchEventRulesFromSupabase();
+  }
+  if (!rulesMap || typeof rulesMap !== 'object') {
+    rulesMap = getEventRulesFromFile();
+  }
+  return rulesMap;
+}
+
 function getDefaultEventRules() {
   return {
     startTime: '7:00 PM',
@@ -620,7 +632,7 @@ function getDefaultEventRules() {
     minAge: 12,
     accompaniedByAdultUnderAge: 15,
     termsText:
-      'By purchasing these tickets, you confirm your acceptance of all terms and conditions of Ticketsmarche.com and/or any affiliated sites using the Ticketsmarche.com domain and/or technology, including but not limited to, the no refunds and no exchange policy.',
+      "By purchasing tickets you agree to BLOCK's terms of sale for this event, including any refund or exchange policy shown at checkout. Follow venue rules and staff instructions.",
     maxTicketsPerOrder: 10,
   };
 }
@@ -1987,7 +1999,7 @@ app.get('/api/booking-event/:id', async (req, res) => {
   const base = await getEventById(id);
   if (!base) return res.status(404).json({ error: 'Event not found.' });
 
-  const rulesMap = getEventRulesFromFile();
+  const rulesMap = await getEventRulesMapResolved();
   const rulesKey = base.id || id;
   const rules = normalizeEventRules(rulesMap[rulesKey] || rulesMap[id] || null);
 
@@ -2076,13 +2088,7 @@ app.get('/api/admin/booking-event-rules/:id', async (req, res) => {
   const base = await getEventById(id);
   if (!base) return res.status(404).json({ error: 'Event not found.' });
 
-  let rulesMap = null;
-  if (supabase) {
-    rulesMap = await fetchEventRulesFromSupabase();
-  }
-  if (!rulesMap || typeof rulesMap !== 'object') {
-    rulesMap = getEventRulesFromFile();
-  }
+  const rulesMap = await getEventRulesMapResolved();
   const rulesKey = base.id || id;
   const rules = normalizeEventRules(rulesMap[rulesKey] || rulesMap[id] || null);
 
@@ -2099,13 +2105,7 @@ app.put('/api/admin/booking-event-rules/:id', async (req, res) => {
   const base = await getEventById(id);
   if (!base) return res.status(404).json({ error: 'Event not found.' });
 
-  let rulesMap = null;
-  if (supabase) {
-    rulesMap = await fetchEventRulesFromSupabase();
-  }
-  if (!rulesMap || typeof rulesMap !== 'object') {
-    rulesMap = getEventRulesFromFile();
-  }
+  const rulesMap = await getEventRulesMapResolved();
   const rulesKey = base.id || id;
   const normalized = normalizeEventRules(req.body);
   rulesMap[rulesKey] = normalized;
@@ -3624,6 +3624,84 @@ app.get('/event', (req, res) => {
 
 app.get('/register', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'register.html'));
+});
+
+/** Public site origin for sitemap, robots, and absolute URLs (prefer BASE_URL in production). */
+function siteOriginFromRequest(req) {
+  const trimmed = String(process.env.BASE_URL || '').replace(/\/$/, '');
+  if (trimmed && /^https?:\/\//i.test(trimmed)) return trimmed;
+  const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'https')
+    .split(',')[0]
+    .trim();
+  const scheme = proto === 'http' || proto === 'https' ? proto : 'https';
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '')
+    .split(',')[0]
+    .trim();
+  if (host) return `${scheme}://${host}`;
+  return 'https://block-events.vercel.app';
+}
+
+function escapeXmlForSitemap(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+app.get('/robots.txt', (req, res) => {
+  const origin = siteOriginFromRequest(req);
+  res.type('text/plain');
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.send(
+    [
+      'User-agent: *',
+      'Allow: /',
+      'Disallow: /admin',
+      'Disallow: /admin-bookings',
+      'Disallow: /admin-rules',
+      'Disallow: /admin-scanners',
+      'Disallow: /api/',
+      '',
+      `Sitemap: ${origin}/sitemap.xml`,
+      '',
+    ].join('\n'),
+  );
+});
+
+app.get('/sitemap.xml', async (req, res) => {
+  const origin = siteOriginFromRequest(req);
+  const staticPaths = ['/', '/events', '/about-us', '/contact', '/faq', '/register', '/event'];
+  let events = [];
+  try {
+    events = await listEventsForPublic({ lite: true });
+  } catch (e) {
+    events = [];
+  }
+  const eventPaths = new Set();
+  for (const ev of events || []) {
+    if (!ev) continue;
+    const key = String(ev.slug || ev.id || '').trim();
+    if (!key) continue;
+    eventPaths.add(`/event/${encodeURIComponent(key)}`);
+  }
+  const paths = [...staticPaths, ...eventPaths];
+  const today = new Date().toISOString().slice(0, 10);
+  const lines = paths.map((p) => {
+    const loc = `${origin}${p}`;
+    const priority = p === '/' ? '1.0' : p.startsWith('/event/') ? '0.9' : '0.8';
+    const freq = p === '/' || p === '/events' ? 'daily' : 'weekly';
+    return `  <url>\n    <loc>${escapeXmlForSitemap(loc)}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>${freq}</changefreq>\n    <priority>${priority}</priority>\n  </url>`;
+  });
+  const xml =
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    lines.join('\n') +
+    `\n</urlset>`;
+  res.type('application/xml');
+  res.set('Cache-Control', 'public, max-age=300');
+  res.send(xml);
 });
 
 app.post('/api/register', async (req, res) => {
