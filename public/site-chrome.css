@@ -361,6 +361,11 @@ body:not(.has-session) .site-chrome-header__signout {
   display: none !important;
 }
 
+/* Pre-login home: never show sign-out in the landing hero (avoids races / stale class) */
+body.home-landing .site-chrome-header__signout {
+  display: none !important;
+}
+
 body.has-session .site-chrome-header__signin {
   display: none !important;
 }
@@ -1035,6 +1040,9 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
     min-height: 36px;
     padding: 0.35rem 0.62rem;
     border-radius: 10px;
+  }
+
+  .site-chrome-lang__btn {
     font-size: 0.79rem;
   }
 
@@ -1104,6 +1112,9 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
   .site-chrome-header__signout {
     min-height: 34px;
     padding: 0.32rem 0.55rem;
+  }
+
+  .site-chrome-lang__btn {
     font-size: 0.75rem;
   }
 
@@ -1247,39 +1258,80 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
     border-radius: 999px !important;
   }
 
+  /* Scrollable footer meta (logo, ©, links copy) + fixed bottom tab bar */
   .site-chrome-footer {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    z-index: auto;
+    background: transparent;
+    border-top: none;
+    box-shadow: none;
+    color: inherit;
+    border-radius: 0;
+    overflow: visible;
+  }
+
+  .site-chrome-footer__inner {
+    max-width: none;
+    padding: 1rem 0.85rem calc(1rem + 64px + env(safe-area-inset-bottom, 0)) !important;
+    background: var(--chrome-footer-bg);
+    color: var(--chrome-footer-text);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    box-sizing: border-box;
+  }
+
+  .site-chrome-footer__logo-wrap {
+    display: flex !important;
+    margin-bottom: 0.35rem;
+  }
+
+  .site-chrome-footer__rule {
+    display: block !important;
+    margin: 0.65rem 0 0.55rem;
+  }
+
+  .site-chrome-footer__copy {
+    display: block !important;
+    text-align: left;
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.84rem;
+  }
+
+  body.rtl .site-chrome-footer__copy {
+    text-align: right;
+  }
+
+  .site-chrome-footer__social-slot {
+    display: flex !important;
+    margin-top: 0.65rem;
+    justify-content: flex-start;
+  }
+
+  body.rtl .site-chrome-footer__social-slot {
+    justify-content: flex-end;
+  }
+
+  .site-chrome-footer .site-chrome-nav--footer {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 1250;
-    background: #ffffff;
-    border-top: 1px solid rgba(0, 0, 0, 0.12);
-    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.14);
-    color: #111;
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
-    overflow: hidden;
-  }
-
-  .site-chrome-footer__inner {
-    max-width: none;
-    padding: 0.35rem 0.35rem calc(0.35rem + env(safe-area-inset-bottom, 0)) !important;
-  }
-
-  .site-chrome-footer__logo-wrap,
-  .site-chrome-footer__rule,
-  .site-chrome-footer__copy,
-  .site-chrome-footer__social-slot {
-    display: none !important;
-  }
-
-  .site-chrome-footer .site-chrome-nav--footer {
     width: 100%;
     display: grid !important;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0.15rem;
     align-items: stretch;
+    margin: 0;
+    padding: 0.35rem 0.35rem calc(0.35rem + env(safe-area-inset-bottom, 0));
+    box-sizing: border-box;
+    background: #ffffff;
+    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.14);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
   }
 
   .site-chrome-footer .site-chrome-nav a.site-chrome-navlink--footer {
@@ -1315,8 +1367,13 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
     font-weight: 700;
   }
 
-  body:has(.site-chrome-footer):not(.home-landing) {
+  body:has(.site-chrome-footer) {
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0));
+  }
+
+  /* Home “app” view zeros padding; restore clearance for the fixed tab bar on small screens */
+  body.home-app-visible:has(.site-chrome-footer) {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0)) !important;
   }
 }
 
@@ -1506,6 +1563,15 @@ body.block-ticket-loader-open {
   opacity: 1 !important;
 }
 
+/* Icon-only account / sign-in / sign-out (mobile rules must not restore label text size) */
+.site-chrome-header .site-chrome-header__account-link,
+.site-chrome-header .site-chrome-header__signin,
+.site-chrome-header .site-chrome-header__signout {
+  font-size: 0 !important;
+  line-height: 0 !important;
+  overflow: hidden;
+}
+
 .site-chrome-header .site-chrome-header__account-link::before,
 .site-chrome-header .site-chrome-header__signin::before,
 .site-chrome-header .site-chrome-header__signout::before {
@@ -1534,6 +1600,11 @@ body.chrome-on-light .site-chrome-header .site-chrome-header__signout::before {
 
 body.chrome-on-light .site-chrome-header .site-chrome-lang__globe {
   stroke: #0a0a0a !important;
+}
+
+/* Sign out: hidden until /api/auth/me confirms a user (author display rules must not beat [hidden]) */
+#siteChromeSignOut[hidden] {
+  display: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

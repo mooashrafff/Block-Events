@@ -344,14 +344,15 @@
       align-items: stretch;
       gap: 0;
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 10px;
       background: #121212;
-      overflow: hidden;
+      overflow: visible;
       min-height: 52px;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
     .auth-phone-row:focus-within {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-soft);
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
     }
     .auth-country-wrap {
       position: relative;
@@ -360,100 +361,186 @@
     .auth-country-btn {
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
+      gap: 0.28rem;
       height: 100%;
       min-height: 50px;
-      padding: 0 0.5rem 0 0.55rem;
+      padding: 0 0.45rem 0 0.5rem;
       border: none;
-      border-right: 1px solid var(--border);
+      border-right: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px 0 0 10px;
       background: #2a2a2a;
       font: inherit;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 600;
       color: var(--text);
       cursor: pointer;
       white-space: nowrap;
-      max-width: min(140px, 38vw);
+      max-width: min(158px, 42vw);
     }
     .auth-country-btn:hover { background: #333333; }
     .auth-country-btn:focus-visible {
-      outline: 2px solid var(--accent);
+      outline: 2px solid #3b82f6;
       outline-offset: -2px;
     }
-    .auth-country-flag { font-size: 1.15rem; line-height: 1; flex-shrink: 0; }
-    .auth-country-digits { color: #e5e5e5; }
+    .auth-country-flag { font-size: 1.2rem; line-height: 1; flex-shrink: 0; }
+    .auth-country-iso {
+      font-weight: 800;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      color: #e5e5e5;
+      flex-shrink: 0;
+    }
+    .auth-country-digits { color: #9ca3af; font-weight: 600; font-size: 0.78rem; }
     .auth-country-chev {
       width: 14px;
       height: 14px;
       flex-shrink: 0;
       color: var(--muted);
+      transition: transform 0.2s ease;
     }
+    .auth-country-btn[aria-expanded='true'] .auth-country-chev {
+      transform: rotate(180deg);
+    }
+
+    /* Match reference: light country chip + light searchable panel (overrides global button pill) */
+    .auth-panel .auth-country-btn {
+      background: #f2efe9 !important;
+      color: #0a0a0a !important;
+      border-right: 1px solid rgba(0, 0, 0, 0.1) !important;
+      box-shadow: none !important;
+      border-radius: 9px 0 0 9px !important;
+    }
+    .auth-panel .auth-country-btn:hover {
+      background: #ffffff !important;
+      color: #0a0a0a !important;
+    }
+    .auth-panel .auth-country-iso {
+      color: #0a0a0a !important;
+    }
+    .auth-panel .auth-country-digits {
+      color: #6b7280 !important;
+    }
+    .auth-panel .auth-country-chev {
+      color: #4b5563 !important;
+    }
+
     .auth-country-popover {
       position: absolute;
-      top: calc(100% + 4px);
+      top: calc(100% + 6px);
       left: 0;
-      width: min(320px, 92vw);
-      max-height: min(280px, 45vh);
-      background: #1a1a1a;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-      z-index: 500;
+      width: min(340px, calc(100vw - 2rem));
+      max-height: min(400px, 58vh);
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.04);
+      z-index: 600;
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
     .auth-country-popover[hidden] { display: none !important; }
     .auth-country-search-wrap {
-      padding: 0.5rem;
-      border-bottom: 1px solid var(--border);
+      padding: 0.55rem;
+      border-bottom: 1px solid #e5e7eb;
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: #f9fafb;
+    }
+    .auth-country-search-wrap::before {
+      content: '';
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      margin-left: 0.15rem;
+      opacity: 0.45;
+      background: currentColor;
+      color: #6b7280;
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23000' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23000' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E");
+      -webkit-mask-size: contain;
+      mask-size: contain;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+      -webkit-mask-position: center;
+      mask-position: center;
     }
     .auth-country-search {
-      width: 100%;
-      padding: 0.55rem 0.65rem;
+      flex: 1;
+      min-width: 0;
+      padding: 0.5rem 0.35rem;
       border-radius: 8px;
-      border: 1px solid var(--border);
-      background: #121212;
-      color: var(--text);
+      border: 1px solid transparent;
+      background: transparent;
+      color: #111827;
       font: inherit;
       font-size: 0.9rem;
       outline: none;
     }
     .auth-country-search:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px var(--accent-soft);
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+      background: #ffffff;
     }
     .auth-country-search::placeholder { color: #9ca3af; }
     .auth-country-list {
       list-style: none;
       margin: 0;
-      padding: 0.35rem 0;
+      padding: 0.25rem 0;
       overflow-y: auto;
       flex: 1;
       min-height: 0;
+      -webkit-overflow-scrolling: touch;
     }
-    .auth-country-list button {
-      width: 100%;
-      display: flex;
+    .auth-country-list > li { list-style: none; margin: 0; }
+    .auth-panel .auth-country-list button {
+      width: 100% !important;
+      display: flex !important;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.55rem 0.85rem;
-      border: none;
-      background: transparent;
+      gap: 0.55rem;
+      padding: 0.55rem 0.85rem !important;
+      min-height: 0 !important;
+      border: none !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
       font: inherit;
       font-size: 0.88rem;
-      color: var(--text);
+      color: #111827 !important;
       cursor: pointer;
       text-align: left;
     }
-    .auth-country-list button:hover,
-    .auth-country-list button:focus-visible {
-      background: var(--accent-soft);
+    .auth-panel .auth-country-list button:hover,
+    .auth-panel .auth-country-list button:focus-visible {
+      background: #f3f4f6 !important;
+      color: #111827 !important;
       outline: none;
     }
-    .auth-country-list .c-name { flex: 1; min-width: 0; }
-    .auth-country-list .c-dial { color: var(--muted); font-weight: 600; flex-shrink: 0; }
+    .auth-country-list .auth-country-flag {
+      font-size: 1.25rem;
+    }
+    .auth-country-list .c-line {
+      flex: 1;
+      min-width: 0;
+      line-height: 1.35;
+    }
+    .auth-country-list .c-name {
+      font-weight: 500;
+      color: #111827;
+    }
+    .auth-country-list .c-dial {
+      color: #6b7280;
+      font-weight: 600;
+      font-size: 0.82rem;
+    }
+    .auth-country-empty {
+      padding: 1rem 0.85rem;
+      font-size: 0.88rem;
+      color: #6b7280;
+      text-align: center;
+    }
     .auth-phone-row input {
       flex: 1;
       min-width: 0;
@@ -464,6 +551,7 @@
       outline: none;
       background: #121212;
       color: var(--text);
+      border-radius: 0 9px 9px 0;
     }
     .auth-phone-row input::placeholder { color: #9ca3af; }
     .auth-phone-row input:-webkit-autofill,
@@ -497,20 +585,38 @@
       color: var(--muted);
       margin: 1.25rem 0 0.5rem;
     }
-    .auth-reg-prompt button {
+    /* Override global block-theme button pill for this text-style control only */
+    .auth-panel .auth-reg-prompt button {
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
-      background: none;
-      border: none;
-      color: var(--accent);
+      width: auto !important;
+      max-width: 100%;
+      margin: 0;
+      padding: 0 !important;
+      min-height: 0 !important;
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      color: #ffffff !important;
       font: inherit;
       font-weight: 700;
       cursor: pointer;
       text-decoration: none;
+      border-radius: 0 !important;
     }
-    .auth-reg-prompt button:hover { text-decoration: underline; }
-    .auth-reg-prompt button svg { width: 18px; height: 18px; }
+    .auth-panel .auth-reg-prompt button:hover {
+      color: #ffffff !important;
+      background: transparent !important;
+      border: none !important;
+      text-decoration: underline;
+    }
+    .auth-panel .auth-reg-prompt button svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      color: #ffffff;
+    }
 
     .auth-btn-primary {
       width: 100%;
@@ -536,34 +642,36 @@
       text-align: center;
     }
     .auth-alt p { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.65rem; }
-    .auth-btn-google {
+    /* Beat block-theme global `button` pill; colorful G uses inline SVG (no black raster box) */
+    .auth-panel .auth-btn-google {
       width: 100%;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 0.65rem;
       padding: 0.8rem 1.35rem;
-      border-radius: 9999px;
-      border: 1px solid #4a4a4a;
-      background: #0b0b0b;
+      border-radius: 9999px !important;
+      border: 1px solid rgba(0, 0, 0, 0.12) !important;
+      background: #ffffff !important;
       font: inherit;
       font-weight: 500;
       font-size: 0.95rem;
       letter-spacing: 0.01em;
       cursor: pointer;
-      color: #e5e5e5;
+      color: #0a0a0a !important;
       transition: background 0.15s, border-color 0.15s;
+      box-shadow: none !important;
     }
-    .auth-btn-google__icon {
+    .auth-panel .auth-btn-google__icon {
       width: 20px;
       height: 20px;
       flex-shrink: 0;
-      object-fit: contain;
       display: block;
     }
-    .auth-btn-google:hover {
-      background: #121212;
-      border-color: #6b6b6b;
+    .auth-panel .auth-btn-google:hover {
+      background: #f5f5f5 !important;
+      border-color: rgba(0, 0, 0, 0.18) !important;
+      color: #0a0a0a !important;
     }
 
     .msg {
@@ -593,6 +701,13 @@
       padding: 1rem;
       font-size: 0.8rem;
       color: var(--muted);
+    }
+
+    @media (max-width: 420px) {
+      .auth-panel .auth-country-btn {
+        width: auto !important;
+        max-width: min(150px, 46vw) !important;
+      }
     }
   </style>
 </head>
@@ -627,10 +742,6 @@
         <a href="/auth" class="auth-tk-util" title="Sign in">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           <span>Sign in</span>
-        </a>
-        <a href="/profile" class="auth-tk-util" title="Update information">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          <span>Update info</span>
         </a>
         </div>
         </div>
@@ -675,7 +786,12 @@
           <div class="auth-alt">
             <p>Or sign in with</p>
             <button type="button" class="auth-btn-google" id="btnGoogleLogin">
-              <img class="auth-btn-google__icon" src="/google-g-logo.png" width="20" height="20" alt="" aria-hidden="true" />
+              <svg class="auth-btn-google__icon" viewBox="0 0 48 48" width="20" height="20" aria-hidden="true" focusable="false">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              </svg>
               <span>Sign in with Google</span>
             </button>
           </div>
@@ -743,14 +859,15 @@
             <div class="auth-phone-row">
               <div class="auth-country-wrap">
                 <input type="hidden" id="signupPhoneDial" value="20" />
-                <button type="button" class="auth-country-btn" id="signupCountryBtn" aria-expanded="false" aria-haspopup="listbox" aria-label="Country calling code">
+                <button type="button" class="auth-country-btn" id="signupCountryBtn" aria-expanded="false" aria-haspopup="listbox" aria-label="Country calling code, Egypt +20">
                   <span class="auth-country-flag" id="signupCountryFlag" aria-hidden="true">&#x1F1EA;&#x1F1EC;</span>
+                  <span class="auth-country-iso" id="signupCountryIso">EG</span>
                   <span class="auth-country-digits" id="signupCountryDialLabel">+20</span>
                   <svg class="auth-country-chev" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                 </button>
                 <div class="auth-country-popover" id="signupCountryPopover" hidden>
                   <div class="auth-country-search-wrap">
-                    <input type="search" id="signupCountrySearch" class="auth-country-search" placeholder="Search country or code…" autocomplete="off" aria-label="Search countries" />
+                    <input type="search" id="signupCountrySearch" class="auth-country-search" placeholder="Search for country" autocomplete="off" aria-label="Search countries" />
                   </div>
                   <ul class="auth-country-list" id="signupCountryList" role="listbox" aria-label="Countries"></ul>
                 </div>
@@ -764,7 +881,12 @@
           <div class="auth-alt">
             <p>Or sign up with</p>
             <button type="button" class="auth-btn-google" id="btnGoogleSignup">
-              <img class="auth-btn-google__icon" src="/google-g-logo.png" width="20" height="20" alt="" aria-hidden="true" />
+              <svg class="auth-btn-google__icon" viewBox="0 0 48 48" width="20" height="20" aria-hidden="true" focusable="false">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              </svg>
               <span>Sign up with Google</span>
             </button>
           </div>
@@ -848,6 +970,7 @@
       var btn = document.getElementById('signupCountryBtn');
       var dialInput = document.getElementById('signupPhoneDial');
       var flagEl = document.getElementById('signupCountryFlag');
+      var isoEl = document.getElementById('signupCountryIso');
       var dialLabel = document.getElementById('signupCountryDialLabel');
 
       function flagEmoji(iso2) {
@@ -859,18 +982,25 @@
       function applySelection(c) {
         dialInput.value = c.dial;
         flagEl.textContent = flagEmoji(c.iso2);
+        if (isoEl) isoEl.textContent = c.iso2;
         dialLabel.textContent = '+' + c.dial;
+        btn.setAttribute(
+          'aria-label',
+          'Country: ' + c.name + ', +' + c.dial
+        );
       }
 
       function render(filter) {
         var q = (filter || '').trim().toLowerCase();
         listEl.innerHTML = '';
+        var shown = 0;
         for (var i = 0; i < countries.length; i++) {
           var c = countries[i];
           if (q) {
-            var hay = (c.name + ' ' + c.iso2 + ' ' + c.dial).toLowerCase();
+            var hay = (c.name + ' ' + c.iso2 + ' ' + c.dial + ' +' + c.dial).toLowerCase();
             if (hay.indexOf(q) === -1) continue;
           }
+          shown++;
           var li = document.createElement('li');
           var b = document.createElement('button');
           b.type = 'button';
@@ -879,15 +1009,18 @@
           spanF.className = 'auth-country-flag';
           spanF.setAttribute('aria-hidden', 'true');
           spanF.textContent = flagEmoji(c.iso2);
+          var line = document.createElement('span');
+          line.className = 'c-line';
           var spanN = document.createElement('span');
           spanN.className = 'c-name';
-          spanN.textContent = c.name;
+          spanN.textContent = c.name + ' ';
           var spanD = document.createElement('span');
           spanD.className = 'c-dial';
-          spanD.textContent = '+' + c.dial;
+          spanD.textContent = '(+' + c.dial + ')';
+          line.appendChild(spanN);
+          line.appendChild(spanD);
           b.appendChild(spanF);
-          b.appendChild(spanN);
-          b.appendChild(spanD);
+          b.appendChild(line);
           (function (country) {
             b.addEventListener('click', function () {
               applySelection(country);
@@ -896,6 +1029,18 @@
           })(c);
           li.appendChild(b);
           listEl.appendChild(li);
+        }
+        if (shown === 0) {
+          var emptyLi = document.createElement('li');
+          emptyLi.className = 'auth-country-empty';
+          emptyLi.setAttribute('role', 'presentation');
+          emptyLi.textContent =
+            countries.length === 0
+              ? 'Could not load country list. Refresh and try again.'
+              : q
+                ? 'No countries match your search.'
+                : 'No countries found.';
+          listEl.appendChild(emptyLi);
         }
       }
 
@@ -960,7 +1105,10 @@
             }
           }
         })
-        .catch(function () {});
+        .catch(function () {
+          countries = [];
+          render('');
+        });
     })();
 
     async function redirectAfterAuth() {

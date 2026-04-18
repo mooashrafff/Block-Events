@@ -506,7 +506,7 @@
       padding: 0 clamp(0.75rem, 3vw, 1.5rem);
       font-size: 1.5rem;
       font-weight: 700;
-      color: var(--text);
+      color: #0a0a0a;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -516,10 +516,13 @@
     .section-title .view-all {
       font-size: 0.95rem;
       font-weight: 600;
-      color: var(--accent);
+      color: #0a0a0a;
       text-decoration: none;
     }
-    .section-title .view-all:hover { text-decoration: underline; }
+    .section-title .view-all:hover {
+      color: #0a0a0a;
+      text-decoration: underline;
+    }
     .section-title .arrows {
       display: flex;
       gap: 0.5rem;
@@ -868,14 +871,23 @@
     .landing-hero__copy {
       text-align: center;
     }
-    .landing-eyebrow {
+    .landing-hero-brand {
       display: inline-block;
-      font-size: 0.78rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--accent-hover);
-      margin-bottom: 0.65rem;
+      margin-bottom: 0.75rem;
+      line-height: 0;
+      text-decoration: none;
+    }
+    .landing-hero-brand:focus-visible {
+      outline: 2px solid rgba(255, 255, 255, 0.55);
+      outline-offset: 4px;
+      border-radius: 4px;
+    }
+    .landing-hero-brand__img {
+      height: clamp(52px, 12vw, 96px);
+      width: auto;
+      max-width: min(380px, 90vw);
+      display: block;
+      filter: brightness(0) invert(1);
     }
     .landing-hero__copy h1 {
       font-size: clamp(2rem, 5.5vw, 3.15rem);
@@ -1136,6 +1148,11 @@
     body.home-landing .site-chrome-header__nav-band {
       display: block !important;
     }
+    body.home-landing .site-chrome-header__logo-img {
+      height: 54px;
+      width: auto;
+      max-width: min(220px, 38vw);
+    }
 
     /* Mobile / small tablets: lean header + stacked hero (≥900px keeps full desktop chrome + two-column hero) */
     @media (max-width: 899px) {
@@ -1154,8 +1171,8 @@
         min-width: 0;
       }
       body.home-landing .site-chrome-header__logo-img {
-        height: 34px !important;
-        max-width: min(112px, 36vw) !important;
+        height: 46px !important;
+        max-width: min(160px, 44vw) !important;
       }
       body.home-landing .site-chrome-header__utils {
         margin-left: 0 !important;
@@ -1204,9 +1221,12 @@
       .landing-hero__grid {
         gap: 1.25rem;
       }
-      .landing-eyebrow {
-        font-size: 0.7rem;
-        margin-bottom: 0.45rem;
+      .landing-hero-brand {
+        margin-bottom: 0.5rem;
+      }
+      .landing-hero-brand__img {
+        height: clamp(48px, 14vw, 84px);
+        max-width: min(340px, 92vw);
       }
       .landing-hero__copy h1 {
         font-size: clamp(1.55rem, 6.8vw, 2.05rem);
@@ -1413,7 +1433,7 @@
   <header class="site-chrome-header">
     <div class="site-chrome-header__inner">
       <a href="/" class="site-chrome-header__logo-wrap" aria-label="BLOCK Home">
-        <img src="/block-logo.png" alt="" class="site-chrome-header__logo-img" width="120" height="26">
+        <img src="/block-logo.png" alt="" class="site-chrome-header__logo-img" width="220" height="48">
       </a>
       <nav class="site-chrome-nav site-chrome-nav--header" aria-label="Main">
         <a href="/" data-nav-match="/">Home</a>
@@ -1425,7 +1445,7 @@
       <div class="site-chrome-header__account">
         <a href="/profile" class="site-chrome-header__account-link" data-nav-match="/profile">Account</a>
         <a href="/auth" class="site-chrome-header__signin">Sign in</a>
-        <button type="button" class="site-chrome-header__signout" id="siteChromeSignOut">Sign out</button>
+        <button type="button" class="site-chrome-header__signout" id="siteChromeSignOut" hidden>Sign out</button>
       </div>
     </div>
   </header>
@@ -1436,7 +1456,9 @@
       <div class="landing-hero__main">
         <div class="landing-hero__grid">
           <div class="landing-hero__copy">
-            <p class="landing-eyebrow" data-i18n="landingEyebrow">BLOCK</p>
+            <a href="/" class="landing-hero-brand" aria-label="BLOCK Home">
+              <img src="/block-logo.png" alt="" class="landing-hero-brand__img" width="380" height="84" decoding="async">
+            </a>
             <h1 data-i18n="landingHeadline">Your night out, sorted.</h1>
             <p class="landing-lead" data-i18n="landingSub">Browse what’s on, compare ticket tiers, and book in a few taps — the same bold BLOCK look as the rest of the site.</p>
             <div class="landing-cta-row">
@@ -1557,7 +1579,6 @@
           bookNow: 'Book Now', moreInfo: 'More Info', eventsHeading: 'Events', viewAllEvents: 'View All Events',
           loadingEvents: 'Loading events…', noMatch: 'No events match your search.',
           drawerHome: 'Home', drawerEvents: 'Events', drawerTickets: 'My tickets', drawerAbout: 'About Block', drawerFaq: 'FAQ', drawerContact: 'Contact Us',
-          landingEyebrow: 'BLOCK',
           landingHeadline: 'Your night out, sorted.',
           landingSub: 'Browse what’s on, compare ticket tiers, and book in a few taps — the same bold BLOCK look as the rest of the site.',
           landingBrowse: 'Browse events',
@@ -1581,7 +1602,6 @@
           bookNow: 'احجز الآن', moreInfo: 'المزيد', eventsHeading: 'الفعاليات', viewAllEvents: 'كل الفعاليات',
           loadingEvents: 'جاري تحميل الفعاليات…', noMatch: 'لا توجد فعاليات مطابقة.',
           drawerHome: 'الرئيسية', drawerEvents: 'الفعاليات', drawerTickets: 'تذاكري', drawerAbout: 'عن BLOCK', drawerFaq: 'الأسئلة الشائعة', drawerContact: 'اتصل بنا',
-          landingEyebrow: 'BLOCK',
           landingHeadline: 'خطط لأمسيتك بسهولة.',
           landingSub: 'تصفح الفعاليات، قارن فئات التذاكر، واحجز بخطوات قليلة — بنفس أسلوب BLOCK الداكن والواضح.',
           landingBrowse: 'تصفح الفعاليات',

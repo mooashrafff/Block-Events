@@ -228,22 +228,25 @@
 
   function applyChromeAccountI18n(lang) {
     document.querySelectorAll('.site-chrome-header__account-link').forEach(function (el) {
-      if (!el.getAttribute('data-chrome-text-en')) {
-        el.setAttribute('data-chrome-text-en', el.textContent.trim());
+      if (!el.getAttribute('data-chrome-label-en')) {
+        el.setAttribute('data-chrome-label-en', el.textContent.trim() || 'Account');
       }
-      el.textContent = lang === 'ar' ? 'الحساب' : el.getAttribute('data-chrome-text-en');
+      el.textContent = '';
+      el.setAttribute('aria-label', lang === 'ar' ? 'الحساب' : el.getAttribute('data-chrome-label-en'));
     });
     document.querySelectorAll('.site-chrome-header__signin').forEach(function (el) {
-      if (!el.getAttribute('data-chrome-text-en')) {
-        el.setAttribute('data-chrome-text-en', el.textContent.trim());
+      if (!el.getAttribute('data-chrome-label-en')) {
+        el.setAttribute('data-chrome-label-en', el.textContent.trim() || 'Sign in');
       }
-      el.textContent = lang === 'ar' ? 'تسجيل الدخول' : el.getAttribute('data-chrome-text-en');
+      el.textContent = '';
+      el.setAttribute('aria-label', lang === 'ar' ? 'تسجيل الدخول' : el.getAttribute('data-chrome-label-en'));
     });
     document.querySelectorAll('.site-chrome-header__signout').forEach(function (el) {
-      if (!el.getAttribute('data-chrome-text-en')) {
-        el.setAttribute('data-chrome-text-en', el.textContent.trim());
+      if (!el.getAttribute('data-chrome-label-en')) {
+        el.setAttribute('data-chrome-label-en', el.textContent.trim() || 'Sign out');
       }
-      el.textContent = lang === 'ar' ? 'تسجيل الخروج' : el.getAttribute('data-chrome-text-en');
+      el.textContent = '';
+      el.setAttribute('aria-label', lang === 'ar' ? 'تسجيل الخروج' : el.getAttribute('data-chrome-label-en'));
     });
   }
 
@@ -564,11 +567,20 @@
     var signin = document.querySelector('.site-chrome-header__signin');
     var signout = document.getElementById('siteChromeSignOut');
     if (!signin && !signout) return;
-    try {
-      if (localStorage.getItem('block_home_signed_in') === '1') {
-        document.body.classList.add('has-session');
+    /* Do not use localStorage alone for has-session — it showed sign-out while logged out. */
+
+    function setSignoutVisible(show) {
+      if (!signout) return;
+      if (show) {
+        signout.hidden = false;
+        signout.removeAttribute('aria-hidden');
+      } else {
+        signout.hidden = true;
+        signout.setAttribute('aria-hidden', 'true');
       }
-    } catch (e) {}
+    }
+
+    setSignoutVisible(false);
 
     fetch('/api/auth/me', { credentials: 'same-origin' })
       .then(function (r) {
@@ -576,11 +588,26 @@
         return r.json();
       })
       .then(function (d) {
-        if (d && d.user) document.body.classList.add('has-session');
-        else document.body.classList.remove('has-session');
+        if (d && d.user) {
+          document.body.classList.add('has-session');
+          setSignoutVisible(true);
+          try {
+            localStorage.setItem('block_home_signed_in', '1');
+          } catch (e) {}
+        } else {
+          document.body.classList.remove('has-session');
+          setSignoutVisible(false);
+          try {
+            localStorage.removeItem('block_home_signed_in');
+          } catch (e) {}
+        }
       })
       .catch(function () {
         document.body.classList.remove('has-session');
+        setSignoutVisible(false);
+        try {
+          localStorage.removeItem('block_home_signed_in');
+        } catch (e) {}
       });
 
     if (signout) {
