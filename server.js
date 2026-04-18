@@ -3597,6 +3597,12 @@ app.get('/admin-scanners', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin-scanners.html'));
 });
 
+/** Tab icon: many clients request /favicon.ico by default */
+app.get('/favicon.ico', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.redirect(302, '/block-logo.png');
+});
+
 // TicketsMarche-style routes
 app.get('/event/checkout', (req, res) => {
   redirectIfNotLoggedIn(req, res)

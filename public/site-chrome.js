@@ -1081,6 +1081,8 @@
     splitHeaderDom();
     injectLanguageSwitcher();
     splitFooterDom();
+    /* Clear account / sign-in / sign-out label text immediately (icons + aria-label only). */
+    applyChromeAccountI18n(getChromeLang());
     fetch('/api/site-config')
       .then(function (r) {
         return r.json();

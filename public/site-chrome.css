@@ -1223,6 +1223,15 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
 
 /* App-like tablet/mobile shell (matches provided references) */
 @media only screen and (max-width: 1024px) {
+  /* Space for fixed bottom tab bar + iOS home indicator / browser toolbars */
+  :root {
+    --block-mobile-tab-clearance: calc(92px + env(safe-area-inset-bottom, 0px));
+  }
+
+  html {
+    scroll-padding-bottom: var(--block-mobile-tab-clearance);
+  }
+
   .site-chrome-header {
     position: sticky;
     top: 0;
@@ -1368,12 +1377,22 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
   }
 
   body:has(.site-chrome-footer) {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0));
+    padding-bottom: var(--block-mobile-tab-clearance);
+  }
+
+  body:has(.site-chrome-footer):not(.home-landing) > main,
+  body:has(.site-chrome-footer):not(.home-landing) > .page-main {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
   }
 
   /* Home “app” view zeros padding; restore clearance for the fixed tab bar on small screens */
   body.home-app-visible:has(.site-chrome-footer) {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0)) !important;
+    padding-bottom: var(--block-mobile-tab-clearance) !important;
+  }
+
+  /* Pre-login home sets padding-bottom: 0 in page CSS — keep tab bar clearance */
+  body.home-landing:has(.site-chrome-footer) {
+    padding-bottom: var(--block-mobile-tab-clearance) !important;
   }
 }
 
@@ -1563,13 +1582,15 @@ body.block-ticket-loader-open {
   opacity: 1 !important;
 }
 
-/* Icon-only account / sign-in / sign-out (mobile rules must not restore label text size) */
+/* Icon-only account / sign-in / sign-out (label text cleared in JS; CSS hides any flash/fallback) */
 .site-chrome-header .site-chrome-header__account-link,
 .site-chrome-header .site-chrome-header__signin,
 .site-chrome-header .site-chrome-header__signout {
   font-size: 0 !important;
   line-height: 0 !important;
   overflow: hidden;
+  text-indent: -9999px;
+  letter-spacing: 0;
 }
 
 .site-chrome-header .site-chrome-header__account-link::before,
