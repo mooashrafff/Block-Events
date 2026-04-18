@@ -105,29 +105,33 @@ body:has(.site-chrome-footer):not(.home-landing) > .page-wrap {
 .site-chrome-header__utils {
   display: flex;
   align-items: center;
-  gap: 0.35rem 0.85rem;
-  flex-wrap: wrap;
   justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 0.4rem;
   margin-left: auto;
+  min-width: 0;
 }
 
 .site-chrome-header__social {
   display: flex;
   align-items: center;
-  gap: 0.15rem 0.35rem;
-  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .site-chrome-social__link--header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   color: #fff;
   text-decoration: none;
   transition: background 0.15s;
+  flex-shrink: 0;
 }
 
 .site-chrome-social__link--header:hover {
@@ -180,22 +184,22 @@ body:has(.site-chrome-footer):not(.home-landing) > .page-wrap {
 .site-chrome-lang__btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0;
   margin: 0;
   background: transparent !important;
   border: 0 !important;
-  padding: 0.25rem 0.45rem;
+  padding: 0;
   cursor: pointer;
   color: #fff;
   font: inherit;
   font-size: 0;
   font-weight: 600;
-  border-radius: 0;
+  border-radius: 10px;
   transition: background 0.15s;
-  min-width: 34px;
-  min-height: 34px;
-  justify-content: center;
-  border-left: 1px solid rgba(255, 255, 255, 0.22);
+  min-width: 40px;
+  min-height: 40px;
+  flex-shrink: 0;
 }
 
 .site-chrome-lang__btn:hover {
@@ -207,8 +211,8 @@ body:has(.site-chrome-footer):not(.home-landing) > .page-wrap {
 }
 
 .site-chrome-lang__icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   display: block;
 }
@@ -266,12 +270,13 @@ body:has(.site-chrome-footer):not(.home-landing) > .page-wrap {
 }
 
 .site-chrome-header__account {
-  display: flex;
+  display: inline-flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   flex-shrink: 0;
   flex-wrap: nowrap;
-  justify-content: flex-end;
 }
 
 .site-chrome-header__account-link,
@@ -280,18 +285,20 @@ body:has(.site-chrome-footer):not(.home-landing) > .page-wrap {
   text-decoration: none;
   font-size: 0;
   font-weight: 600;
-  padding: 0.28rem 0.45rem;
-  border-radius: 0;
+  padding: 0;
+  border-radius: 10px;
   border: 0 !important;
   background: transparent !important;
   transition: background 0.15s, border-color 0.15s;
   position: relative;
-  min-width: 34px;
-  min-height: 34px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-left: 1px solid rgba(255, 255, 255, 0.22);
+  flex-shrink: 0;
 }
 
 .site-chrome-header__account-link:hover,
@@ -310,31 +317,33 @@ body:has(.site-chrome-footer):not(.home-landing) > .page-wrap {
   color: #fff;
   background: transparent !important;
   border: 0 !important;
-  padding: 0.28rem 0.45rem;
-  border-radius: 0;
+  padding: 0;
+  border-radius: 10px;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
-  min-width: 34px;
-  min-height: 34px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-left: 1px solid rgba(255, 255, 255, 0.22);
+  flex-shrink: 0;
 }
 
 .site-chrome-header__signout:hover {
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.35);
 }
 
 .site-chrome-header__account-link::before,
 .site-chrome-header__signin::before,
 .site-chrome-header__signout::before {
   content: "";
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   background: currentColor;
   display: block;
+  flex-shrink: 0;
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
   -webkit-mask-size: contain;
@@ -402,17 +411,17 @@ body.has-session .site-chrome-header__signin {
 
 .site-chrome-nav__primary-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 0.35rem 0.5rem;
+  gap: 0.4rem;
   min-width: 0;
 }
 
 .site-chrome-nav__primary-links {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 0.35rem 0.5rem;
+  gap: 0.35rem;
   min-width: 0;
 }
 
@@ -427,10 +436,12 @@ body.has-session .site-chrome-header__signin {
   display: none;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   padding: 0;
-  margin-left: 0.15rem;
+  margin: 0;
   flex-shrink: 0;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 10px;
@@ -446,8 +457,8 @@ body.has-session .site-chrome-header__signin {
 }
 
 .site-chrome-header__more-menu svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   display: block;
 }
 
@@ -604,15 +615,20 @@ body.site-chrome-more-open {
     justify-content: flex-start;
   }
   .site-chrome-nav__primary-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     flex-wrap: nowrap;
     width: 100%;
-    gap: 0.5rem;
+    gap: 0.45rem;
   }
   .site-chrome-nav__primary-links {
     flex: 1 1 auto;
-    justify-content: center;
-    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    flex-wrap: nowrap;
     min-width: 0;
+    gap: 0.35rem;
   }
 }
 
@@ -982,16 +998,19 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
 
 @media (max-width: 720px) {
   .site-chrome-header__top-inner {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: nowrap;
   }
   .site-chrome-header__utils {
-    margin-left: 0;
-    width: 100%;
-    justify-content: space-between;
+    margin-left: auto;
+    width: auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
   }
   .site-chrome-header__account {
-    justify-content: flex-end;
+    justify-content: center;
     flex-wrap: nowrap;
   }
   .site-chrome-header__nav-inner {
@@ -1040,8 +1059,11 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
   .site-chrome-header__account-link,
   .site-chrome-header__signin,
   .site-chrome-header__signout {
-    min-height: 36px;
-    padding: 0.35rem 0.62rem;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0;
     border-radius: 10px;
   }
 
@@ -1053,8 +1075,9 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
     line-height: 0 !important;
     -webkit-text-size-adjust: none;
     text-size-adjust: none;
-    width: auto !important;
-    max-width: 48px;
+    width: 40px !important;
+    height: 40px !important;
+    max-width: 40px;
     overflow: hidden;
     white-space: nowrap;
   }
@@ -1097,13 +1120,13 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
   }
 
   .site-chrome-header__social {
-    gap: 0.2rem;
+    gap: 0.35rem;
   }
 
   .site-chrome-social__link--header {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
   }
 
   .site-chrome-lang__label {
@@ -1111,9 +1134,16 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
   }
 
   .site-chrome-header__more-menu {
-    width: 34px;
-    height: 34px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
     border-radius: 10px;
+  }
+
+  .site-chrome-header__more-menu svg {
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -1127,8 +1157,31 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
   .site-chrome-header__account-link,
   .site-chrome-header__signin,
   .site-chrome-header__signout {
-    min-height: 34px;
-    padding: 0.32rem 0.55rem;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0;
+  }
+
+  .site-chrome-header .site-chrome-header__account-link,
+  .site-chrome-header .site-chrome-header__signin,
+  .site-chrome-header .site-chrome-header__signout {
+    width: 38px !important;
+    height: 38px !important;
+    max-width: 38px;
+  }
+
+  .site-chrome-social__link--header {
+    width: 38px;
+    height: 38px;
+  }
+
+  .site-chrome-header__more-menu {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
   }
 
   .site-chrome-lang__btn {
