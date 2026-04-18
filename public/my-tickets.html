@@ -174,6 +174,11 @@
       margin: 0 auto;
       padding: 1.25rem clamp(0.75rem, 3vw, 1.5rem) 3rem;
     }
+    @media only screen and (max-width: 1024px) {
+      .page-wrap {
+        padding-bottom: calc(1.5rem + var(--block-mobile-tab-clearance, 92px));
+      }
+    }
 
     .guest-email {
       background: var(--panel);
@@ -244,6 +249,27 @@
       align-items: flex-end;
       margin-bottom: 1rem;
     }
+    @media (max-width: 640px) {
+      .filters {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+      }
+      .filter-actions {
+        margin-left: 0;
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      .filter-field select {
+        min-width: 0;
+        width: 100%;
+      }
+      .btn-search-sm {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+    }
     .filter-field { display: flex; flex-direction: column; gap: 0.35rem; }
     .filter-field label { font-size: 0.78rem; font-weight: 600; color: var(--muted); }
     .filter-field select {
@@ -255,7 +281,7 @@
       background: #121212;
       color: var(--text);
     }
-    .filter-actions { display: flex; align-items: center; gap: 0.65rem; margin-left: auto; }
+    .filter-actions { display: flex; align-items: center; gap: 0.65rem; margin-left: auto; flex-shrink: 0; }
     .link-clear {
       background: transparent !important;
       border: 0 !important;
@@ -289,12 +315,24 @@
     .pager {
       margin-top: 0.9rem;
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 0.35rem;
       align-items: center;
+      justify-content: center;
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      padding-bottom: 0.15rem;
+    }
+    .pager::-webkit-scrollbar {
+      height: 4px;
     }
     .pager[hidden] { display: none !important; }
     .pager button {
+      flex: 0 0 auto;
+      width: auto !important;
       min-width: 34px;
       height: 34px;
       border-radius: 8px;
@@ -376,15 +414,72 @@
     }
     .btn-qr:hover { border-color: var(--accent); background: var(--accent-soft); }
 
-    .pay-table-wrap { overflow-x: auto; }
+    .pay-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .pay-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
     .pay-table th, .pay-table td {
       border: 1px solid var(--border);
       padding: 0.65rem 0.75rem;
       text-align: left;
+      word-break: break-word;
     }
     .pay-table th { background: #121212; font-weight: 700; }
     .pay-table td.actions { text-align: right; }
+    @media (max-width: 640px) {
+      .pay-table-wrap {
+        overflow-x: visible;
+      }
+      .pay-table {
+        table-layout: auto;
+        font-size: 0.82rem;
+      }
+      .pay-table thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      .pay-table tbody tr {
+        display: block;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        margin-bottom: 0.65rem;
+        padding: 0.55rem 0.75rem 0.65rem;
+        background: #121212;
+      }
+      .pay-table tbody td {
+        display: grid;
+        grid-template-columns: minmax(0, 40%) 1fr;
+        gap: 0.35rem 0.5rem;
+        align-items: start;
+        border: none;
+        padding: 0.45rem 0;
+      }
+      .pay-table tbody td + td {
+        border-top: 1px solid rgba(255, 255, 255, 0.07);
+      }
+      .pay-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        font-size: 0.7rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        line-height: 1.35;
+      }
+      .pay-table tbody td.actions {
+        grid-template-columns: minmax(0, 40%) 1fr;
+        justify-items: stretch;
+      }
+      .pay-table tbody td.actions a.link {
+        justify-self: end;
+        text-align: right;
+      }
+    }
     .pay-table a.link {
       color: var(--accent);
       font-weight: 600;
@@ -1391,11 +1486,11 @@
       tbody.innerHTML = rows.map(function (p) {
         return (
           '<tr>' +
-            '<td>' + escapeHtml(p.bookingNo) + '</td>' +
-            '<td>' + escapeHtml(formatPurchaseDate(p.purchaseDate)) + '</td>' +
-            '<td>' + escapeHtml(p.paymentMethod) + '</td>' +
-            '<td>' + escapeHtml(String(p.totalAmount)) + ' L.E.</td>' +
-            '<td class="actions"><a class="link" href="#" data-booking="' + escapeHtml(p.id) + '">View Details</a></td>' +
+            '<td data-label="Booking No.">' + escapeHtml(p.bookingNo) + '</td>' +
+            '<td data-label="Purchase date">' + escapeHtml(formatPurchaseDate(p.purchaseDate)) + '</td>' +
+            '<td data-label="Payment">' + escapeHtml(p.paymentMethod) + '</td>' +
+            '<td data-label="Total">' + escapeHtml(String(p.totalAmount)) + ' L.E.</td>' +
+            '<td class="actions" data-label="Details"><a class="link" href="#" data-booking="' + escapeHtml(p.id) + '">View</a></td>' +
           '</tr>'
         );
       }).join('');

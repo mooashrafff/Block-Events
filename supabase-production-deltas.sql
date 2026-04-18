@@ -23,6 +23,7 @@ create index if not exists bookings_user_status_idx
 alter table public.app_users add column if not exists phone text;
 alter table public.app_users add column if not exists birthdate date;
 alter table public.app_users add column if not exists gender text;
+alter table public.app_users add column if not exists registration_country text;
 alter table public.app_users add column if not exists password_reset_token_hash text;
 alter table public.app_users add column if not exists password_reset_expires_at timestamptz;
 alter table public.app_users add column if not exists profile_picture_url text;

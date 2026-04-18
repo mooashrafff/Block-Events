@@ -923,6 +923,7 @@
             <div class="auth-phone-row">
               <div class="auth-country-wrap">
                 <input type="hidden" id="signupPhoneDial" value="20" />
+                <input type="hidden" id="signupCountryName" value="" />
                 <button type="button" class="auth-country-btn" id="signupCountryBtn" aria-expanded="false" aria-haspopup="listbox" aria-label="Country calling code, Egypt +20">
                   <span class="auth-country-flag" id="signupCountryFlag" aria-hidden="true">&#x1F1EA;&#x1F1EC;</span>
                   <span class="auth-country-iso" id="signupCountryIso">EG</span>
@@ -1041,6 +1042,7 @@
       var popover = document.getElementById('signupCountryPopover');
       var btn = document.getElementById('signupCountryBtn');
       var dialInput = document.getElementById('signupPhoneDial');
+      var nameInput = document.getElementById('signupCountryName');
       var flagEl = document.getElementById('signupCountryFlag');
       var isoEl = document.getElementById('signupCountryIso');
       var dialLabel = document.getElementById('signupCountryDialLabel');
@@ -1053,6 +1055,7 @@
 
       function applySelection(c) {
         dialInput.value = c.dial;
+        if (nameInput) nameInput.value = c.name || '';
         flagEl.textContent = flagEmoji(c.iso2);
         if (isoEl) isoEl.textContent = c.iso2;
         dialLabel.textContent = '+' + c.dial;
@@ -1247,6 +1250,8 @@
         }
         phonePayload = '+' + dial + phoneNational.replace(/^0+/, '');
       }
+      var countryNameEl = document.getElementById('signupCountryName');
+      var phoneCountry = countryNameEl && countryNameEl.value ? String(countryNameEl.value).trim() : '';
 
       var btn = document.getElementById('btnSignup');
       btn.disabled = true;
@@ -1263,6 +1268,7 @@
             birthdate: birthdate || null,
             gender: gender || null,
             phone: phonePayload,
+            phoneCountry: phoneCountry,
           }),
         });
         var data = await res.json().catch(function () {

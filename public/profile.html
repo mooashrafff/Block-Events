@@ -25,67 +25,83 @@
   </script>
   <style>
     :root {
-      --page-bg: var(--lux-body-stack, linear-gradient(180deg, #000 0%, #141414 100%));
-      --card: #141414;
-      --border: rgba(255, 255, 255, 0.1);
-      --text: #f5f3ef;
-      --muted: #9b968f;
-      --accent: #ebe8e2;
-      --accent-hover: #ffffff;
-      --accent-purple: #c4b8a8;
-      --inp-bg: #101010;
+      --page-bg: var(--lux-body-stack, linear-gradient(180deg, #000000 0%, #111111 38%, #2a2a2a 72%, #e9e9e9 100%));
+      --profile-surface: #faf9f7;
+      --profile-surface-border: rgba(15, 15, 15, 0.08);
+      --profile-ink: #0f0f0f;
+      --profile-muted: #5c5852;
+      --profile-input-bg: #ffffff;
+      --profile-input-border: rgba(15, 15, 15, 0.12);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html {
+      min-height: 100%;
+    }
     body {
       font-family: 'Outfit', system-ui, sans-serif;
-      background: var(--page-bg);
-      color: var(--text);
+      /* Keep lux black→white stack on all breakpoints (block-theme forces flat bg ≤1024px). */
+      background: var(--page-bg) !important;
+      background-attachment: fixed !important;
+      color: var(--profile-ink);
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
     }
-    .page-main {
+    .profile-page {
       flex: 1;
       width: 100%;
-      max-width: 1100px;
+      max-width: min(920px, 100%);
       margin: 0 auto;
-      padding: 1.5rem clamp(0.75rem, 3vw, 1.25rem) 3rem;
+      padding: clamp(1.25rem, 3.5vw, 2.25rem) clamp(0.85rem, 4vw, 1.5rem) 2.5rem;
     }
-    .page-main h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.35rem; }
-    .sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 1.35rem; }
-    .grid {
-      display: grid;
-      grid-template-columns: 0.95fr 1.05fr;
-      gap: 1.25rem;
-      align-items: start;
+    @media only screen and (max-width: 1024px) {
+      .profile-page {
+        padding-bottom: calc(1.5rem + var(--block-mobile-tab-clearance, 92px));
+      }
     }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 1.35rem 1.25rem;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    .profile-shell {
+      display: flex;
+      flex-direction: column;
+      gap: clamp(1.5rem, 3vw, 2rem);
     }
-    .profile-head { display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+    .profile-hero-card {
+      background: var(--profile-surface);
+      border: 1px solid var(--profile-surface-border);
+      border-radius: clamp(20px, 3vw, 28px);
+      padding: clamp(1.25rem, 4vw, 2rem) clamp(1.1rem, 3.5vw, 1.85rem);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+    .profile-hero-top {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: clamp(1rem, 3vw, 1.75rem);
+      flex-wrap: wrap;
+    }
     .avatar-stack { position: relative; flex-shrink: 0; }
     .avatar-ring {
       position: relative;
-      width: 72px;
-      height: 72px;
+      width: clamp(80px, 18vw, 104px);
+      height: clamp(80px, 18vw, 104px);
       border-radius: 50%;
-      border: 2px solid var(--border);
+      border: 3px solid #ffffff;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
       padding: 0;
       margin: 0;
-      background: var(--inp-bg);
+      background: #ffffff;
       cursor: pointer;
       display: block;
       overflow: visible;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: box-shadow 0.2s, transform 0.2s;
     }
-    .avatar-ring:hover { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12); }
+    .avatar-ring:hover {
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+      transform: scale(1.02);
+    }
     .avatar-ring:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 3px;
+      outline: 2px solid #0f0f0f;
+      outline-offset: 4px;
     }
     .avatar-ring:disabled { opacity: 0.7; cursor: wait; }
     .avatar-fill {
@@ -95,22 +111,28 @@
       overflow: hidden;
       display: grid;
       place-items: center;
+      background: #f0eeeb;
     }
     .avatar-fill img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .avatar-letter { font-size: 1.35rem; font-weight: 700; color: var(--muted); }
+    .avatar-letter {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(1.75rem, 5vw, 2.25rem);
+      font-weight: 600;
+      color: var(--profile-muted);
+    }
     .avatar-edit-badge {
       position: absolute;
-      right: -4px;
-      bottom: -4px;
-      width: 28px;
-      height: 28px;
+      right: -2px;
+      bottom: -2px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
-      background: var(--accent);
-      border: 2px solid var(--card);
+      background: #0f0f0f;
+      border: 3px solid var(--profile-surface);
       display: grid;
       place-items: center;
       pointer-events: none;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
     .avatar-edit-badge svg { width: 14px; height: 14px; color: #fff; }
     .visually-hidden {
@@ -124,72 +146,130 @@
       white-space: nowrap;
       border: 0;
     }
-    .meta-block { flex: 1; min-width: 0; }
-    .row-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.4rem; }
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      padding: 6px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      color: var(--muted);
+    .profile-identity { flex: 1; min-width: min(100%, 240px); padding-top: 0.15rem; }
+    .profile-name {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(1.85rem, 5vw, 2.65rem);
       font-weight: 600;
-      font-size: 0.82rem;
-      background: var(--inp-bg);
-      max-width: 100%;
-      word-break: break-all;
+      letter-spacing: -0.02em;
+      color: var(--profile-ink);
+      line-height: 1.15;
     }
-    .name-display { font-size: 1.2rem; font-weight: 700; }
-    .field { margin-top: 1rem; }
+    .profile-since {
+      margin-top: 0.35rem;
+      font-size: 0.92rem;
+      color: var(--profile-muted);
+      font-weight: 500;
+    }
+    .profile-details-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(0.85rem, 2vw, 1.25rem) clamp(1rem, 3vw, 2rem);
+      margin-top: clamp(1.25rem, 3vw, 1.75rem);
+      padding-top: clamp(1.1rem, 2.5vw, 1.5rem);
+      border-top: 1px solid var(--profile-surface-border);
+    }
+    @media (max-width: 720px) {
+      .profile-details-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (min-width: 721px) and (max-width: 900px) {
+      .profile-details-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    .detail-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      min-width: 0;
+      font-size: 0.9rem;
+      color: var(--profile-ink);
+      line-height: 1.45;
+    }
+    .detail-icon {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      margin-top: 0.1rem;
+      color: var(--profile-muted);
+    }
+    .detail-icon svg {
+      width: 22px;
+      height: 22px;
+      display: block;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.75;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .detail-text {
+      min-width: 0;
+      word-break: break-word;
+    }
+    .detail-text.muted {
+      color: var(--profile-muted);
+      font-style: italic;
+    }
+    .profile-form-block {
+      margin-top: clamp(1.25rem, 3vw, 1.75rem);
+      padding-top: clamp(1.1rem, 2.5vw, 1.5rem);
+      border-top: 1px solid var(--profile-surface-border);
+    }
+    .field { margin-top: 0.85rem; }
+    .field:first-of-type { margin-top: 0; }
     label {
       display: block;
-      color: var(--muted);
+      color: var(--profile-muted);
       font-weight: 600;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
       margin-bottom: 0.4rem;
     }
     input[type="text"] {
       width: 100%;
       padding: 12px 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: var(--inp-bg);
-      color: var(--text);
+      border-radius: 12px;
+      border: 1px solid var(--profile-input-border);
+      background: var(--profile-input-bg);
+      color: var(--profile-ink);
       font: inherit;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     input[type="text"]:focus {
       outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
+      border-color: rgba(15, 15, 15, 0.35);
+      box-shadow: 0 0 0 3px rgba(15, 15, 15, 0.06);
     }
-    .actions { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 1.1rem; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 1.15rem; }
     .btn {
-      padding: 10px 18px;
-      border-radius: 10px;
+      padding: 11px 20px;
+      border-radius: 12px;
       border: none;
-      background: var(--accent);
-      color: #fff;
+      background: #0f0f0f;
+      color: #faf9f7;
       font: inherit;
       font-weight: 700;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background 0.15s, transform 0.15s;
     }
-    .btn:hover { background: var(--accent-purple); }
+    .btn:hover { background: #2a2a2a; }
     .btn:disabled { opacity: 0.65; cursor: not-allowed; }
     .btn.secondary {
       background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text);
+      border: 1px solid var(--profile-input-border);
+      color: var(--profile-ink);
       font-weight: 600;
       text-decoration: none;
       display: inline-flex;
       align-items: center;
     }
     .btn.secondary:hover {
-      border-color: var(--accent);
-      color: var(--accent-hover);
-      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(15, 15, 15, 0.35);
+      background: rgba(15, 15, 15, 0.04);
     }
     .msg {
       margin-top: 0.85rem;
@@ -200,30 +280,78 @@
     }
     .msg.show { display: block; }
     .msg.error {
-      border: 1px solid rgba(248, 113, 113, 0.35);
-      background: rgba(248, 113, 113, 0.1);
-      color: #fecaca;
+      border: 1px solid rgba(185, 80, 80, 0.35);
+      background: rgba(248, 113, 113, 0.12);
+      color: #7f1d1d;
     }
     .msg.success {
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      background: rgba(255, 255, 255, 0.08);
-      color: #b8d4ff;
+      border: 1px solid rgba(15, 15, 15, 0.12);
+      background: rgba(15, 15, 15, 0.06);
+      color: var(--profile-ink);
     }
-    .bookings { display: flex; flex-direction: column; gap: 0.75rem; }
+    .profile-purchase { width: 100%; }
+    .profile-section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.85rem;
+      padding: 0 0.15rem;
+    }
+    .profile-section-title {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(1.35rem, 3.5vw, 1.75rem);
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--profile-ink);
+    }
+    .profile-count {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--profile-muted);
+    }
+    .profile-purchase-panel {
+      background: var(--profile-surface);
+      border: 1px solid var(--profile-surface-border);
+      border-radius: clamp(999px, 50vw, 48px);
+      padding: clamp(1.75rem, 5vw, 2.75rem) clamp(1.25rem, 4vw, 2.5rem);
+      min-height: clamp(140px, 22vw, 180px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+    }
+    .profile-purchase-panel.has-bookings {
+      border-radius: clamp(24px, 4vw, 36px);
+      align-items: stretch;
+      justify-content: flex-start;
+    }
+    .purchase-empty {
+      text-align: center;
+      font-size: 0.95rem;
+      color: var(--profile-muted);
+      line-height: 1.55;
+      max-width: 28rem;
+      margin: 0 auto;
+    }
+    .bookings { display: flex; flex-direction: column; gap: 0.85rem; }
     .booking {
-      border: 1px solid var(--border);
-      border-radius: 14px;
+      border: 1px solid var(--profile-input-border);
+      border-radius: 16px;
       padding: 1rem;
       display: flex;
       gap: 0.9rem;
-      background: var(--inp-bg);
+      background: rgba(255, 255, 255, 0.75);
     }
     .booking-thumb-wrap {
       width: 96px;
       height: 72px;
       border-radius: 12px;
-      border: 1px solid var(--border);
-      background: #2a2a2a;
+      border: 1px solid var(--profile-input-border);
+      background: #e8e6e2;
       overflow: hidden;
       flex-shrink: 0;
     }
@@ -234,12 +362,137 @@
       object-position: center;
       display: block;
     }
-    .booking h3 { font-size: 1.05rem; margin-bottom: 0.15rem; }
-    .meta { color: var(--muted); font-size: 0.9rem; }
-    .price { margin-top: 0.4rem; font-weight: 700; }
-    .card h2 { font-size: 1.15rem; font-weight: 700; }
-    .count-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem; }
-    @media (max-width: 920px) { .grid { grid-template-columns: 1fr; } }
+    .booking h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.02rem;
+      margin-bottom: 0.15rem;
+      color: var(--profile-ink);
+      font-weight: 700;
+    }
+    .booking .meta { color: var(--profile-muted); font-size: 0.88rem; }
+    .booking .price { margin-top: 0.4rem; font-weight: 700; color: var(--profile-ink); }
+    .booking .btn.secondary {
+      border-color: var(--profile-input-border);
+    }
+    .ticket-qr-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10050;
+      background: #000000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(1rem, 4vw, 2rem);
+      box-sizing: border-box;
+    }
+    .ticket-qr-overlay.is-open {
+      display: flex;
+    }
+    .ticket-qr-dialog {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      font-family: 'Outfit', system-ui, sans-serif;
+    }
+    .ticket-qr-close {
+      position: absolute;
+      top: -0.25rem;
+      right: 0;
+      width: 44px;
+      height: 44px;
+      border: none;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 1.75rem;
+      line-height: 1;
+      cursor: pointer;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+    }
+    .ticket-qr-close:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+    .ticket-qr-close:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 2px;
+    }
+    .ticket-qr-logo {
+      width: clamp(100px, 28vw, 132px);
+      height: auto;
+      margin: 0 auto 1.25rem;
+      opacity: 0.38;
+      filter: grayscale(1);
+    }
+    .ticket-qr-heading {
+      color: #ffffff;
+      font-size: clamp(1.5rem, 5vw, 1.85rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.5rem;
+    }
+    .ticket-qr-sub {
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 400;
+      margin: 0 0 1.5rem;
+      line-height: 1.4;
+    }
+    .ticket-qr-scanned-msg {
+      color: #dc2626;
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin: -0.75rem 0 1.25rem;
+    }
+    .ticket-qr-wrap {
+      display: inline-block;
+      position: relative;
+    }
+    .ticket-qr-wrap.is-scanned .ticket-qr-frame {
+      border: 4px solid #dc2626;
+      border-radius: 10px;
+    }
+    .ticket-qr-wrap.is-scanned .ticket-qr-img {
+      filter: brightness(0.55);
+    }
+    .ticket-qr-frame {
+      position: relative;
+      display: inline-block;
+      padding: 14px;
+      background: #ffffff;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    .ticket-qr-ar {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      writing-mode: vertical-rl;
+      font-size: 0.72rem;
+      color: #fff;
+      background: #dc2626;
+      padding: 8px 4px;
+      border-radius: 4px;
+      white-space: nowrap;
+      line-height: 1.2;
+      z-index: 2;
+    }
+    .ticket-qr-ar-l {
+      left: -4px;
+      transform: translate(-100%, -50%);
+    }
+    .ticket-qr-ar-r {
+      right: -4px;
+      transform: translate(100%, -50%);
+    }
+    .ticket-qr-img {
+      display: block;
+      width: min(260px, 72vw);
+      max-width: 100%;
+      height: auto;
+    }
   </style>
 </head>
 <body>
@@ -263,13 +516,12 @@
     </div>
   </header>
 
-  <main class="page-main">
-    <h1>Profile</h1>
-    <p class="sub" id="sub">Loading…</p>
+  <main class="profile-page">
+    <p class="visually-hidden" id="sub">Loading…</p>
 
-    <div class="grid">
-      <section class="card">
-        <div class="profile-head">
+    <div class="profile-shell">
+      <section class="profile-hero-card" aria-label="Your profile">
+        <div class="profile-hero-top">
           <div class="avatar-stack">
             <input type="file" id="avatarFile" class="visually-hidden" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,.jpg,.jpeg,.png,.webp,.gif,.avif" aria-hidden="true" tabindex="-1" />
             <button type="button" class="avatar-ring" id="avatarTrigger" aria-label="Change profile photo">
@@ -281,18 +533,48 @@
               </span>
             </button>
           </div>
-          <div class="meta-block">
-            <div class="row-pills">
-              <span class="pill" id="pillEmail">—</span>
-              <span class="pill" id="pillSince">—</span>
-            </div>
-            <div class="name-display" id="nameText">—</div>
+          <div class="profile-identity">
+            <h1 class="profile-name" id="nameText">—</h1>
+            <p class="profile-since" id="memberSince">Member since —</p>
           </div>
         </div>
 
-        <form id="profileForm">
+        <div class="profile-details-grid" aria-label="Contact details">
+          <div class="detail-item">
+            <span class="detail-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </span>
+            <span class="detail-text muted" id="detailPhone">Not on file</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </span>
+            <span class="detail-text muted" id="detailLocation">Not on file</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </span>
+            <span class="detail-text muted" id="detailDob">Not on file</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </span>
+            <span class="detail-text" id="detailEmail">—</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <span class="detail-text muted" id="detailGender">Not on file</span>
+          </div>
+        </div>
+
+        <form id="profileForm" class="profile-form-block">
           <div class="field">
-            <label for="name">Name</label>
+            <label for="name">Display name</label>
             <input id="name" type="text" name="name" autocomplete="name" placeholder="Your name">
           </div>
           <div class="actions">
@@ -303,13 +585,15 @@
         </form>
       </section>
 
-      <section class="card">
-        <div class="count-header">
-          <h2>Booked events</h2>
-          <span class="pill" id="countPill">0</span>
+      <section class="profile-purchase" aria-label="Purchase history">
+        <div class="profile-section-head">
+          <h2 class="profile-section-title">Purchase history</h2>
+          <span class="profile-count" id="countPill">0 upcoming</span>
         </div>
-        <div id="bookings" class="bookings"></div>
-        <p id="empty" class="meta" style="display:none; padding:0.5rem 0 0;">No bookings yet. Add an event to your cart and checkout.</p>
+        <div class="profile-purchase-panel" id="purchasePanel">
+          <div id="bookings" class="bookings"></div>
+          <p id="empty" class="purchase-empty" style="display:none;">You haven’t purchased tickets for any upcoming events yet.</p>
+        </div>
       </section>
     </div>
   </main>
@@ -329,6 +613,23 @@
       <span class="site-chrome-footer__copy" id="siteChromeCopyright">© BLOCK</span>
     </div>
   </footer>
+
+  <div id="ticketQrOverlay" class="ticket-qr-overlay" aria-hidden="true">
+    <div class="ticket-qr-dialog" role="dialog" aria-modal="true" aria-labelledby="ticketQrTitle">
+      <button type="button" class="ticket-qr-close" id="ticketQrClose" aria-label="Close">×</button>
+      <img src="/block-logo.png" alt="BLOCK" class="ticket-qr-logo" width="132" height="29">
+      <h2 id="ticketQrTitle" class="ticket-qr-heading">Your Ticket</h2>
+      <p id="ticketQrSub" class="ticket-qr-sub">Show this QR at the entrance</p>
+      <p id="ticketQrScannedMsg" class="ticket-qr-scanned-msg" hidden>The code has been scanned before</p>
+      <div id="ticketQrWrap" class="ticket-qr-wrap">
+        <div class="ticket-qr-frame">
+          <span class="ticket-qr-ar ticket-qr-ar-l" id="ticketQrArL" hidden>تم مسح الرمز من قبل</span>
+          <span class="ticket-qr-ar ticket-qr-ar-r" id="ticketQrArR" hidden>تم مسح الرمز من قبل</span>
+          <img id="ticketQrImg" class="ticket-qr-img" alt="Ticket QR code" width="260" height="260" />
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="/site-chrome.js" defer></script>
   <script>
@@ -355,6 +656,52 @@
       try { return new Date(d).toLocaleString(); } catch (e) { return String(d); }
     }
 
+    function fmtMemberSince(createdAt) {
+      if (!createdAt) return 'Member since —';
+      try {
+        var d = new Date(createdAt);
+        if (isNaN(d.getTime())) return 'Member since —';
+        return 'Member since ' + d.getFullYear();
+      } catch (e) {
+        return 'Member since —';
+      }
+    }
+
+    function fmtDobDisplay(raw) {
+      if (!raw) return '';
+      var s = String(raw);
+      var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) {
+        var y = Number(m[1]);
+        var mo = Number(m[2]) - 1;
+        var day = Number(m[3]);
+        var dt = new Date(y, mo, day);
+        if (!isNaN(dt.getTime())) {
+          return dt.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+      }
+      try {
+        var dt2 = new Date(s);
+        if (!isNaN(dt2.getTime())) {
+          return dt2.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+      } catch (e) {}
+      return s;
+    }
+
+    function setProfileDetail(elId, value) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      var v = value != null && String(value).trim() !== '' ? String(value).trim() : '';
+      if (v) {
+        el.textContent = v;
+        el.classList.remove('muted');
+      } else {
+        el.textContent = 'Not on file';
+        el.classList.add('muted');
+      }
+    }
+
     function escAttr(s) {
       return String(s || '')
         .replace(/&/g, '&amp;')
@@ -362,6 +709,111 @@
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
     }
+
+    var ticketQrPollTimer = null;
+    var ticketQrPollId = null;
+
+    function setTicketQrScannedUi(attended) {
+      var wrap = document.getElementById('ticketQrWrap');
+      var sub = document.getElementById('ticketQrSub');
+      var msg = document.getElementById('ticketQrScannedMsg');
+      var arL = document.getElementById('ticketQrArL');
+      var arR = document.getElementById('ticketQrArR');
+      if (!wrap || !sub || !msg) return;
+      if (attended) {
+        wrap.classList.add('is-scanned');
+        sub.hidden = true;
+        msg.hidden = false;
+        if (arL) arL.hidden = false;
+        if (arR) arR.hidden = false;
+      } else {
+        wrap.classList.remove('is-scanned');
+        sub.hidden = false;
+        msg.hidden = true;
+        if (arL) arL.hidden = true;
+        if (arR) arR.hidden = true;
+      }
+    }
+
+    function stopTicketQrPoll() {
+      if (ticketQrPollTimer) {
+        clearInterval(ticketQrPollTimer);
+        ticketQrPollTimer = null;
+      }
+      ticketQrPollId = null;
+    }
+
+    function closeTicketQrModal() {
+      stopTicketQrPoll();
+      var overlay = document.getElementById('ticketQrOverlay');
+      if (!overlay) return;
+      overlay.classList.remove('is-open');
+      overlay.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      var img = document.getElementById('ticketQrImg');
+      if (img) img.src = '';
+    }
+
+    function openTicketQrModal(ticketId) {
+      var overlay = document.getElementById('ticketQrOverlay');
+      if (!ticketId || !overlay) return;
+      stopTicketQrPoll();
+      var img = document.getElementById('ticketQrImg');
+      if (img) img.src = '';
+      setTicketQrScannedUi(false);
+      overlay.classList.add('is-open');
+      overlay.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+
+      ticketQrPollId = String(ticketId);
+      function poll() {
+        if (!ticketQrPollId) return;
+        fetch('/api/ticket-status/' + encodeURIComponent(ticketQrPollId), { credentials: 'same-origin' })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            if (d && d.attended) setTicketQrScannedUi(true);
+          })
+          .catch(function () {});
+      }
+
+      fetch('/api/ticket-detail/' + encodeURIComponent(ticketId), { credentials: 'same-origin' })
+        .then(function (r) {
+          return r.json().then(function (j) {
+            return { ok: r.ok, j: j };
+          });
+        })
+        .then(function (o) {
+          if (!o.ok) throw new Error((o.j && o.j.error) || 'Could not load ticket');
+          var d = o.j;
+          if (img) img.src = d.qrDataUrl || '';
+          setTicketQrScannedUi(!!d.attended);
+          ticketQrPollTimer = setInterval(poll, 4000);
+          poll();
+        })
+        .catch(function (err) {
+          show('error', err.message || 'Could not load ticket.');
+          closeTicketQrModal();
+        });
+    }
+
+    document.getElementById('ticketQrClose').addEventListener('click', closeTicketQrModal);
+    document.getElementById('ticketQrOverlay').addEventListener('click', function (e) {
+      if (e.target === this) closeTicketQrModal();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var overlay = document.getElementById('ticketQrOverlay');
+      if (overlay && overlay.classList.contains('is-open')) closeTicketQrModal();
+    });
+    document.getElementById('purchasePanel').addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('.btn-ticket-qr');
+      if (!btn) return;
+      e.preventDefault();
+      var id = btn.getAttribute('data-ticket-id');
+      if (id) openTicketQrModal(id);
+    });
 
     async function requireMe() {
       const r = await fetch('/api/auth/me', { credentials: 'same-origin' });
@@ -393,23 +845,34 @@
 
     function render(me) {
       const user = me.user;
-      document.getElementById('sub').textContent = 'Manage your info and bookings.';
-      document.getElementById('pillEmail').textContent = user.email;
-      document.getElementById('pillSince').textContent = 'Joined ' + fmtDate(user.created_at).split(',')[0];
+      document.getElementById('sub').textContent = '';
+      document.getElementById('memberSince').textContent = fmtMemberSince(user.created_at);
+      setProfileDetail('detailPhone', user.phone);
+      setProfileDetail('detailLocation', user.registration_country);
+      setProfileDetail('detailDob', fmtDobDisplay(user.birthdate));
+      setProfileDetail('detailGender', user.gender);
+
+      document.getElementById('detailEmail').textContent = user.email || '—';
+      document.getElementById('detailEmail').classList.toggle('muted', !user.email);
       document.getElementById('nameText').textContent = user.name || 'Your account';
       document.getElementById('name').value = user.name || '';
       setAvatarDisplay(user);
 
       const list = Array.isArray(me.bookedEvents) ? me.bookedEvents : [];
-      document.getElementById('countPill').textContent = String(list.length);
+      const n = list.length;
+      document.getElementById('countPill').textContent =
+        n === 0 ? 'No bookings yet' : n === 1 ? '1 booking' : n + ' bookings';
+      const purchasePanel = document.getElementById('purchasePanel');
       const wrap = document.getElementById('bookings');
       const empty = document.getElementById('empty');
       if (!list.length) {
         wrap.innerHTML = '';
         empty.style.display = 'block';
+        purchasePanel.classList.remove('has-bookings');
         return;
       }
       empty.style.display = 'none';
+      purchasePanel.classList.add('has-bookings');
       wrap.innerHTML = list.map(function (b) {
         const e = b.event || {};
         const paymentStatus = b.paymentStatus || 'Pending';
@@ -418,10 +881,20 @@
         const paidTxt = money(b.pricePaid);
         const isPaid = paymentStatus === 'Paid';
         const ticketsCount = Math.max(0, Number(b.ticketsCount || (Array.isArray(b.ticketIds) ? b.ticketIds.length : 0)) || 0);
-        const ticketUrl = ticketsCount > 1
-          ? '/my-tickets'
-          : (b.ticketId ? '/ticket/' + encodeURIComponent(b.ticketId) : null);
-        const ticketBtnLabel = ticketsCount > 1 ? 'View tickets / QR' : 'View ticket / QR';
+        const multiTickets = ticketsCount > 1;
+        const singleTicketId = !multiTickets && b.ticketId ? String(b.ticketId) : '';
+        const ticketBtnLabel = multiTickets ? 'View tickets / QR' : 'View ticket / QR';
+        const ticketActionHtml = singleTicketId
+          ? '<div style="margin-top:0.6rem;"><button type="button" class="btn secondary btn-ticket-qr" data-ticket-id="' +
+            escAttr(singleTicketId) +
+            '">' +
+            ticketBtnLabel +
+            '</button></div>'
+          : multiTickets
+            ? '<div style="margin-top:0.6rem;"><a class="btn secondary" href="/my-tickets" style="display:inline-flex; text-decoration:none;">' +
+              ticketBtnLabel +
+              '</a></div>'
+            : '';
         return '<div class="booking">' +
           '<div class="booking-thumb-wrap"><img alt="" src="' + (e.imageCard || e.image || '/block-logo.png').replace(/"/g, '&quot;') + '"></div>' +
           '<div style="flex:1; min-width:0;">' +
@@ -430,17 +903,15 @@
             '<div class="meta" style="margin-top:0.25rem;">Booked ' + fmtDate(b.createdAt) + '</div>' +
             '<div class="meta" style="margin-top:0.25rem;">Tickets: <strong>' + String(ticketsCount || 0) + '</strong></div>' +
             '<div class="price">' + (priceTxt === 'FREE' ? 'FREE' : (isPaid ? ('Paid ' + paidTxt + ' via ' + String(pm).toUpperCase()) : (paymentStatus + ' via ' + String(pm).toUpperCase()))) + '</div>' +
-            (ticketUrl
-              ? '<div style="margin-top:0.6rem;"><a class="btn secondary" href="' + ticketUrl + '" style="display:inline-flex; text-decoration:none;">' + ticketBtnLabel + '</a></div>'
-              : '') +
-            (b.instapayQrImageUrl && b.instapayPaymentUrl && !ticketUrl
-              ? '<div style="margin-top:0.6rem;padding:0.75rem;border:1px solid var(--border);border-radius:12px;background:#121212;">' +
+            ticketActionHtml +
+            (b.instapayQrImageUrl && b.instapayPaymentUrl && !singleTicketId && !multiTickets
+              ? '<div style="margin-top:0.6rem;padding:0.75rem;border:1px solid rgba(15,15,15,0.1);border-radius:12px;background:rgba(255,255,255,0.7);">' +
                 '<div class="meta" style="margin-bottom:0.35rem;">InstaPay — waiting for admin confirmation</div>' +
-                '<img alt="InstaPay QR" src="' + escAttr(b.instapayQrImageUrl) + '" style="width:180px;max-width:100%;border-radius:12px;border:1px solid var(--border);background:#fff;">' +
-                '<div style="margin-top:0.5rem;"><a href="' + escAttr(b.instapayPaymentUrl) + '" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-weight:600;word-break:break-all;font-size:0.9rem;">Open InstaPay payment link</a></div>' +
+                '<img alt="InstaPay QR" src="' + escAttr(b.instapayQrImageUrl) + '" style="width:180px;max-width:100%;border-radius:12px;border:1px solid rgba(15,15,15,0.12);background:#fff;">' +
+                '<div style="margin-top:0.5rem;"><a href="' + escAttr(b.instapayPaymentUrl) + '" target="_blank" rel="noopener noreferrer" style="color:#0f0f0f;font-weight:600;word-break:break-all;font-size:0.9rem;">Open InstaPay payment link</a></div>' +
                 (b.instapaySenderPhone
                   ? '<div class="meta" style="margin-top:0.5rem;">Paid from: <strong>' + escAttr(b.instapaySenderPhone) + '</strong></div>'
-                  : '<div class="meta" style="margin-top:0.5rem;">After paying, add the phone number you used on the <a href="/instapay-success?bookingIds=' + encodeURIComponent(b.id) + '" style="color:var(--accent);font-weight:600;">InstaPay pending</a> page.</div>') +
+                  : '<div class="meta" style="margin-top:0.5rem;">After paying, add the phone number you used on the <a href="/instapay-success?bookingIds=' + encodeURIComponent(b.id) + '" style="color:#0f0f0f;font-weight:600;">InstaPay pending</a> page.</div>') +
                 '</div>'
               : '') +
           '</div>' +

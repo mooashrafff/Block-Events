@@ -274,6 +274,21 @@ h4 {
   :where(.btn, button) {
     width: 100%;
   }
+
+  /* Header chrome: keep account / language controls icon-sized, not full-bleed CTAs */
+  .site-chrome-header :where(button, .btn) {
+    width: auto;
+  }
+
+  /* Pagination rows (e.g. My tickets) must stay horizontal */
+  .pager :where(button, .btn) {
+    width: auto;
+  }
+
+  /* Checkout payment modal footer — two buttons side by side */
+  .pay-foot :where(button, .btn) {
+    width: auto;
+  }
 }
 
 /* Large desktop tuning */

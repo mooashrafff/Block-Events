@@ -74,6 +74,7 @@ create index if not exists app_users_email_idx on public.app_users (lower(email)
 alter table public.app_users add column if not exists phone text;
 alter table public.app_users add column if not exists birthdate date;
 alter table public.app_users add column if not exists gender text;
+alter table public.app_users add column if not exists registration_country text;
 
 -- Password reset (forgot-password email flow)
 alter table public.app_users add column if not exists password_reset_token_hash text;

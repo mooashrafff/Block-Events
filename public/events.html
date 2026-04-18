@@ -397,7 +397,7 @@
 
     .empty-msg { text-align: center; color: var(--muted); padding: 3rem 1rem; }
 
-    /* Rules modal (Terms of entry) */
+    /* Rules modal (Terms of entry) — z-index above fixed mobile tab bar (~1250) */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -405,16 +405,19 @@
       background: rgba(6, 8, 12, 0.78);
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
-      z-index: 1200;
+      z-index: 4000;
       align-items: center;
       justify-content: center;
-      padding: 1.25rem;
+      padding: max(0.75rem, env(safe-area-inset-top, 0px)) 1rem calc(1rem + var(--block-mobile-tab-clearance, 0px) + env(safe-area-inset-bottom, 0px));
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      box-sizing: border-box;
     }
     .modal-overlay.show { display: flex; }
     .modal-rules {
       width: 100%;
       max-width: min(760px, 96vw);
-      max-height: 86vh;
+      max-height: min(86vh, calc(100dvh - 2rem - var(--block-mobile-tab-clearance, 0px) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));
       background: #0c0c0c;
       border-radius: 16px;
       overflow: hidden;
@@ -424,6 +427,7 @@
       flex-direction: column;
     }
     .modal-rules-header {
+      flex-shrink: 0;
       padding: 1.25rem 1.5rem;
       text-align: center;
       border-bottom: 1px solid var(--border);
@@ -441,12 +445,16 @@
       color: #f5f3ef;
       font-size: 1rem;
       line-height: 1.65;
-      max-height: calc(86vh - 150px);
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: min(calc(86vh - 150px), calc(100dvh - 11rem - var(--block-mobile-tab-clearance, 0px)));
       overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .modal-rules-body ul { margin: 0; padding-left: 1.2rem; }
     .modal-rules-body li { margin-bottom: 0.7rem; }
     .modal-rules-footer {
+      flex-shrink: 0;
       padding: 1rem 1.5rem;
       background: #101010;
       display: flex;

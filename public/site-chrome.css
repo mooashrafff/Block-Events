@@ -34,7 +34,9 @@ body:has(.site-chrome-footer):not(.home-landing) {
 
 /* Grow the main content column when it is a direct child (common layout). */
 body:has(.site-chrome-footer):not(.home-landing) > main,
-body:has(.site-chrome-footer):not(.home-landing) > .page-main {
+body:has(.site-chrome-footer):not(.home-landing) > .page-main,
+body:has(.site-chrome-footer):not(.home-landing) > .home-main,
+body:has(.site-chrome-footer):not(.home-landing) > .page-wrap {
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -1042,6 +1044,20 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
     border-radius: 10px;
   }
 
+  /* Icon-only: beat theme/global button text (incl. iOS text-size adjustment) */
+  .site-chrome-header .site-chrome-header__account-link,
+  .site-chrome-header .site-chrome-header__signin,
+  .site-chrome-header .site-chrome-header__signout {
+    font-size: 0 !important;
+    line-height: 0 !important;
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
+    width: auto !important;
+    max-width: 48px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
   .site-chrome-lang__btn {
     font-size: 0.79rem;
   }
@@ -1385,9 +1401,20 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
     padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
   }
 
-  /* Home “app” view zeros padding; restore clearance for the fixed tab bar on small screens */
+  /*
+   * Index “app” home uses .home-main (not main.page-main). The tab bar is position:fixed,
+   * so the last event cards need in-flow padding or they sit under the bar.
+   */
+  body:has(.site-chrome-footer):not(.home-landing) > .home-main {
+    padding-bottom: var(--block-mobile-tab-clearance);
+  }
+
+  /*
+   * Index app home: bottom clearance lives on .home-main (above). Avoid doubling body padding
+   * with the same value — footer inner already reserves space above the fixed tab.
+   */
   body.home-app-visible:has(.site-chrome-footer) {
-    padding-bottom: var(--block-mobile-tab-clearance) !important;
+    padding-bottom: 0 !important;
   }
 
   /* Pre-login home sets padding-bottom: 0 in page CSS — keep tab bar clearance */

@@ -273,11 +273,23 @@ async function getAuthUserFromRequest(req) {
     const decoded = jwt.verify(token, JWT_SECRET || 'dev-insecure-secret');
     const userId = decoded?.sub;
     if (!userId || !supabase) return null;
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('app_users')
-      .select('id, name, email, profile_picture_url, created_at')
+      .select(
+        'id, name, email, profile_picture_url, created_at, phone, birthdate, gender, registration_country'
+      )
       .eq('id', userId)
       .maybeSingle();
+    if (
+      error &&
+      /registration_country|column/i.test(String(error.message || error.details || ''))
+    ) {
+      ({ data, error } = await supabase
+        .from('app_users')
+        .select('id, name, email, profile_picture_url, created_at, phone, birthdate, gender')
+        .eq('id', userId)
+        .maybeSingle());
+    }
     if (error) return null;
     return data || null;
   } catch {
@@ -2245,6 +2257,9 @@ app.post('/api/auth/signup', async (req, res) => {
   const birthdate =
     /^\d{4}-\d{2}-\d{2}$/.test(birthdateRaw) ? birthdateRaw : null;
   const gender = String(req.body?.gender || '').trim().slice(0, 32) || null;
+  const countryRaw = String(req.body?.phoneCountry || req.body?.registrationCountry || '').trim();
+  let registration_country = countryRaw ? countryRaw.slice(0, 120) : null;
+  if (!phone) registration_country = null;
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Please enter a valid email.' });
@@ -2262,12 +2277,26 @@ app.post('/api/auth/signup', async (req, res) => {
     phone,
     birthdate,
     gender,
+    registration_country,
   };
-  let { data, error } = await supabase
-    .from('app_users')
-    .insert(insertRow)
-    .select('id, name, email, profile_picture_url, created_at')
-    .single();
+  const userSelect =
+    'id, name, email, profile_picture_url, created_at, phone, birthdate, gender, registration_country';
+  const userSelectNoCountry =
+    'id, name, email, profile_picture_url, created_at, phone, birthdate, gender';
+  let { data, error } = await supabase.from('app_users').insert(insertRow).select(userSelect).single();
+
+  if (
+    error &&
+    /registration_country|column|schema/i.test(String(error.message || error.details || '')) &&
+    registration_country
+  ) {
+    const { registration_country: _drop, ...rowNoCountry } = insertRow;
+    ({ data, error } = await supabase
+      .from('app_users')
+      .insert(rowNoCountry)
+      .select(userSelectNoCountry)
+      .single());
+  }
 
   if (
     error &&
@@ -2308,11 +2337,25 @@ app.post('/api/auth/login', async (req, res) => {
   const password = String(req.body?.password || '');
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' });
 
-  const { data: user, error } = await supabase
+  let { data: user, error } = await supabase
     .from('app_users')
-    .select('id, name, email, password_hash, profile_picture_url, created_at')
+    .select(
+      'id, name, email, password_hash, profile_picture_url, created_at, phone, birthdate, gender, registration_country'
+    )
     .eq('email', email)
     .maybeSingle();
+  if (
+    error &&
+    /registration_country|column/i.test(String(error.message || error.details || ''))
+  ) {
+    ({ data: user, error } = await supabase
+      .from('app_users')
+      .select(
+        'id, name, email, password_hash, profile_picture_url, created_at, phone, birthdate, gender'
+      )
+      .eq('email', email)
+      .maybeSingle());
+  }
   if (error || !user) return res.status(400).json({ error: 'Invalid email or password.' });
 
   const ok = await bcrypt.compare(password, user.password_hash);
@@ -2320,7 +2363,17 @@ app.post('/api/auth/login', async (req, res) => {
 
   const token = signSessionToken({ id: user.id, email: user.email });
   setSessionCookie(res, token);
-  const safeUser = { id: user.id, name: user.name, email: user.email, profile_picture_url: user.profile_picture_url, created_at: user.created_at };
+  const safeUser = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    profile_picture_url: user.profile_picture_url,
+    created_at: user.created_at,
+    phone: user.phone ?? null,
+    birthdate: user.birthdate ?? null,
+    gender: user.gender ?? null,
+    registration_country: user.registration_country ?? null,
+  };
   res.json({ user: safeUser });
 });
 
@@ -2437,12 +2490,25 @@ app.patch('/api/auth/profile', async (req, res) => {
   const user = await requireAuth(req, res);
   if (!user) return;
   const name = String(req.body?.name ?? '').trim() || null;
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('app_users')
     .update({ name, updated_at: new Date().toISOString() })
     .eq('id', user.id)
-    .select('id, name, email, profile_picture_url, created_at')
+    .select(
+      'id, name, email, profile_picture_url, created_at, phone, birthdate, gender, registration_country'
+    )
     .single();
+  if (
+    error &&
+    /registration_country|column/i.test(String(error.message || error.details || ''))
+  ) {
+    ({ data, error } = await supabase
+      .from('app_users')
+      .update({ name, updated_at: new Date().toISOString() })
+      .eq('id', user.id)
+      .select('id, name, email, profile_picture_url, created_at, phone, birthdate, gender')
+      .single());
+  }
   if (error) return res.status(500).json({ error: 'Could not update profile.' });
   res.json({ user: data });
 });
@@ -2476,12 +2542,25 @@ app.post('/api/auth/profile/avatar', (req, res) => {
         }
 
         const publicUrl = await persistAvatarAndUrl(user.id, req.file.buffer, mt);
-        const { data, error } = await supabase
+        let { data, error } = await supabase
           .from('app_users')
           .update({ profile_picture_url: publicUrl, updated_at: new Date().toISOString() })
           .eq('id', user.id)
-          .select('id, name, email, profile_picture_url, created_at')
+          .select(
+            'id, name, email, profile_picture_url, created_at, phone, birthdate, gender, registration_country'
+          )
           .single();
+        if (
+          error &&
+          /registration_country|column/i.test(String(error.message || error.details || ''))
+        ) {
+          ({ data, error } = await supabase
+            .from('app_users')
+            .update({ profile_picture_url: publicUrl, updated_at: new Date().toISOString() })
+            .eq('id', user.id)
+            .select('id, name, email, profile_picture_url, created_at, phone, birthdate, gender')
+            .single());
+        }
         if (error) {
           console.error('Avatar DB update:', error.message, error.details || '');
           return res.status(500).json({
@@ -5860,12 +5939,19 @@ function formatPaymentMethodLabel(m) {
   return m ? String(m).charAt(0).toUpperCase() + String(m).slice(1) : '—';
 }
 
-// JSON for ticket detail modal (QR + metadata)
+// JSON for ticket detail modal (QR + metadata) — requires login; email must match the ticket.
 app.get('/api/ticket-detail/:ticketId', async (req, res) => {
   const ticketId = String(req.params.ticketId || '').trim();
   if (!ticketId) return res.status(400).json({ error: 'ticketId required.' });
+  const user = await getAuthUserFromRequest(req);
+  if (!user) return res.status(401).json({ error: 'Unauthorized.' });
   const attendee = await getAttendeeByTicketId(ticketId);
   if (!attendee) return res.status(404).json({ error: 'Ticket not found.' });
+  const holderEmail = String(attendee.email || '').trim().toLowerCase();
+  const sessionEmail = String(user.email || '').trim().toLowerCase();
+  if (!holderEmail || holderEmail !== sessionEmail) {
+    return res.status(403).json({ error: 'Forbidden.' });
+  }
   const ev = attendee.event_id ? await getEventById(String(attendee.event_id)) : null;
   let dataUrl = '';
   try {
