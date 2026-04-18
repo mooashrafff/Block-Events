@@ -6,7 +6,7 @@
   <title>Profile – BLOCK</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/block-theme.css">
   <link rel="stylesheet" href="/site-chrome.css">
   <script>
@@ -22,15 +22,15 @@
   </script>
   <style>
     :root {
-      --page-bg: #0b0b0b;
-      --card: #1a1a1a;
-      --border: #2a2a2a;
-      --text: #ffffff;
-      --muted: #888888;
-      --accent: #0066ff;
-      --accent-hover: #3385ff;
-      --accent-purple: #7c3aed;
-      --inp-bg: #121212;
+      --page-bg: var(--lux-body-stack, linear-gradient(180deg, #000 0%, #141414 100%));
+      --card: #141414;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f5f3ef;
+      --muted: #9b968f;
+      --accent: #ebe8e2;
+      --accent-hover: #ffffff;
+      --accent-purple: #c4b8a8;
+      --inp-bg: #101010;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -79,7 +79,7 @@
       overflow: visible;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .avatar-ring:hover { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2); }
+    .avatar-ring:hover { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12); }
     .avatar-ring:focus-visible {
       outline: 2px solid var(--accent);
       outline-offset: 3px;
@@ -158,7 +158,7 @@
     input[type="text"]:focus {
       outline: none;
       border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
     }
     .actions { display: flex; flex-wrap: wrap; gap: 0.65rem; margin-top: 1.1rem; }
     .btn {
@@ -186,7 +186,7 @@
     .btn.secondary:hover {
       border-color: var(--accent);
       color: var(--accent-hover);
-      background: rgba(0, 102, 255, 0.08);
+      background: rgba(255, 255, 255, 0.06);
     }
     .msg {
       margin-top: 0.85rem;
@@ -202,8 +202,8 @@
       color: #fecaca;
     }
     .msg.success {
-      border: 1px solid rgba(0, 102, 255, 0.35);
-      background: rgba(0, 102, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.08);
       color: #b8d4ff;
     }
     .bookings { display: flex; flex-direction: column; gap: 0.75rem; }
@@ -227,7 +227,7 @@
     .booking-thumb-wrap img {
       width: 100%;
       height: 100%;
-      object-fit: contain;
+      object-fit: cover;
       object-position: center;
       display: block;
     }
@@ -414,16 +414,21 @@
         const priceTxt = money(e.price);
         const paidTxt = money(b.pricePaid);
         const isPaid = paymentStatus === 'Paid';
-        const ticketUrl = b.ticketId ? '/ticket/' + encodeURIComponent(b.ticketId) : null;
+        const ticketsCount = Math.max(0, Number(b.ticketsCount || (Array.isArray(b.ticketIds) ? b.ticketIds.length : 0)) || 0);
+        const ticketUrl = ticketsCount > 1
+          ? '/my-tickets'
+          : (b.ticketId ? '/ticket/' + encodeURIComponent(b.ticketId) : null);
+        const ticketBtnLabel = ticketsCount > 1 ? 'View tickets / QR' : 'View ticket / QR';
         return '<div class="booking">' +
           '<div class="booking-thumb-wrap"><img alt="" src="' + (e.imageCard || e.image || '/block-logo.png').replace(/"/g, '&quot;') + '"></div>' +
           '<div style="flex:1; min-width:0;">' +
             '<h3 style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + (e.name || 'Event') + '</h3>' +
             '<div class="meta">' + [e.date, e.time, e.venue].filter(Boolean).join(' · ') + '</div>' +
             '<div class="meta" style="margin-top:0.25rem;">Booked ' + fmtDate(b.createdAt) + '</div>' +
+            '<div class="meta" style="margin-top:0.25rem;">Tickets: <strong>' + String(ticketsCount || 0) + '</strong></div>' +
             '<div class="price">' + (priceTxt === 'FREE' ? 'FREE' : (isPaid ? ('Paid ' + paidTxt + ' via ' + String(pm).toUpperCase()) : (paymentStatus + ' via ' + String(pm).toUpperCase()))) + '</div>' +
             (ticketUrl
-              ? '<div style="margin-top:0.6rem;"><a class="btn secondary" href="' + ticketUrl + '" style="display:inline-flex; text-decoration:none;">View ticket / QR</a></div>'
+              ? '<div style="margin-top:0.6rem;"><a class="btn secondary" href="' + ticketUrl + '" style="display:inline-flex; text-decoration:none;">' + ticketBtnLabel + '</a></div>'
               : '') +
             (b.instapayQrImageUrl && b.instapayPaymentUrl && !ticketUrl
               ? '<div style="margin-top:0.6rem;padding:0.75rem;border:1px solid var(--border);border-radius:12px;background:#121212;">' +

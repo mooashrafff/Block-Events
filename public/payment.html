@@ -7,12 +7,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/block-theme.css">
   <link rel="stylesheet" href="/site-chrome.css">
   <style>
     :root{
-      --bg:#0a0a0c; --card:#141418; --border:#25252d;
-      --text:#e8e8ed; --muted:#8888a0;
-      --accent:#0066ff; --accent-hover:#3385ff;
+      --bg:var(--lux-body-stack,#0a0a0a); --card:#141414; --border:rgba(255,255,255,0.1);
+      --text:#f5f3ef; --muted:#9b968f;
+      --accent:#ebe8e2; --accent-hover:#ffffff;
       --danger:#ef4444; --ok:#22c55e;
       --bar-bg:#ffffff; --bar-text:#1a1a1a;
     }
@@ -21,7 +22,7 @@
       font-family:'Outfit',system-ui,sans-serif;
       background:var(--bg); color:var(--text);
       min-height:100vh; display:flex; flex-direction:column;
-      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 102, 255, 0.15), transparent);
+      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 255, 255, 0.07), transparent);
     }
     .main{flex:1; width:100%; max-width:980px; margin:0 auto; padding:1.25rem;}
     h1{font-size:1.5rem; margin-bottom:0.25rem;}

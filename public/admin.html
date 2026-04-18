@@ -21,13 +21,13 @@
   </script>
   <style>
     :root {
-      --bg: #050509;
-      --card: #141418;
-      --border: #25252d;
-      --text: #e8e8ed;
-      --muted: #8888a0;
-      --accent: #0066ff;
-      --accent-hover: #3385ff;
+      --bg: #050505;
+      --card: #141414;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f5f3ef;
+      --muted: #9b968f;
+      --accent: #ebe8e2;
+      --accent-hover: #ffffff;
       --danger: #ef4444;
       --gold: #c9a227;
       --bar-bg: #ffffff;
@@ -173,30 +173,53 @@
       font-weight: 600;
       padding: 8px 14px;
       border-radius: 999px;
-      border: none;
+      border: 1px solid rgba(255, 255, 255, 0.35);
       cursor: pointer;
       text-decoration: none;
+      color: #0a0a0a;
+      background: #f3f3f3;
+      transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+    }
+    .btn:hover {
+      background: #0a0a0a;
+      color: #ffffff;
+      border-color: #0a0a0a;
     }
     .btn-primary {
-      background: var(--accent);
-      color: #fff;
+      background: #f3f3f3;
+      color: #0a0a0a;
     }
-    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:hover { background: #0a0a0a; color: #ffffff; }
     .btn-ghost {
-      background: transparent;
-      color: var(--muted);
+      background: #f3f3f3;
+      color: #0a0a0a;
     }
     .btn-ghost:hover {
-      background: rgba(255,255,255,0.04);
-      color: var(--text);
+      background: #0a0a0a;
+      color: #ffffff;
     }
     .btn-danger {
-      background: rgba(239, 68, 68, 0.15);
-      color: #fca5a5;
+      background: #f3f3f3;
+      color: #0a0a0a;
     }
     .btn-danger:hover {
-      background: rgba(239, 68, 68, 0.25);
-      color: #fee2e2;
+      background: #b91c1c;
+      color: #ffffff;
+      border-color: #b91c1c;
+    }
+    .btn-delete-event:hover,
+    .btn-delete-scanner:hover,
+    .btn-delete-site-user:hover,
+    .btn-delete-attendee:hover,
+    .promo-remove:hover,
+    .link-remove:hover {
+      background: #b91c1c !important;
+      color: #ffffff !important;
+      border-color: #b91c1c !important;
+    }
+    .btn:disabled,
+    .btn[disabled] {
+      color: #0a0a0a !important;
     }
 
     /* Events grid (user-style cards) */
@@ -622,7 +645,7 @@
     }
     .btn-resend-attendee:hover {
       background: var(--accent);
-      color: white;
+      color: #0a0a0a;
     }
     .btn-resend-attendee:disabled {
       opacity: 0.5;
@@ -711,13 +734,13 @@
       overflow-y: auto;
     }
     .ev-user-preview {
-      --pv-bg: #0b0b0b;
-      --pv-panel: #1a1a1a;
-      --pv-border: #2a2a2a;
-      --pv-text: #ffffff;
-      --pv-muted: #888888;
-      --pv-accent: #0066ff;
-      --pv-cta: #0066ff;
+      --pv-bg: #0a0a0a;
+      --pv-panel: #141414;
+      --pv-border: rgba(255, 255, 255, 0.1);
+      --pv-text: #f5f3ef;
+      --pv-muted: #9b968f;
+      --pv-accent: #ebe8e2;
+      --pv-cta: #f2efe9;
       background: var(--pv-bg);
       color: var(--pv-text);
       border-radius: 16px;
@@ -820,12 +843,14 @@
       border-collapse: collapse;
       font-size: 0.88rem;
       margin-top: 0.35rem;
+      table-layout: fixed;
     }
     .ticket-edit-table th,
     .ticket-edit-table td {
       border: 1px solid var(--border);
       padding: 6px 8px;
       text-align: left;
+      vertical-align: top;
     }
     .ticket-edit-table th { color: var(--muted); font-weight: 600; }
     .ticket-edit-table input[type="text"],
@@ -848,6 +873,39 @@
       accent-color: var(--accent);
     }
     .ticket-edit-table input.wide { max-width: none; }
+    .ticket-edit-table th:nth-child(1), .ticket-edit-table td:nth-child(1) { width: 30%; }
+    .ticket-edit-table th:nth-child(2), .ticket-edit-table td:nth-child(2) { width: 24%; }
+    .ticket-edit-table th:nth-child(3), .ticket-edit-table td:nth-child(3) { width: 20%; }
+    .ticket-edit-table th:nth-child(4), .ticket-edit-table td:nth-child(4) { width: 10%; }
+    .ticket-edit-table th:nth-child(5), .ticket-edit-table td:nth-child(5) { width: 16%; text-align: center; }
+    .ticket-edit-table input.t-name {
+      max-width: none;
+      min-width: 0;
+    }
+    .ticket-edit-table input.t-price {
+      max-width: none;
+      min-height: 44px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .ticket-edit-table .t-remove.t-remove-icon {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 12px;
+    }
+    .ticket-edit-table .t-remove.t-remove-icon svg {
+      width: 1.15rem;
+      height: 1.15rem;
+      display: block;
+    }
+    .ticket-edit-table .t-remove.t-remove-icon:hover {
+      background: #b91c1c !important;
+      color: #ffffff !important;
+      border-color: #b91c1c !important;
+    }
     .admin-meta-details {
       margin-bottom: 1rem;
       border-radius: 12px;
@@ -862,8 +920,8 @@
     }
     .admin-event-guide {
       border-radius: 12px;
-      border: 1px solid rgba(0, 102, 255, 0.28);
-      background: rgba(0, 102, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.05);
       padding: 0.85rem 1rem;
       margin-bottom: 1rem;
       font-size: 0.82rem;
@@ -1089,7 +1147,7 @@
         <input type="hidden" id="eventId">
         <div class="admin-event-guide">
           <strong>Tickets &amp; gallery</strong> (middle of this form) control <strong>what people pay</strong> and <strong>extra photos</strong> on the event page.
-          <strong>Schedule &amp; caps</strong> (last section) control the <strong>event date/time</strong>, <strong>URL slug</strong>, a <strong>fallback price</strong>, and the <strong>total registration limit</strong> for the whole event—separate from per-category caps in the ticket table.
+          <strong>Schedule</strong> (last section) controls the <strong>event date/time</strong>, <strong>URL slug</strong>, and a <strong>fallback price</strong>. Capacity is managed only in the ticket categories table.
         </div>
 
         <div class="admin-event-section">
@@ -1114,6 +1172,7 @@
           <input type="text" id="eventName" class="preview-title" required placeholder="Event title">
           <div class="preview-sub">Venue</div>
           <input type="text" id="eventVenue" class="preview-title" style="font-size:1rem;font-weight:600;" placeholder="Venue name">
+          <button type="button" class="btn btn-ghost" id="btnClearVenue" style="margin-top:0.5rem;padding:6px 10px;">Clear venue</button>
           <label for="eventDescription" class="small" style="display:block;margin-top:0.65rem;color:var(--pv-muted);">Description</label>
           <textarea id="eventDescription" class="desc-preview" placeholder="Full description on the event page."></textarea>
           <div class="chip-row">
@@ -1142,7 +1201,7 @@
 
         <div class="admin-event-section">
           <h3>Ticket categories</h3>
-          <p class="section-hint">Pricing tiers shown on the booking page. <strong>Cap</strong> here limits seats <em>per category</em>. The <strong>total registrations cap</strong> in the schedule section limits the whole event.</p>
+          <p class="section-hint">Pricing tiers shown on the booking page. <strong>Cap</strong> here limits seats per category.</p>
           <div class="field" style="margin-bottom:0;">
           <table class="ticket-edit-table">
             <thead>
@@ -1188,6 +1247,7 @@
             <input type="text" id="eventVenueMapUrl" placeholder="URL or upload below">
             <input type="file" id="eventVenueMapFile" accept="image/*" style="margin-top:0.5rem;">
             <img id="venueMapPreview" class="venue-map-preview" alt="Venue layout preview">
+            <button type="button" class="btn btn-ghost" id="btnResetLocationMaps" style="margin-top:0.6rem;padding:6px 10px;">Reset location &amp; maps</button>
           </div>
         </div>
 
@@ -1204,9 +1264,9 @@
           </div>
         </div>
 
-        <details class="admin-meta-details" open>
-          <summary>URL slug, schedule &amp; event-wide cap</summary>
-          <p class="small" style="color:var(--muted);margin:0.5rem 0 0.75rem;line-height:1.45;">Use this for the public link slug, when the event runs, default pricing if needed, and a <strong>total</strong> registration limit across all categories.</p>
+        <div class="admin-event-section">
+          <h3>Schedule &amp; ticket starts from</h3>
+          <p class="section-hint">Set event link slug, date/time, and the base ticket price shown to users.</p>
           <div class="field" style="margin-top:0;">
             <label for="eventSlug">Slug (URL id – optional)</label>
             <input type="text" id="eventSlug" placeholder="ramadan-palace">
@@ -1219,16 +1279,12 @@
             <label for="eventTime">Time</label>
             <input type="time" id="eventTime">
           </div>
-          <div class="field">
-            <label for="eventPrice">Fallback price (EGP)</label>
+          <div class="field" style="margin-bottom:0;">
+            <label for="eventPrice">Ticket starts from (EGP)</label>
             <input type="number" id="eventPrice" min="0" step="0.01" placeholder="Used if no categories">
             <p class="small" style="color:var(--muted);margin-top:0.25rem;">Ticket categories above override this on the booking page.</p>
           </div>
-          <div class="field">
-            <label for="eventAvailableTickets">Total registrations cap (whole event)</label>
-            <input type="number" id="eventAvailableTickets" min="0" placeholder="Unlimited if empty">
-          </div>
-        </details>
+        </div>
 
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" id="btnCancelEdit" style="display:none;">Cancel edit</button>
@@ -1681,6 +1737,8 @@
       var fVenueMapUrl = document.getElementById('eventVenueMapUrl');
       var fVenueMapFile = document.getElementById('eventVenueMapFile');
       var venueMapPreview = document.getElementById('venueMapPreview');
+      var btnClearVenue = document.getElementById('btnClearVenue');
+      var btnResetLocationMaps = document.getElementById('btnResetLocationMaps');
       var fRulesTerms = document.getElementById('eventRulesTerms');
       var fRulesMax = document.getElementById('eventRulesMaxTickets');
       var fPublished = document.getElementById('eventPublished');
@@ -1824,13 +1882,19 @@
         var price = row.price != null ? row.price : '';
         var cap = row.available != null && row.available !== '' ? row.available : '';
         var so = row.soldOut ? ' checked' : '';
+        var booked = row.booked != null ? Math.max(0, Number(row.booked) || 0) : 0;
+        var remaining = row.remaining != null && row.remaining !== '' ? Math.max(0, Number(row.remaining) || 0) : null;
+        var usageText = 'Booked: ' + booked + ' · Remaining: ' + (remaining != null ? remaining : '∞');
         return (
           '<tr data-tid="' + escapeAttrib(id) + '">' +
             '<td><input type="text" class="wide t-name" value="' + escapeAttrib(name) + '" placeholder="VIP"></td>' +
             '<td><input type="number" class="t-price" min="0" step="0.01" value="' + escapeAttrib(price) + '"></td>' +
-            '<td><input type="number" class="t-cap" min="0" step="1" placeholder="∞" value="' + escapeAttrib(cap) + '"></td>' +
+            '<td>' +
+              '<input type="number" class="t-cap" min="0" step="1" placeholder="∞" value="' + escapeAttrib(cap) + '">' +
+              '<div class="small" style="margin-top:0.35rem;color:var(--muted);">' + escapeAttrib(usageText) + '</div>' +
+            '</td>' +
             '<td style="text-align:center;"><input type="checkbox" class="t-sold"' + so + '></td>' +
-            '<td><button type="button" class="btn btn-ghost t-remove" style="padding:4px 8px;">Remove</button></td>' +
+            '<td><button type="button" class="btn btn-ghost t-remove t-remove-icon" title="Remove category" aria-label="Remove category">' + ICON_TRASH_SVG + '</button></td>' +
           '</tr>'
         );
       }
@@ -2464,7 +2528,6 @@
           if (fImageDetail) fImageDetail.value = '';
           fDescription.value = '';
           if (fPrice) fPrice.value = '';
-          if (fAvailableTickets) fAvailableTickets.value = '';
           galleryItems = [];
           if (fGalleryPaste) fGalleryPaste.value = '';
           if (galleryListAdmin) galleryListAdmin.innerHTML = '';
@@ -2498,7 +2561,6 @@
           if (fImageDetail) fImageDetail.value = unifiedImg;
           fDescription.value = event.description || '';
           if (fPrice) fPrice.value = event.price != null ? String(event.price) : '';
-          if (fAvailableTickets) fAvailableTickets.value = event.available_tickets != null ? String(event.available_tickets) : '';
           galleryItems = Array.isArray(event.gallery) ? event.gallery.slice() : [];
           if (fGalleryPaste) fGalleryPaste.value = '';
           var loc = event.location && typeof event.location === 'object' ? event.location : null;
@@ -2590,6 +2652,14 @@
           venueMapPreview.removeAttribute('src');
           venueMapPreview.style.display = 'none';
         }
+      }
+
+      function resetLocationMapFields() {
+        if (fLocAddr) fLocAddr.value = '';
+        if (fMapEmbed) fMapEmbed.value = '';
+        if (fVenueMapUrl) fVenueMapUrl.value = '';
+        if (fVenueMapFile) fVenueMapFile.value = '';
+        syncVenueMapPreview();
       }
 
       function renderList() {
@@ -3092,7 +3162,6 @@
           image_detail: eventImg,
           description: fDescription.value.trim() || null,
           price: fPrice && fPrice.value.trim() ? fPrice.value.trim() : primaryPrice,
-          available_tickets: fAvailableTickets && fAvailableTickets.value.trim() ? fAvailableTickets.value.trim() : null,
           tickets: tickets,
           gallery: gallery,
           location: {
@@ -3270,6 +3339,18 @@
       wireImageFileInput(fImageCardFile, fImageCard);
       wireImageFileInput(fVenueMapFile, fVenueMapUrl, syncVenueMapPreview);
       if (fVenueMapUrl) fVenueMapUrl.addEventListener('input', syncVenueMapPreview);
+      if (btnClearVenue) {
+        btnClearVenue.addEventListener('click', function () {
+          if (fVenue) fVenue.value = '';
+          fVenue.focus();
+        });
+      }
+      if (btnResetLocationMaps) {
+        btnResetLocationMaps.addEventListener('click', function () {
+          resetLocationMapFields();
+          if (fLocAddr) fLocAddr.focus();
+        });
+      }
       if (galleryFilesInput) {
         galleryFilesInput.addEventListener('change', function () {
           var files = galleryFilesInput.files;

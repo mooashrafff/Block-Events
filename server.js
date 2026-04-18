@@ -27,6 +27,8 @@ async function getUniqueShortTicketId() {
 const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
 const { createClient } = require('@supabase/supabase-js');
+const compression = require('compression');
+const sharp = require('sharp');
 
 const fs = require('fs');
 const multer = require('multer');
@@ -177,6 +179,11 @@ async function markAttendedInSupabase(ticketId, scannerName, scannerPhone) {
 }
 
 // Admin event saves embed base64 data URLs (card + detail + gallery); raise limit so saves do not 413.
+app.use(
+  compression({
+    threshold: 1024,
+  })
+);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
@@ -462,6 +469,31 @@ app.get('/scan/:scannerId', (req, res) => {
 const EVENTS_FILE_PATH = path.join(__dirname, 'public', 'events.json');
 let eventsJsonCache = { mtimeMs: null, data: null };
 let eventThumbCache = new Map(); // id -> { value: string, expiresAt: number }
+let publicEventsCache = new Map(); // key(lite/full) -> { value, expiresAt }
+let eventByIdCache = new Map(); // id/slug -> { value, expiresAt }
+const PUBLIC_EVENTS_TTL_MS = 20000;
+const EVENT_BY_ID_TTL_MS = 15000;
+
+function getTtlCache(map, key) {
+  const k = String(key || '');
+  if (!k) return null;
+  const hit = map.get(k);
+  if (!hit) return null;
+  if (Date.now() > hit.expiresAt) {
+    map.delete(k);
+    return null;
+  }
+  return hit.value;
+}
+
+function setTtlCache(map, key, value, ttlMs) {
+  const k = String(key || '');
+  if (!k) return;
+  map.set(k, {
+    value,
+    expiresAt: Date.now() + (Number(ttlMs) > 0 ? Number(ttlMs) : 10000),
+  });
+}
 
 function getCachedThumb(id) {
   const key = String(id || '');
@@ -486,6 +518,8 @@ function setCachedThumb(id, value, ttlMs) {
 function invalidateEventsJsonCache() {
   eventsJsonCache = { mtimeMs: null, data: null };
   eventThumbCache.clear();
+  publicEventsCache.clear();
+  eventByIdCache.clear();
 }
 
 // Events from local JSON (fallback if Supabase/events table not used)
@@ -795,6 +829,54 @@ function deriveEventImagesFromAdminBody(body) {
   return { image, image_card, image_detail };
 }
 
+function isDataImageUrl(value) {
+  return /^data:image\/[a-zA-Z0-9.+-]+;base64,/i.test(String(value || '').trim());
+}
+
+async function optimizeImageDataUrl(dataUrl, options = {}) {
+  const raw = String(dataUrl || '').trim();
+  if (!isDataImageUrl(raw)) return raw || null;
+  const m = raw.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/i);
+  if (!m) return raw;
+  const mime = String(m[1] || '').toLowerCase();
+  // Keep vector and animated-safe formats untouched.
+  if (mime === 'image/svg+xml' || mime === 'image/gif') return raw;
+  try {
+    const input = Buffer.from(m[2], 'base64');
+    if (!input || !input.length) return raw;
+    const maxWidth = Math.max(480, Number(options.maxWidth) || 1600);
+    const quality = Math.max(55, Math.min(88, Number(options.quality) || 78));
+    const transformed = await sharp(input, { failOn: 'none' })
+      .rotate()
+      .resize({
+        width: maxWidth,
+        withoutEnlargement: true,
+        fit: 'inside',
+      })
+      .webp({ quality, effort: 4 })
+      .toBuffer();
+    if (!transformed || !transformed.length) return raw;
+    // Keep original if optimization does not help payload size.
+    if (transformed.length >= input.length) return raw;
+    return `data:image/webp;base64,${transformed.toString('base64')}`;
+  } catch (e) {
+    return raw;
+  }
+}
+
+async function deriveEventImagesFromAdminBodyAsync(body) {
+  const normalized = deriveEventImagesFromAdminBody(body);
+  const [card, detail, legacy] = await Promise.all([
+    optimizeImageDataUrl(normalized.image_card, { maxWidth: 1200, quality: 76 }),
+    optimizeImageDataUrl(normalized.image_detail, { maxWidth: 1800, quality: 80 }),
+    optimizeImageDataUrl(normalized.image, { maxWidth: 1600, quality: 78 }),
+  ]);
+  const image_card = card || normalized.image_card || null;
+  const image_detail = detail || normalized.image_detail || null;
+  const image = detail || legacy || image_detail || image_card || null;
+  return { image, image_card, image_detail };
+}
+
 // Map Supabase events rows into the public event shape
 function mapEventRowToPublic(row) {
   if (!row) return null;
@@ -929,6 +1011,9 @@ async function getRawEventRowForImages(id) {
 // Prefer Supabase events table; fall back to JSON file
 async function listEventsForPublic(opts = {}) {
   const lite = opts.lite === true;
+  const cacheKey = lite ? 'lite' : 'full';
+  const cached = getTtlCache(publicEventsCache, cacheKey);
+  if (cached) return cached;
   if (supabase) {
     try {
       const columns = lite
@@ -941,9 +1026,11 @@ async function listEventsForPublic(opts = {}) {
         .order('created_at', { ascending: false });
       if (!error && data && data.length) {
         const mapper = lite ? mapEventRowToPublicLite : mapEventRowToPublic;
-        return data
+        const out = data
           .filter((row) => parseEventExtra(row.extra).published !== false)
           .map(mapper);
+        setTtlCache(publicEventsCache, cacheKey, out, PUBLIC_EVENTS_TTL_MS);
+        return out;
       }
       if (error) {
         console.error('Supabase events error:', error.message);
@@ -954,11 +1041,16 @@ async function listEventsForPublic(opts = {}) {
   }
   const fileList = getEventsFromFile() || [];
   const mapper = lite ? mapFileEventToPublicLite : mapFileEventToPublic;
-  return fileList.map(mapper).filter((ev) => ev && ev.published !== false);
+  const out = fileList.map(mapper).filter((ev) => ev && ev.published !== false);
+  setTtlCache(publicEventsCache, cacheKey, out, PUBLIC_EVENTS_TTL_MS);
+  return out;
 }
 
 async function getEventById(id) {
   if (!id) return null;
+  const lookupKey = String(id).trim();
+  const cached = getTtlCache(eventByIdCache, lookupKey);
+  if (cached) return cached;
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -968,7 +1060,11 @@ async function getEventById(id) {
         .limit(1)
         .maybeSingle();
       if (!error && data) {
-        return mapEventRowToPublic(data);
+        const out = mapEventRowToPublic(data);
+        setTtlCache(eventByIdCache, lookupKey, out, EVENT_BY_ID_TTL_MS);
+        if (out && out.id) setTtlCache(eventByIdCache, String(out.id), out, EVENT_BY_ID_TTL_MS);
+        if (out && out.slug) setTtlCache(eventByIdCache, String(out.slug), out, EVENT_BY_ID_TTL_MS);
+        return out;
       }
       if (error && error.code !== 'PGRST116') {
         console.error('Supabase getEventById error:', error.message);
@@ -987,7 +1083,13 @@ async function getEventById(id) {
           .ilike('slug', v)
           .limit(1)
           .maybeSingle();
-        if (!error2 && data2) return mapEventRowToPublic(data2);
+        if (!error2 && data2) {
+          const out2 = mapEventRowToPublic(data2);
+          setTtlCache(eventByIdCache, lookupKey, out2, EVENT_BY_ID_TTL_MS);
+          if (out2 && out2.id) setTtlCache(eventByIdCache, String(out2.id), out2, EVENT_BY_ID_TTL_MS);
+          if (out2 && out2.slug) setTtlCache(eventByIdCache, String(out2.slug), out2, EVENT_BY_ID_TTL_MS);
+          return out2;
+        }
       }
     } catch (e) {
       console.error('Supabase getEventById exception:', e.message);
@@ -995,7 +1097,13 @@ async function getEventById(id) {
   }
   const fileList = getEventsFromFile() || [];
   const fileHit = fileList.find((e) => e && (e.id === id || e.slug === id));
-  return mapFileEventToPublic(fileHit) || null;
+  const out = mapFileEventToPublic(fileHit) || null;
+  if (out) {
+    setTtlCache(eventByIdCache, lookupKey, out, EVENT_BY_ID_TTL_MS);
+    if (out.id) setTtlCache(eventByIdCache, String(out.id), out, EVENT_BY_ID_TTL_MS);
+    if (out.slug) setTtlCache(eventByIdCache, String(out.slug), out, EVENT_BY_ID_TTL_MS);
+  }
+  return out;
 }
 
 // Resolve event to its canonical UUID row (used for cart/bookings FK columns)
@@ -1904,23 +2012,55 @@ app.get('/api/booking-event/:id', async (req, res) => {
       ? base.location
       : { address: base.venue || '', mapEmbedUrl: null, venueMapUrl: null };
 
+  // Show live remaining seats in the booking popup:
+  // remaining = configured category cap - already booked quantity.
+  // We query by canonical id and requested id to cover id/slug storage differences.
+  let bookedByKey = new Map();
+  try {
+    const primary = await getBookedCountsForEvent(base.id || id);
+    bookedByKey = primary && primary.byKey instanceof Map ? primary.byKey : new Map();
+    if (base.id && id && base.id !== id) {
+      const secondary = await getBookedCountsForEvent(id);
+      if (secondary && secondary.byKey instanceof Map) {
+        secondary.byKey.forEach((qty, key) => {
+          bookedByKey.set(key, (bookedByKey.get(key) || 0) + (Number(qty) || 0));
+        });
+      }
+    }
+  } catch (e) {
+    console.warn('Could not load live booked counts for booking-event:', e && e.message ? e.message : e);
+  }
+
+  res.set('Cache-Control', 'public, max-age=10');
   res.json({
     ...base,
     facilities,
     location,
-    tickets: tickets.map((t) => ({
-      id: t.ticketId || t.id,
-      name: t.ticketName || t.name,
-      category: t.ticketCategory || t.category || null,
-      price: Number(t.price || 0),
-      soldOut: Boolean(t.soldOut),
-      available:
+    tickets: tickets.map((t) => {
+      const ticketId = t.ticketId || t.id;
+      const ticketCategory = t.ticketCategory || t.category || null;
+      const ticketName = t.ticketName || t.name;
+      const key =
+        normalizeTicketKey(ticketId) ||
+        normalizeTicketKey(ticketCategory) ||
+        normalizeTicketKey(ticketName);
+      const rawCap =
         t.available != null && t.available !== ''
           ? Math.max(0, parseInt(t.available, 10))
           : t.available_tickets != null && t.available_tickets !== ''
           ? Math.max(0, parseInt(t.available_tickets, 10))
-          : null,
-    })),
+          : null;
+      const used = key ? bookedByKey.get(key) || 0 : 0;
+      const remaining = rawCap != null ? Math.max(0, rawCap - used) : null;
+      return {
+        id: ticketId,
+        name: ticketName,
+        category: ticketCategory,
+        price: Number(t.price || 0),
+        soldOut: Boolean(t.soldOut) || (remaining != null && remaining <= 0),
+        available: remaining,
+      };
+    }),
     rules,
   });
 });
@@ -2054,6 +2194,10 @@ app.get('/api/auth/me', async (req, res) => {
         paymentStatus === 'Paid' ? attendeeTicketsByEventId.get(b.event_id) || [] : [];
       const ticketId = tickets.length ? tickets[0].ticketId : null;
       const ticketIds = tickets.map((t) => t.ticketId);
+      const selectionCount = Array.isArray(b.ticket_selections)
+        ? b.ticket_selections.reduce((sum, s) => sum + Math.max(0, Number(s && s.quantity ? s.quantity : 0) || 0), 0)
+        : 0;
+      const ticketsCount = Math.max(selectionCount, ticketIds.length);
       const instapayPendingRow = b.payment_method === 'instapay' && b.status === 'pending_payment';
 
       return {
@@ -2066,6 +2210,7 @@ app.get('/api/auth/me', async (req, res) => {
         instapaySenderPhone: b.instapay_sender_phone || null,
         ticketId,
         ticketIds,
+        ticketsCount,
         pricePaid: Number(b.price_paid || 0),
         createdAt: b.created_at,
         event,
@@ -2733,8 +2878,163 @@ function isBookingsUniqueViolation(error) {
   );
 }
 
+function normalizeTicketKey(value) {
+  return String(value == null ? '' : value).trim().toLowerCase();
+}
+
+function quantityFromSelection(sel) {
+  return Math.max(0, parseInt(sel && (sel.quantity ?? sel.qty ?? 0), 10) || 0);
+}
+
+function selectionKey(sel) {
+  const byId = normalizeTicketKey(sel && (sel.ticketId ?? sel.id));
+  if (byId && byId !== 'default') return byId;
+  const byCategory = normalizeTicketKey(sel && (sel.ticketCategory ?? sel.category));
+  if (byCategory) return byCategory;
+  return normalizeTicketKey(sel && (sel.ticketName ?? sel.name));
+}
+
+function eventTicketCapacity(event) {
+  const byKey = new Map();
+  const tickets = Array.isArray(event && event.tickets) ? event.tickets : [];
+  tickets.forEach((t, idx) => {
+    const key =
+      normalizeTicketKey(t && (t.ticketId ?? t.id)) ||
+      normalizeTicketKey(t && (t.ticketCategory ?? t.category)) ||
+      normalizeTicketKey(t && (t.ticketName ?? t.name)) ||
+      `cat_${idx + 1}`;
+    const capRaw = t && t.available != null ? t.available : t && t.available_tickets != null ? t.available_tickets : null;
+    const capNum = capRaw != null && capRaw !== '' ? Math.max(0, parseInt(capRaw, 10) || 0) : null;
+    byKey.set(key, {
+      name: String((t && (t.ticketName || t.name || t.ticketCategory || t.category)) || 'Ticket'),
+      cap: capNum,
+      soldOut: Boolean(t && t.soldOut),
+    });
+  });
+  const totalRaw = event && event.available_tickets != null ? event.available_tickets : null;
+  const totalCap = totalRaw != null && totalRaw !== '' ? Math.max(0, parseInt(totalRaw, 10) || 0) : null;
+  return { byKey, totalCap };
+}
+
+async function getBookedCountsForEvent(eventId) {
+  const result = { total: 0, byKey: new Map() };
+  if (!supabase || !eventId) return result;
+  const canonicalEvent = await getEventById(eventId);
+  const eventAliases = Array.from(
+    new Set(
+      [eventId, canonicalEvent && canonicalEvent.id, canonicalEvent && canonicalEvent.slug]
+        .map((v) => String(v || '').trim())
+        .filter(Boolean)
+    )
+  );
+
+  // 1) Reservation counts from bookings (includes pending checkout reservations)
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('status, ticket_selections')
+    .in('event_id', eventAliases)
+    .in('status', ['paid', 'confirmed', 'pending_payment', 'pending', 'processing']);
+
+  if (error) throw error;
+
+  const fromBookings = { total: 0, byKey: new Map() };
+  (data || []).forEach((b) => {
+    const sels = Array.isArray(b && b.ticket_selections) ? b.ticket_selections : [];
+    sels.forEach((s) => {
+      const qty = quantityFromSelection(s);
+      if (!qty) return;
+      fromBookings.total += qty;
+      const key = selectionKey(s);
+      if (!key) return;
+      fromBookings.byKey.set(key, (fromBookings.byKey.get(key) || 0) + qty);
+    });
+  });
+
+  // 2) Issued-ticket counts from attendees (covers legacy rows where booking_selections may be missing)
+  const fromAttendees = { total: 0, byKey: new Map() };
+  const { data: attendeeRows, error: attendeeErr } = await supabase
+    .from('attendees')
+    .select('ticket_id, ticket_category')
+    .in('event_id', eventAliases);
+  if (attendeeErr) throw attendeeErr;
+  (attendeeRows || []).forEach((r) => {
+    const key =
+      normalizeTicketKey(r && r.ticket_category) ||
+      normalizeTicketKey(r && r.ticket_id);
+    if (!key) return;
+    fromAttendees.total += 1;
+    fromAttendees.byKey.set(key, (fromAttendees.byKey.get(key) || 0) + 1);
+  });
+
+  // Merge without double-counting: take the higher count per bucket.
+  // (Bookings and attendees can represent the same sale in different shapes.)
+  const mergedKeys = new Set([
+    ...Array.from(fromBookings.byKey.keys()),
+    ...Array.from(fromAttendees.byKey.keys()),
+  ]);
+  mergedKeys.forEach((key) => {
+    result.byKey.set(
+      key,
+      Math.max(fromBookings.byKey.get(key) || 0, fromAttendees.byKey.get(key) || 0)
+    );
+  });
+  result.total = Math.max(fromBookings.total, fromAttendees.total);
+
+  return result;
+}
+
+function aggregateRequestedSelections(item) {
+  const out = { total: 0, byKey: new Map() };
+  const sels = Array.isArray(item && item.ticketSelections) ? item.ticketSelections : [];
+  sels.forEach((s) => {
+    const qty = quantityFromSelection(s);
+    if (!qty) return;
+    out.total += qty;
+    const key = selectionKey(s);
+    if (!key) return;
+    out.byKey.set(key, (out.byKey.get(key) || 0) + qty);
+  });
+  return out;
+}
+
+async function validateCartTicketCaps(cart) {
+  const items = Array.isArray(cart && cart.items) ? cart.items : [];
+  for (const item of items) {
+    const eventId = item && item.eventId;
+    if (!eventId) continue;
+    const event = await getEventById(eventId);
+    if (!event) return `Event not found for checkout (${eventId}).`;
+
+    const capacity = eventTicketCapacity(event);
+    const booked = await getBookedCountsForEvent(eventId);
+    const requested = aggregateRequestedSelections(item);
+
+    for (const [key, reqQty] of requested.byKey.entries()) {
+      const cap = capacity.byKey.get(key);
+      if (cap && cap.soldOut) {
+        return `Ticket category "${cap.name}" is sold out for ${event.name}.`;
+      }
+      if (cap && cap.cap != null) {
+        const used = booked.byKey.get(key) || 0;
+        if (used + reqQty > cap.cap) {
+          const remaining = Math.max(0, cap.cap - used);
+          return `Not enough seats in "${cap.name}" for ${event.name}. Remaining: ${remaining}.`;
+        }
+      }
+    }
+
+    if (capacity.totalCap != null && booked.total + requested.total > capacity.totalCap) {
+      const remainingTotal = Math.max(0, capacity.totalCap - booked.total);
+      return `Not enough total seats for ${event.name}. Remaining: ${remainingTotal}.`;
+    }
+  }
+  return null;
+}
+
 async function confirmBookingsFromCart(userId, paymentMethod, pricePaidByEventId) {
   const cart = await getCartForUser(userId);
+  const capError = await validateCartTicketCaps(cart);
+  if (capError) return { error: capError };
   const rows = cart.items.map((i) => ({
     user_id: userId,
     event_id: i.eventId,
@@ -2763,6 +3063,8 @@ app.post('/api/checkout/start', async (req, res) => {
 
   const cart = await getCartForUser(user.id);
   if (cart.items.length === 0) return res.status(400).json({ error: 'Cart is empty.' });
+  const capError = await validateCartTicketCaps(cart);
+  if (capError) return res.status(400).json({ error: capError });
 
   // Free checkout: skip payment
   if (cart.total <= 0) {
@@ -2808,6 +3110,8 @@ app.post('/api/checkout/confirm', async (req, res) => {
 
   const cart = await getCartForUser(user.id);
   if (!cart.items.length) return res.status(400).json({ error: 'Cart is empty.' });
+  const capError = await validateCartTicketCaps(cart);
+  if (capError) return res.status(400).json({ error: capError });
 
   // Free checkout
   if (cart.total <= 0) {
@@ -3884,7 +4188,36 @@ app.get('/api/admin/events', async (req, res) => {
       console.error('Supabase admin list events error:', error.message);
       return res.json(loadAdminEventsFromFile());
     }
-    res.json((data || []).map((row) => mapSupabaseEventRowToAdmin(row)));
+    const adminEvents = (data || []).map((row) => mapSupabaseEventRowToAdmin(row));
+    const withUsage = await Promise.all(
+      adminEvents.map(async (ev) => {
+        try {
+          const booked = await getBookedCountsForEvent(ev.id);
+          const tickets = Array.isArray(ev.tickets) ? ev.tickets : [];
+          const enrichedTickets = tickets.map((t, idx) => {
+            const key =
+              normalizeTicketKey(t && (t.ticketId ?? t.id)) ||
+              normalizeTicketKey(t && (t.ticketCategory ?? t.category)) ||
+              normalizeTicketKey(t && (t.ticketName ?? t.name)) ||
+              `cat_${idx + 1}`;
+            const capRaw =
+              t && t.available != null ? t.available : t && t.available_tickets != null ? t.available_tickets : null;
+            const cap = capRaw != null && capRaw !== '' ? Math.max(0, parseInt(capRaw, 10) || 0) : null;
+            const used = booked && booked.byKey instanceof Map ? booked.byKey.get(key) || 0 : 0;
+            return {
+              ...t,
+              booked: used,
+              remaining: cap != null ? Math.max(0, cap - used) : null,
+            };
+          });
+          return { ...ev, tickets: enrichedTickets };
+        } catch (usageErr) {
+          console.warn('admin events usage calc failed:', usageErr && usageErr.message ? usageErr.message : usageErr);
+          return ev;
+        }
+      })
+    );
+    res.json(withUsage);
   } catch (e) {
     console.error('Supabase admin list events exception:', e.message);
     res.json(loadAdminEventsFromFile());
@@ -3899,7 +4232,7 @@ app.post('/api/admin/events', async (req, res) => {
   const normalizedPrice = price != null && price !== '' ? Number(price) : 0;
   const normalizedAvailable = available_tickets != null && available_tickets !== '' ? parseInt(available_tickets, 10) : null;
   const extraPayload = buildExtraFromAdminBody(req.body);
-  const imgs = deriveEventImagesFromAdminBody(req.body);
+  const imgs = await deriveEventImagesFromAdminBodyAsync(req.body);
   if (!supabase) {
     const events = getEventsFromFile();
     const newEvent = {
@@ -3967,6 +4300,7 @@ app.post('/api/admin/events', async (req, res) => {
       setEventsToFile(events);
       return res.json({ id: newEvent.id, slug: newEvent.slug });
     }
+    invalidateEventsJsonCache();
     res.json(data);
   } catch (e) {
     console.error('Supabase admin create event exception:', e.message);
@@ -4002,7 +4336,7 @@ app.put('/api/admin/events/:id', async (req, res) => {
   const normalizedPrice = price != null && price !== '' ? Number(price) : 0;
   const normalizedAvailable = available_tickets != null && available_tickets !== '' ? parseInt(available_tickets, 10) : null;
   const extraPayload = buildExtraFromAdminBody(req.body);
-  const imgs = deriveEventImagesFromAdminBody(req.body);
+  const imgs = await deriveEventImagesFromAdminBodyAsync(req.body);
   if (!supabase) {
     const events = getEventsFromFile();
     const idx = events.findIndex((e) => e && e.id === id);
@@ -4073,6 +4407,7 @@ app.put('/api/admin/events/:id', async (req, res) => {
       setEventsToFile(events);
       return res.json({ id: events[idx].id, slug: events[idx].slug || null });
     }
+    invalidateEventsJsonCache();
     res.json(data);
   } catch (e) {
     console.error('Supabase admin update event exception:', e.message);
@@ -4120,6 +4455,7 @@ app.delete('/api/admin/events/:id', async (req, res) => {
       setEventsToFile(next);
       return res.json({ success: true });
     }
+    invalidateEventsJsonCache();
     res.json({ success: true });
   } catch (e) {
     console.error('Supabase admin delete event exception:', e.message);
@@ -4176,6 +4512,7 @@ app.post('/api/admin/events/reorder', async (req, res) => {
       setEventsToFile(next);
       return res.json({ success: true });
     }
+    invalidateEventsJsonCache();
     res.json({ success: true });
   } catch (e) {
     console.error('Admin reorder exception:', e.message);
@@ -5358,6 +5695,24 @@ async function buildTicketGroupsForEmail(email, bookingRowsForUser) {
     return [];
   }
 
+  // Avoid N+1 event lookups by resolving each unique event once.
+  const eventIds = Array.from(
+    new Set(
+      (rows || [])
+        .map((r) => String((r && r.event_id) || '').trim())
+        .filter(Boolean)
+    )
+  );
+  const eventsById = new Map();
+  await Promise.all(
+    eventIds.map(async (eid) => {
+      const ev = await getEventById(eid);
+      if (!ev) return;
+      if (ev.id) eventsById.set(String(ev.id), ev);
+      if (ev.slug) eventsById.set(String(ev.slug), ev);
+    })
+  );
+
   const bookingByEventId = new Map();
   for (const b of bookingRowsForUser || []) {
     const eid = String(b.event_id || '');
@@ -5366,7 +5721,7 @@ async function buildTicketGroupsForEmail(email, bookingRowsForUser) {
 
   const list = [];
   for (const r of rows || []) {
-    const ev = r.event_id ? await getEventById(String(r.event_id)) : null;
+    const ev = r.event_id ? eventsById.get(String(r.event_id)) || null : null;
     const booking = r.event_id ? bookingByEventId.get(String(r.event_id)) : null;
     list.push({
       ticketId: r.ticket_id,
@@ -5626,7 +5981,21 @@ app.post('/api/resend-ticket', async (req, res) => {
   res.json({ success: true, message: 'Ticket sent to your email.' });
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(
+  express.static(path.join(__dirname, 'public'), {
+    maxAge: '7d',
+    etag: true,
+    setHeaders: (res, filePath) => {
+      if (/\.html?$/i.test(filePath)) {
+        res.setHeader('Cache-Control', 'no-cache');
+        return;
+      }
+      if (/\.(js|css|png|jpe?g|webp|svg|ico|woff2?|gif)$/i.test(filePath)) {
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+      }
+    },
+  })
+);
 
 // Ensure sheet has header (run once or add manually)
 async function ensureSheetHeaders() {

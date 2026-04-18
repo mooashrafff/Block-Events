@@ -372,11 +372,11 @@
         '</ul>';
 
       utils.appendChild(socialHost);
-      utils.appendChild(langWrap);
       if (account) {
         account.remove();
         utils.appendChild(account);
       }
+      utils.appendChild(langWrap);
       while (row.firstChild) row.removeChild(row.firstChild);
       if (logo) row.appendChild(logo);
       row.appendChild(utils);
@@ -564,6 +564,11 @@
     var signin = document.querySelector('.site-chrome-header__signin');
     var signout = document.getElementById('siteChromeSignOut');
     if (!signin && !signout) return;
+    try {
+      if (localStorage.getItem('block_home_signed_in') === '1') {
+        document.body.classList.add('has-session');
+      }
+    } catch (e) {}
 
     fetch('/api/auth/me', { credentials: 'same-origin' })
       .then(function (r) {
@@ -748,6 +753,8 @@
   var NAV_LOADER_TS_KEY = 'block_nav_loader_ts';
   var NAV_LOADER_MIN_MS = 2600;
   var navLoaderSafetyTimer = null;
+  var navTrackedRequests = 0;
+  var navLoaderWaitTimer = null;
 
   function normalizePathname(p) {
     var s = String(p || '');
@@ -808,6 +815,10 @@
       clearTimeout(navLoaderSafetyTimer);
       navLoaderSafetyTimer = null;
     }
+    if (navLoaderWaitTimer) {
+      clearTimeout(navLoaderWaitTimer);
+      navLoaderWaitTimer = null;
+    }
   }
 
   function showTicketLoader() {
@@ -819,7 +830,11 @@
     el.setAttribute('aria-hidden', 'false');
     document.body.classList.add('block-ticket-loader-open');
     if (navLoaderSafetyTimer) clearTimeout(navLoaderSafetyTimer);
-    navLoaderSafetyTimer = setTimeout(hideTicketLoader, 12000);
+    navLoaderSafetyTimer = setTimeout(hideTicketLoader, 30000);
+  }
+
+  function canHideNavLoaderNow() {
+    return document.readyState === 'complete' && navTrackedRequests <= 0;
   }
 
   function scheduleHideTicketLoaderAfterNav(startedAt) {
@@ -829,8 +844,14 @@
       var wait = Math.max(0, NAV_LOADER_MIN_MS - elapsed);
       setTimeout(hideTicketLoader, wait);
     }
-    if (document.readyState === 'complete') finish();
-    else window.addEventListener('load', finish, { once: true });
+    function check() {
+      if (canHideNavLoaderNow()) {
+        finish();
+        return;
+      }
+      navLoaderWaitTimer = setTimeout(check, 120);
+    }
+    check();
   }
 
   function beginNavLoaderFromClick() {
@@ -900,6 +921,108 @@
     );
   }
 
+  function bindHeaderScrollContrast() {
+    var ticking = false;
+    function apply() {
+      ticking = false;
+      var threshold = Math.max(140, Math.round(window.innerHeight * 0.18));
+      var onLight = (window.scrollY || window.pageYOffset || 0) > threshold;
+      document.body.classList.toggle('chrome-on-light', onLight);
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(apply);
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    apply();
+  }
+
+  function patchRequestTracking() {
+    if (window.__blockNavLoaderPatched) return;
+    window.__blockNavLoaderPatched = true;
+
+    if (typeof window.fetch === 'function') {
+      var originalFetch = window.fetch.bind(window);
+      var inflightGetApi = new Map();
+      var cacheablePrefixes = ['/api/events', '/api/event-thumbs', '/api/booking-event/'];
+      function shouldDedupeFetch(input, init) {
+        var method = String((init && init.method) || 'GET').toUpperCase();
+        if (method !== 'GET') return false;
+        var reqUrl = '';
+        try {
+          if (typeof input === 'string') reqUrl = input;
+          else if (input && typeof input.url === 'string') reqUrl = input.url;
+          else return false;
+          var u = new URL(reqUrl, window.location.href);
+          if (u.origin !== window.location.origin) return false;
+          return cacheablePrefixes.some(function (p) {
+            return u.pathname.indexOf(p) === 0;
+          });
+        } catch (e) {
+          return false;
+        }
+      }
+      function dedupeKey(input) {
+        try {
+          if (typeof input === 'string') return new URL(input, window.location.href).toString();
+          if (input && typeof input.url === 'string') return new URL(input.url, window.location.href).toString();
+        } catch (e) {}
+        return String(input || '');
+      }
+      window.fetch = function () {
+        navTrackedRequests++;
+        var args = arguments;
+        var firstArg = args[0];
+        var initArg = args[1] || null;
+        if (shouldDedupeFetch(firstArg, initArg)) {
+          var key = dedupeKey(firstArg);
+          var pending = inflightGetApi.get(key);
+          if (pending) {
+            return pending.then(function (resp) {
+              return resp.clone();
+            }).finally(function () {
+              navTrackedRequests = Math.max(0, navTrackedRequests - 1);
+            });
+          }
+          var baseReq = originalFetch.apply(null, args);
+          inflightGetApi.set(key, baseReq);
+          return baseReq.then(function (resp) {
+            return resp.clone();
+          }).finally(function () {
+            inflightGetApi.delete(key);
+            navTrackedRequests = Math.max(0, navTrackedRequests - 1);
+          });
+        }
+        return originalFetch.apply(null, args).finally(function () {
+          navTrackedRequests = Math.max(0, navTrackedRequests - 1);
+        });
+      };
+    }
+
+    if (window.XMLHttpRequest && window.XMLHttpRequest.prototype) {
+      var origSend = window.XMLHttpRequest.prototype.send;
+      window.XMLHttpRequest.prototype.send = function () {
+        var xhr = this;
+        navTrackedRequests++;
+        var done = false;
+        function onDone() {
+          if (done) return;
+          done = true;
+          navTrackedRequests = Math.max(0, navTrackedRequests - 1);
+          xhr.removeEventListener('loadend', onDone);
+          xhr.removeEventListener('error', onDone);
+          xhr.removeEventListener('abort', onDone);
+        }
+        xhr.addEventListener('loadend', onDone);
+        xhr.addEventListener('error', onDone);
+        xhr.addEventListener('abort', onDone);
+        return origSend.apply(this, arguments);
+      };
+    }
+  }
+
   window.addEventListener('pageshow', function (ev) {
     if (ev.persisted) hideTicketLoader();
   });
@@ -925,6 +1048,7 @@
   };
 
   document.addEventListener('DOMContentLoaded', function () {
+    patchRequestTracking();
     resumeNavLoaderIfPending();
     splitHeaderDom();
     injectLanguageSwitcher();
@@ -958,5 +1082,6 @@
       });
     bindSessionChrome();
     bindNavLoaderClicks();
+    bindHeaderScrollContrast();
   });
 })();

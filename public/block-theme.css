@@ -1,20 +1,296 @@
 /**
- * BLOCK brand tokens — primary dark + electric blue accent.
- * Link after fonts; before page-specific styles. Override per-page if needed.
+ * BLOCK — luxury monochrome (black → pearl) + editorial type.
+ * Reference feel: premium corporate / industrial clarity (e.g. rm-bmu style layout discipline).
+ * Load after font preconnect; before page-specific overrides.
  */
-:root {
-  --block-black: #0b0b0b;
-  --block-black-soft: #121212;
-  --block-card: #1a1a1a;
-  --block-border: #2a2a2a;
-  --block-text: #ffffff;
-  --block-muted: #888888;
-  --block-section-gray: #e5e5e5;
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Outfit:wght@400;500;600;700&display=swap');
 
-  --accent: #0066ff;
-  --accent-hover: #3385ff;
-  --accent-mid: #1a75ff;
-  --accent-purple: #7c3aed;
-  --accent-soft: rgba(0, 102, 255, 0.16);
-  --accent-glow: rgba(0, 102, 255, 0.35);
+:root {
+  /* Global background direction: black to white, reference-like */
+  --lux-body-stack: linear-gradient(
+    180deg,
+    #000000 0%,
+    #0f0f0f 22%,
+    #2b2b2b 44%,
+    #666666 64%,
+    #b7b7b7 82%,
+    #f2f2f2 100%
+  );
+
+  --block-black: #030303;
+  --block-black-soft: #0e0e0e;
+  --block-card: #141414;
+  --block-border: rgba(255, 255, 255, 0.1);
+  --block-text: #f5f3ef;
+  --block-muted: #9b968f;
+  --block-section-gray: #e8e6e1;
+
+  --accent: #ebe8e2;
+  --accent-hover: #ffffff;
+  --accent-mid: #cfc9bf;
+  --accent-purple: #c4b8a8;
+  --accent-soft: rgba(255, 255, 255, 0.09);
+  --accent-glow: rgba(255, 255, 255, 0.18);
+
+  /* Shared names used across HTML pages */
+  --page-bg: var(--lux-body-stack);
+  --bg-page: var(--lux-body-stack);
+  --panel: var(--block-card);
+  --card: var(--block-card);
+  --border: var(--block-border);
+  --text: var(--block-text);
+  --muted: var(--block-muted);
+  --header-bar: #050505;
+  --header-bar-end: #0e0e0e;
+  --header-end: #0e0e0e;
+  --cta: #f2efe9;
+  --cta-hover: #ffffff;
+  --cta-text-on-light: #0a0a0a;
+  --featured-gold: #e8e4dc;
+  --featured-bg: #0c0c0c;
+  --featured-panel: #111111;
+  --banner-bg: #0a0a0a;
+  --bg-panel: var(--block-card);
+  --shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+  --card-shadow: var(--shadow);
+  --event-pic-neon-ring: 1px;
+
+  /* Image frame: platinum shimmer (not electric blue) */
+  --lux-frame-glow: inset 0 0 28px rgba(255, 255, 255, 0.05), 0 0 24px rgba(255, 255, 255, 0.06);
+  --lux-frame-spin: conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.45),
+    rgba(160, 160, 160, 0.2),
+    rgba(255, 255, 255, 0.55),
+    rgba(100, 100, 100, 0.15),
+    rgba(255, 255, 255, 0.4),
+    rgba(200, 200, 200, 0.25),
+    rgba(255, 255, 255, 0.45)
+  );
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  background: var(--lux-body-stack);
+  background-attachment: fixed;
+  color: var(--block-text);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: 'Cormorant Garamond', 'Georgia', 'Times New Roman', serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* Global button system: light pill with black text */
+:where(
+  button,
+  input[type='button'],
+  input[type='submit'],
+  .btn,
+  .btn-primary,
+  .btn-search,
+  .btn-search-sm,
+  .btn-book,
+  .btn-buy,
+  .btn-layout,
+  .btn-accept,
+  .btn-proceed,
+  .btn-book-ticket,
+  .btn-qr,
+  .btn-danger,
+  .btn-ghost,
+  .btn-secondary
+) {
+  color: #0a0a0a !important;
+  background: #f2efe9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+}
+
+:where(
+  button,
+  input[type='button'],
+  input[type='submit'],
+  .btn,
+  .btn-primary,
+  .btn-search,
+  .btn-search-sm,
+  .btn-book,
+  .btn-buy,
+  .btn-layout,
+  .btn-accept,
+  .btn-proceed,
+  .btn-book-ticket,
+  .btn-qr,
+  .btn-danger,
+  .btn-ghost,
+  .btn-secondary
+):hover {
+  color: #0a0a0a !important;
+  background: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+:where(
+  button,
+  input[type='button'],
+  input[type='submit'],
+  .btn,
+  .btn-primary,
+  .btn-search,
+  .btn-search-sm,
+  .btn-book,
+  .btn-buy,
+  .btn-layout,
+  .btn-accept,
+  .btn-proceed,
+  .btn-book-ticket,
+  .btn-qr,
+  .btn-danger,
+  .btn-ghost,
+  .btn-secondary
+):disabled,
+:where(
+  button,
+  input[type='button'],
+  input[type='submit'],
+  .btn,
+  .btn-primary,
+  .btn-search,
+  .btn-search-sm,
+  .btn-book,
+  .btn-buy,
+  .btn-layout,
+  .btn-accept,
+  .btn-proceed,
+  .btn-book-ticket,
+  .btn-qr,
+  .btn-danger,
+  .btn-ghost,
+  .btn-secondary
+)[disabled] {
+  color: #0a0a0a !important;
+}
+
+/* -------------------------------------------------------------
+   Responsive system (mobile-first behavior tuning)
+   Desktop keeps the cinematic layout.
+   Phone/tablet switch to a cleaner stacked experience.
+-------------------------------------------------------------- */
+
+/* Tablets and small laptops */
+@media only screen and (max-width: 1024px) {
+  :root {
+    --shadow: 0 20px 56px rgba(0, 0, 0, 0.42);
+  }
+
+  :where(main, .page-main, .container, .wrap, .section, .content-wrap) {
+    width: min(100%, 980px);
+    margin-inline: auto;
+    padding-inline: clamp(0.8rem, 2.8vw, 1.25rem);
+    box-sizing: border-box;
+  }
+
+  :where(.event-grid, .events-grid, .cards-grid, .grid, .booking-grid, .profile-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.9rem !important;
+  }
+
+  :where(.event-card, .card, .panel, .booking-card, .ticket-card) {
+    border-radius: 14px !important;
+  }
+}
+
+/* Phones: intentionally different style than desktop */
+@media only screen and (max-width: 768px) {
+  :root {
+    --lux-body-stack: linear-gradient(180deg, #030303 0%, #111111 38%, #2a2a2a 72%, #e9e9e9 100%);
+  }
+
+  body {
+    background-attachment: scroll;
+  }
+
+  :where(main, .page-main, .container, .wrap, .section, .content-wrap) {
+    width: 100%;
+    padding-inline: 0.85rem;
+  }
+
+  :where(.event-grid, .events-grid, .cards-grid, .grid, .booking-grid, .profile-grid) {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  :where(.event-card, .card, .panel, .booking-card, .ticket-card, .auth-card, .checkout-card, .modal-sheet) {
+    border-radius: 16px !important;
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  :where(h1, .h1, .hero-title) { font-size: clamp(1.45rem, 6.5vw, 2rem) !important; }
+  :where(h2, .h2, .section-title) { font-size: clamp(1.2rem, 5.4vw, 1.6rem) !important; }
+  :where(p, .muted, .subtitle, .lead) { font-size: 0.95rem !important; line-height: 1.5; }
+
+  :where(button, .btn, input[type='button'], input[type='submit']) {
+    min-height: 44px;
+    border-radius: 12px !important;
+  }
+
+  :where(input, select, textarea) {
+    min-height: 42px;
+    font-size: 16px; /* prevent iOS zoom */
+    border-radius: 12px !important;
+  }
+
+  :where(table) {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  :where(img, .event-card-image, .thumb, .booking-thumb-wrap img) {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* Narrow phones */
+@media only screen and (max-width: 420px) {
+  :where(main, .page-main, .container, .wrap, .section, .content-wrap) {
+    padding-inline: 0.7rem;
+  }
+
+  :where(.event-card, .card, .panel, .booking-card, .ticket-card, .modal-sheet) {
+    border-radius: 14px !important;
+  }
+
+  :where(.btn, button) {
+    width: 100%;
+  }
+}
+
+/* Large desktop tuning */
+@media only screen and (min-width: 1600px) {
+  :where(main, .page-main, .container, .wrap, .section, .content-wrap) {
+    width: min(1360px, 92vw);
+  }
+}
+
+/* Tablet + mobile content area: app-like bright canvas */
+@media only screen and (max-width: 1024px) {
+  body {
+    background: #f5f6f8 !important;
+    color: #121212;
+  }
+
+  :where(main, .page-main) {
+    background: #f5f6f8;
+  }
 }

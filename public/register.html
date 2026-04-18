@@ -6,7 +6,7 @@
   <title>Book Now – BLOCK</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/block-theme.css">
   <link rel="stylesheet" href="/site-chrome.css">
   <script>
@@ -22,13 +22,13 @@
   </script>
   <style>
     :root {
-      --bg: #0a0a0c;
-      --card: #1a1a1f;
-      --border: #2d2d35;
-      --text: #e8e8ed;
-      --muted: #8888a0;
-      --accent: #0066ff;
-      --accent-hover: #7c3aed;
+      --bg: var(--lux-body-stack, #0a0a0a);
+      --card: #141414;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f5f3ef;
+      --muted: #9b968f;
+      --accent: #ebe8e2;
+      --accent-hover: #ffffff;
       --success: #22c55e;
       --error: #ef4444;
       --bar-bg: #ffffff;
@@ -50,7 +50,7 @@
       display: flex;
       flex-direction: column;
       padding: 0;
-      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 102, 255, 0.15), transparent);
+      background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 255, 255, 0.07), transparent);
     }
     .register-main {
       flex: 1;
@@ -128,9 +128,9 @@
     }
     .message.show { display: block; }
     .message.success {
-      background: rgba(0, 102, 255, 0.12);
+      background: rgba(255, 255, 255, 0.08);
       color: #b8d4ff;
-      border: 1px solid rgba(0, 102, 255, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.22);
     }
     .spam-tip {
       font-size: 0.88rem;
@@ -189,14 +189,14 @@
       background: linear-gradient(90deg, var(--accent), var(--accent-hover));
     }
     .ticket-screenshot-msg {
-      background: rgba(0, 102, 255, 0.16);
+      background: rgba(255, 255, 255, 0.1);
       color: var(--accent);
       font-weight: 600;
       font-size: 0.9rem;
       padding: 0.75rem 1rem;
       border-radius: 10px;
       margin-bottom: 1.25rem;
-      border: 1px solid rgba(0, 102, 255, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.22);
     }
     .ticket-qr { max-width: 220px; width: 100%; height: auto; margin: 0 auto 1.25rem; display: block; }
     .ticket-detail { font-size: 0.9rem; margin-bottom: 0.5rem; color: #333; text-align: left; }

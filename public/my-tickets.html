@@ -6,7 +6,7 @@
   <title>My tickets – BLOCK</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/block-theme.css">
   <link rel="stylesheet" href="/site-chrome.css">
   <script>
@@ -22,20 +22,20 @@
   </script>
   <style>
     :root {
-      --page-bg: #0b0b0b;
-      --panel: #1a1a1a;
-      --border: #2a2a2a;
-      --text: #ffffff;
-      --muted: #888888;
-      --accent: #0066ff;
-      --accent-soft: rgba(0, 102, 255, 0.16);
-      --header-bar: #0066ff;
-      --header-end: #0048cc;
-      --banner-bg: #121212;
-      --section: #0066ff;
-      --section-dark: #0048cc;
-      --cta: #0066ff;
-      --shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+      --page-bg: var(--lux-body-stack, linear-gradient(180deg, #000 0%, #141414 100%));
+      --panel: #141414;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f5f3ef;
+      --muted: #9b968f;
+      --accent: #ebe8e2;
+      --accent-soft: rgba(255, 255, 255, 0.09);
+      --header-bar: #050505;
+      --header-end: #0e0e0e;
+      --banner-bg: #0a0a0a;
+      --section: linear-gradient(180deg, #242424 0%, #141414 100%);
+      --section-dark: #0a0a0a;
+      --cta: #f2efe9;
+      --shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { overflow-x: hidden; width: 100%; }
@@ -48,9 +48,10 @@
       flex-direction: column;
     }
     .tk-header {
-      background: linear-gradient(135deg, var(--header-bar), var(--header-end));
+      background: linear-gradient(180deg, var(--header-bar), var(--header-end));
       color: #fff;
-      box-shadow: 0 2px 16px rgba(0, 102, 255, 0.25);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
     }
     .tk-header-inner {
       max-width: min(1400px, 96vw);
@@ -106,8 +107,8 @@
     .tk-avatar {
       width: 52px; height: 52px;
       border-radius: 50%;
-      background: linear-gradient(145deg, var(--accent), #3385ff);
-      color: #fff;
+      background: linear-gradient(145deg, #2a2a2a, #e8e4dc);
+      color: #0a0a0a;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -195,13 +196,13 @@
       padding: 10px 20px;
       font: inherit;
       font-weight: 700;
-      color: #fff;
-      background: var(--accent);
-      border: none;
+      color: #0a0a0a;
+      background: #f2efe9;
+      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 10px;
       cursor: pointer;
     }
-    .btn-primary:hover { background: #7c3aed; }
+    .btn-primary:hover { background: #ffffff; }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
     .section-block {
@@ -221,9 +222,10 @@
       font: inherit;
       font-weight: 700;
       font-size: 1rem;
-      color: #fff;
+      color: #f5f3ef;
       background: var(--section);
       border: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       cursor: pointer;
       text-align: left;
     }
@@ -252,23 +254,64 @@
     }
     .filter-actions { display: flex; align-items: center; gap: 0.65rem; margin-left: auto; }
     .link-clear {
-      background: none;
-      border: none;
-      color: var(--accent);
+      background: transparent !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      padding: 0 !important;
+      color: #ffffff !important;
+      appearance: none;
+      -webkit-appearance: none;
       font: inherit;
       font-weight: 600;
       cursor: pointer;
       text-decoration: underline;
     }
+    #btnClearTicketFilters { color: #ffffff !important; }
+    #btnClearTicketFilters:hover { color: #ffffff !important; opacity: 0.92; }
     .btn-search-sm {
       padding: 8px 18px;
       font: inherit;
       font-weight: 700;
-      color: #fff;
-      background: var(--accent);
-      border: none;
+      color: #0a0a0a;
+      background: #f2efe9;
+      border: 1px solid rgba(255, 255, 255, 0.22);
       border-radius: 8px;
       cursor: pointer;
+    }
+    .btn-search-sm:hover {
+      background: #ffffff;
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+    .pager {
+      margin-top: 0.9rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      align-items: center;
+    }
+    .pager[hidden] { display: none !important; }
+    .pager button {
+      min-width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2) !important;
+      background: #f2efe9 !important;
+      color: #0a0a0a !important;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0 0.55rem;
+    }
+    .pager button.is-active {
+      background: #0a0a0a !important;
+      color: #ffffff !important;
+      border-color: #0a0a0a !important;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
+    }
+    .pager button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
     }
 
     .summary-row {
@@ -307,9 +350,9 @@
     .ticket-row img.thumb {
       width: 72px;
       height: 56px;
-      object-fit: contain;
+      object-fit: cover;
       border-radius: 8px;
-      background: #2a2a2a;
+      background: #0f0f0f;
     }
     .ticket-row .title { font-weight: 700; font-size: 0.95rem; margin-bottom: 0.25rem; }
     .ticket-row .line { font-size: 0.85rem; color: var(--muted); display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
@@ -351,7 +394,7 @@
     .message { padding: 12px; border-radius: 10px; margin-bottom: 1rem; font-size: 0.9rem; display: none; }
     .message.show { display: block; }
     .message.error { background: rgba(248, 113, 113, 0.1); color: #fecaca; border: 1px solid rgba(248, 113, 113, 0.35); }
-    .message.success { background: rgba(0, 102, 255, 0.12); color: #b8d4ff; border: 1px solid rgba(0, 102, 255, 0.35); }
+    .message.success { background: rgba(255, 255, 255, 0.08); color: #f5f3ef; border: 1px solid rgba(255, 255, 255, 0.22); }
 
     /* Ticket detail modal */
     .modal-overlay {
@@ -359,7 +402,7 @@
       position: fixed;
       inset: 0;
       background: rgba(17, 24, 39, 0.5);
-      z-index: 400;
+      z-index: 3200;
       align-items: center;
       justify-content: center;
       padding: 1rem;
@@ -377,13 +420,13 @@
     }
     .ticket-modal .banner-wrap {
       height: 140px;
-      background: #2a2a2a;
+      background: #0f0f0f;
       overflow: hidden;
     }
     .ticket-modal .banner-img {
       width: 100%;
       height: 100%;
-      object-fit: contain;
+      object-fit: cover;
       object-position: center;
       display: block;
     }
@@ -441,22 +484,104 @@
 
     .booking-detail-modal {
       width: 100%;
-      max-width: 480px;
+      max-width: 620px;
       background: var(--panel);
       border-radius: 14px;
       padding: 1.25rem;
       margin: auto;
-      max-height: 90vh;
+      max-height: calc(100dvh - 2rem);
       overflow-y: auto;
+      border: 1px solid var(--border);
     }
-    .booking-detail-modal h3 { margin-bottom: 0.75rem; }
-    .booking-detail-modal pre {
-      background: #121212;
-      padding: 0.75rem;
-      border-radius: 8px;
-      font-size: 0.82rem;
-      overflow-x: auto;
-      white-space: pre-wrap;
+    .booking-detail-modal h3 { margin-bottom: 0.35rem; }
+    .receipt-meta {
+      color: var(--muted);
+      margin-bottom: 0.85rem;
+      font-size: 0.95rem;
+    }
+    .receipt-card {
+      background: #101010;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 0.9rem;
+    }
+    .receipt-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.6rem 1rem;
+      margin-bottom: 0.8rem;
+    }
+    .receipt-k {
+      color: var(--muted);
+      font-size: 0.78rem;
+      display: block;
+      margin-bottom: 0.15rem;
+    }
+    .receipt-v {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+    .receipt-items {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.4rem;
+    }
+    .receipt-items th,
+    .receipt-items td {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 0.45rem 0.5rem;
+      text-align: left;
+      font-size: 0.84rem;
+    }
+    .receipt-items th {
+      background: rgba(255, 255, 255, 0.06);
+      font-weight: 700;
+    }
+    .receipt-share-hint {
+      margin: 0.65rem 0 0;
+      padding: 0.65rem 0.75rem;
+      font-size: 0.84rem;
+      line-height: 1.45;
+      color: rgba(255, 255, 255, 0.92);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 10px;
+    }
+    .receipt-share-hint[hidden] {
+      display: none !important;
+    }
+    .receipt-actions {
+      display: flex;
+      gap: 0.65rem;
+      margin-top: 1rem;
+      flex-wrap: wrap;
+    }
+    .btn-share {
+      padding: 10px 18px;
+      font: inherit;
+      font-weight: 700;
+      color: #0a0a0a;
+      background: #f2efe9;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .btn-share:hover {
+      background: #ffffff;
+    }
+    @media (max-width: 640px) {
+      .modal-overlay {
+        align-items: flex-start;
+        padding: calc(0.7rem + env(safe-area-inset-top, 0)) 0.7rem calc(5.8rem + env(safe-area-inset-bottom, 0));
+      }
+      .booking-detail-modal {
+        margin-top: 0;
+        max-height: calc(100dvh - 6.9rem - env(safe-area-inset-bottom, 0));
+        border-radius: 12px;
+      }
+      .receipt-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .site-footer {
@@ -534,6 +659,7 @@
           </div>
         </div>
         <div id="ticketsMount"></div>
+        <div id="ticketsPager" class="pager" hidden></div>
       </div>
     </div>
 
@@ -551,7 +677,6 @@
                 <th>Purchase Date</th>
                 <th>Payment Method</th>
                 <th>Total Amount</th>
-                <th>Shipment Number</th>
                 <th class="actions">Actions</th>
               </tr>
             </thead>
@@ -559,6 +684,7 @@
           </table>
         </div>
         <p class="empty-msg" id="payEmpty" style="display:none;">No payments yet.</p>
+        <div id="payPager" class="pager" hidden></div>
       </div>
     </div>
   </div>
@@ -608,9 +734,28 @@
   <div id="bookingModal" class="modal-overlay" role="dialog" aria-modal="true">
     <div class="booking-detail-modal">
       <h3 id="bdTitle">Booking details</h3>
-      <p id="bdMeta" class="empty-msg" style="padding:0;text-align:left;margin-bottom:0.75rem;"></p>
-      <pre id="bdJson"></pre>
-      <button type="button" class="btn-primary" id="bdClose" style="width:100%;margin-top:1rem;">Close</button>
+      <p id="bdMeta" class="receipt-meta"></p>
+      <div class="receipt-card" id="bdReceipt">
+        <div class="receipt-grid" id="bdGrid"></div>
+        <table class="receipt-items">
+          <thead>
+            <tr>
+              <th>Ticket</th>
+              <th>Category</th>
+              <th>Qty</th>
+              <th>Unit Price</th>
+              <th>Line Total</th>
+            </tr>
+          </thead>
+          <tbody id="bdItems"></tbody>
+        </table>
+      </div>
+      <p class="receipt-share-hint" id="bdShareHint" hidden role="status"></p>
+      <div class="receipt-actions">
+        <button type="button" class="btn-share" id="bdDownloadPdf">Download PDF</button>
+        <button type="button" class="btn-share" id="bdSharePdf">Share PDF</button>
+        <button type="button" class="btn-primary" id="bdClose" style="margin-left:auto;">Close</button>
+      </div>
     </div>
   </div>
 
@@ -631,11 +776,18 @@
   </footer>
 
   <script src="/site-chrome.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script>
     var base = window.location.origin || 'http://localhost:3001';
     var allGroups = [];
     var paymentRows = [];
     var guestEmail = '';
+    var TICKETS_PER_PAGE = 10;
+    var PAYMENTS_PER_PAGE = 10;
+    var currentTicketPage = 1;
+    var currentPayPage = 1;
+    var currentBookingDetail = null;
+    var currentProfileName = 'BLOCK Customer';
 
     function escapeHtml(s) {
       return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -717,42 +869,97 @@
       });
     }
 
-    function renderTicketGroups(groups) {
-      var mount = document.getElementById('ticketsMount');
-      if (!groups.length) {
-        mount.innerHTML = '<p class="empty-msg">No tickets match your filters.</p>';
+    function buildTicketEntries(groups) {
+      var out = [];
+      (groups || []).forEach(function (g) {
+        var key = String((g && (g.bookingNo || g.eventId || g.eventName)) || 'group');
+        var tickets = Array.isArray(g && g.tickets) ? g.tickets : [];
+        tickets.forEach(function (t, idx) {
+          out.push({
+            group: g,
+            groupKey: key,
+            groupTicketCount: tickets.length,
+            ticket: t,
+            idxInGroup: idx,
+          });
+        });
+      });
+      return out;
+    }
+
+    function renderPager(hostId, current, total, onPick) {
+      var host = document.getElementById(hostId);
+      if (!host) return;
+      if (!total || total <= 1) {
+        host.hidden = true;
+        host.innerHTML = '';
         return;
       }
-      mount.innerHTML = groups.map(function (g) {
-        var n = g.tickets.length;
-        var summary =
-          '<div class="summary-row">' +
-            '<div><span class="k">Name</span><span class="name-val">' + escapeHtml(g.holderName || '—') + '</span></div>' +
-            '<div><span class="k">Event Category</span>' + escapeHtml(g.eventCategory || '—') + '</div>' +
-            '<div><span class="k">Booking No.</span><strong>' + escapeHtml(g.bookingNo || '—') + '</strong></div>' +
-            '<div><span class="k">Print Status</span><span class="print-val">' + n + ' of ' + n + '</span></div>' +
+      host.hidden = false;
+      var html = '';
+      html += '<button type="button" data-pg="' + Math.max(1, current - 1) + '"' + (current <= 1 ? ' disabled' : '') + '>‹</button>';
+      for (var p = 1; p <= total; p++) {
+        html += '<button type="button" data-pg="' + p + '" class="' + (p === current ? 'is-active' : '') + '">' + p + '</button>';
+      }
+      html += '<button type="button" data-pg="' + Math.min(total, current + 1) + '"' + (current >= total ? ' disabled' : '') + '>›</button>';
+      host.innerHTML = html;
+      host.querySelectorAll('button[data-pg]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var pg = parseInt(btn.getAttribute('data-pg') || '1', 10) || 1;
+          onPick(pg);
+        });
+      });
+    }
+
+    function renderTicketGroups(groups) {
+      var mount = document.getElementById('ticketsMount');
+      var entries = buildTicketEntries(groups);
+      if (!entries.length) {
+        mount.innerHTML = '<p class="empty-msg">No tickets match your filters.</p>';
+        renderPager('ticketsPager', 1, 1, function () {});
+        return;
+      }
+      var totalPages = Math.max(1, Math.ceil(entries.length / TICKETS_PER_PAGE));
+      if (currentTicketPage > totalPages) currentTicketPage = totalPages;
+      var start = (currentTicketPage - 1) * TICKETS_PER_PAGE;
+      var pageRows = entries.slice(start, start + TICKETS_PER_PAGE);
+      var lastGroupKey = '';
+      var html = '';
+      pageRows.forEach(function (row) {
+        var g = row.group || {};
+        if (row.groupKey !== lastGroupKey) {
+          var n = row.groupTicketCount || 0;
+          html +=
+            '<div class="summary-row">' +
+              '<div><span class="k">Name</span><span class="name-val">' + escapeHtml(g.holderName || '—') + '</span></div>' +
+              '<div><span class="k">Event Category</span>' + escapeHtml(g.eventCategory || '—') + '</div>' +
+              '<div><span class="k">Booking No.</span><strong>' + escapeHtml(g.bookingNo || '—') + '</strong></div>' +
+              '<div><span class="k">Print Status</span><span class="print-val">' + n + ' of ' + n + '</span></div>' +
+            '</div>';
+          lastGroupKey = row.groupKey;
+        }
+        var t = row.ticket || {};
+        html +=
+          '<div class="ticket-row">' +
+            '<div class="thumb-wrap"><img class="thumb" src="' + escapeHtml(t.image || '/block-logo.png') + '" alt=""></div>' +
+            '<div>' +
+              '<div class="title">' + escapeHtml(t.eventName) + '</div>' +
+              '<div class="line">&#128205; ' + escapeHtml(t.venue || '—') + '</div>' +
+              '<div class="line">&#128197; ' + escapeHtml([t.date, t.time].filter(Boolean).join(', ') || '—') + '</div>' +
+              '<div class="seat">&#9836; Seat: ' + escapeHtml(t.seatLabel || t.ticketId) + '</div>' +
+            '</div>' +
+            '<div class="qr-cell">' +
+              '<button type="button" class="btn-qr" data-ticket="' + escapeHtml(t.ticketId) + '">' +
+                '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h6v6H3V3zm2 2v2h2V5H5zm8-2h6v6h-6V3zm2 2v2h2V5h-2zM3 13h6v6H3v-6zm2 2v2h2v-2H5zm10 0h2v2h-2v-2zm-4 0h2v4h-2v-4zm4 4h2v2h-2v-2zm-4-8h2v2h-2v-2z"/></svg>' +
+                ' QR Code</button>' +
+            '</div>' +
           '</div>';
-        var rows = g.tickets.map(function (t) {
-          var seat = (t.category || 'Ticket') + (t.seatLabel ? ' · ' + t.seatLabel : '');
-          return (
-            '<div class="ticket-row">' +
-              '<div class="thumb-wrap"><img class="thumb" src="' + escapeHtml(t.image || '/block-logo.png') + '" alt=""></div>' +
-              '<div>' +
-                '<div class="title">' + escapeHtml(t.eventName) + '</div>' +
-                '<div class="line">&#128205; ' + escapeHtml(t.venue || '—') + '</div>' +
-                '<div class="line">&#128197; ' + escapeHtml([t.date, t.time].filter(Boolean).join(', ') || '—') + '</div>' +
-                '<div class="seat">&#9836; Seat: ' + escapeHtml(t.seatLabel || t.ticketId) + '</div>' +
-              '</div>' +
-              '<div class="qr-cell">' +
-                '<button type="button" class="btn-qr" data-ticket="' + escapeHtml(t.ticketId) + '">' +
-                  '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h6v6H3V3zm2 2v2h2V5H5zm8-2h6v6h-6V3zm2 2v2h2V5h-2zM3 13h6v6H3v-6zm2 2v2h2v-2H5zm10 0h2v2h-2v-2zm-4 0h2v4h-2v-4zm4 4h2v2h-2v-2zm-4-8h2v2h-2v-2z"/></svg>' +
-                  ' QR Code</button>' +
-              '</div>' +
-            '</div>'
-          );
-        }).join('');
-        return summary + rows;
-      }).join('');
+      });
+      mount.innerHTML = html;
+      renderPager('ticketsPager', currentTicketPage, totalPages, function (pg) {
+        currentTicketPage = pg;
+        renderTicketGroups(groups);
+      });
 
       mount.querySelectorAll('.btn-qr').forEach(function (btn) {
         btn.addEventListener('click', function () {
@@ -800,11 +1007,355 @@
       if (e.target === this) this.classList.remove('show');
     });
 
+    function clearBookingShareHint() {
+      var el = document.getElementById('bdShareHint');
+      if (!el) return;
+      el.hidden = true;
+      el.textContent = '';
+    }
+
     document.getElementById('bdClose').addEventListener('click', function () {
+      clearBookingShareHint();
       document.getElementById('bookingModal').classList.remove('show');
     });
     document.getElementById('bookingModal').addEventListener('click', function (e) {
-      if (e.target === this) this.classList.remove('show');
+      if (e.target === this) {
+        clearBookingShareHint();
+        this.classList.remove('show');
+      }
+    });
+
+    function money(v) {
+      var n = Number(v || 0);
+      if (!isFinite(n)) n = 0;
+      return n.toFixed(2).replace(/\.00$/, '') + ' EGP';
+    }
+
+    function resolveProfileName(user) {
+      var u = user || {};
+      return (
+        u.fullName ||
+        u.full_name ||
+        u.name ||
+        u.displayName ||
+        u.display_name ||
+        [u.firstName, u.lastName].filter(Boolean).join(' ').trim() ||
+        [u.first_name, u.last_name].filter(Boolean).join(' ').trim() ||
+        u.email ||
+        'BLOCK Customer'
+      );
+    }
+
+    function renderBookingReceipt(d) {
+      clearBookingShareHint();
+      currentBookingDetail = d || null;
+      var eventName = d && d.event && d.event.name ? d.event.name : 'Event';
+      document.getElementById('bdTitle').textContent = 'Booking ' + (d.bookingNo || '—');
+      document.getElementById('bdMeta').textContent =
+        eventName + ' · ' + (d.paymentMethod || '—') + ' · ' + money(d.pricePaid) + ' · ' + (d.status || '—');
+
+      var grid = document.getElementById('bdGrid');
+      grid.innerHTML =
+        '<div><span class="receipt-k">Booking Number</span><div class="receipt-v">' + escapeHtml(d.bookingNo || '—') + '</div></div>' +
+        '<div><span class="receipt-k">Purchase Date</span><div class="receipt-v">' + escapeHtml(formatPurchaseDate(d.purchaseDate)) + '</div></div>' +
+        '<div><span class="receipt-k">Payment Method</span><div class="receipt-v">' + escapeHtml(d.paymentMethod || '—') + '</div></div>' +
+        '<div><span class="receipt-k">Status</span><div class="receipt-v">' + escapeHtml(d.status || '—') + '</div></div>' +
+        '<div><span class="receipt-k">Total Paid</span><div class="receipt-v">' + escapeHtml(money(d.pricePaid)) + '</div></div>' +
+        '<div><span class="receipt-k">Event</span><div class="receipt-v">' + escapeHtml(eventName) + '</div></div>';
+
+      var items = Array.isArray(d.ticketSelections) ? d.ticketSelections : [];
+      var itemsBody = document.getElementById('bdItems');
+      if (!items.length) {
+        itemsBody.innerHTML = '<tr><td colspan="5">No ticket lines available.</td></tr>';
+      } else {
+        itemsBody.innerHTML = items.map(function (t) {
+          var qty = Math.max(1, Number((t && t.quantity) || 0) || 1);
+          var unit = Number((t && t.unitPrice) || 0);
+          var total = qty * unit;
+          return (
+            '<tr>' +
+              '<td>' + escapeHtml((t && (t.ticketName || t.ticketId)) || 'Ticket') + '</td>' +
+              '<td>' + escapeHtml((t && (t.ticketCategory || t.category)) || '—') + '</td>' +
+              '<td>' + qty + '</td>' +
+              '<td>' + escapeHtml(money(unit)) + '</td>' +
+              '<td>' + escapeHtml(money(total)) + '</td>' +
+            '</tr>'
+          );
+        }).join('');
+      }
+    }
+
+    async function imageUrlToDataUrl(url) {
+      var src = String(url || '').trim();
+      if (!src) return null;
+      if (src.indexOf('data:image/') === 0) return src;
+      try {
+        var res = await fetch(src, { credentials: 'same-origin' });
+        if (!res.ok) return null;
+        var blob = await res.blob();
+        return await new Promise(function (resolve, reject) {
+          var fr = new FileReader();
+          fr.onload = function () { resolve(String(fr.result || '')); };
+          fr.onerror = reject;
+          fr.readAsDataURL(blob);
+        });
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function imageFormatFromDataUrl(dataUrl, fallback) {
+      var s = String(dataUrl || '');
+      if (/^data:image\/png/i.test(s)) return 'PNG';
+      if (/^data:image\/webp/i.test(s)) return 'WEBP';
+      if (/^data:image\/jpe?g/i.test(s)) return 'JPEG';
+      return fallback || 'JPEG';
+    }
+
+    async function getImageInfo(dataUrl) {
+      var src = String(dataUrl || '');
+      if (!src) return null;
+      return await new Promise(function (resolve) {
+        var img = new Image();
+        img.onload = function () {
+          resolve({ width: Number(img.naturalWidth || 0), height: Number(img.naturalHeight || 0) });
+        };
+        img.onerror = function () { resolve(null); };
+        img.src = src;
+      });
+    }
+
+    async function buildReceiptPdfBlob(detail) {
+      if (!detail) throw new Error('Receipt details unavailable.');
+      if (!window.jspdf || !window.jspdf.jsPDF) throw new Error('PDF engine not loaded yet.');
+      var jsPDF = window.jspdf.jsPDF;
+      var doc = new jsPDF({ unit: 'pt', format: 'a4' });
+      var pageW = doc.internal.pageSize.getWidth();
+      var margin = 36;
+      var y = 36;
+      var eventName = (detail.event && detail.event.name) || 'Event';
+      var purchaseDate = formatPurchaseDate(detail.purchaseDate || detail.createdAt);
+      var receiptNo = 'BLOCK-' + String(detail.bookingNo || 'NA');
+
+      doc.setFillColor(247, 248, 250);
+      doc.rect(0, 0, pageW, 130, 'F');
+
+      var logoData = await imageUrlToDataUrl('/block-logo.png');
+      if (logoData) {
+        try {
+          var logoInfo = await getImageInfo(logoData);
+          var maxLogoW = 130;
+          var maxLogoH = 36;
+          var lw = maxLogoW;
+          var lh = maxLogoH;
+          if (logoInfo && logoInfo.width > 0 && logoInfo.height > 0) {
+            var r = logoInfo.width / logoInfo.height;
+            if (r >= 1) {
+              lw = Math.min(maxLogoW, maxLogoH * r);
+              lh = lw / r;
+            } else {
+              lh = maxLogoH;
+              lw = lh * r;
+            }
+          }
+          doc.addImage(logoData, imageFormatFromDataUrl(logoData, 'PNG'), margin, y - 8, lw, lh);
+        } catch (eLogo) {}
+      }
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(15, 20, 28);
+      if (!logoData) doc.text('BLOCK', margin, y + 10);
+      doc.setFontSize(18);
+      doc.text('Tax Receipt', pageW - margin, y + 10, { align: 'right' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text('Receipt Number: ' + receiptNo, margin, y + 30);
+      doc.text('Issue Date: ' + purchaseDate, margin, y + 46);
+      doc.text('Status: ' + String(detail.status || 'paid'), margin, y + 62);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Booking No: ' + String(detail.bookingNo || '—'), pageW - margin, y + 30, { align: 'right' });
+      doc.text('Payment: ' + String(detail.paymentMethod || '—'), pageW - margin, y + 46, { align: 'right' });
+      doc.text('Total: ' + money(detail.pricePaid), pageW - margin, y + 62, { align: 'right' });
+
+      y = 146;
+      var bannerDataUrl =
+        await imageUrlToDataUrl(
+          (detail.event && (detail.event.imageHero || detail.event.imageCard || detail.event.image)) || '/block-logo.png'
+        );
+      if (bannerDataUrl) {
+        try {
+          var bw = pageW - (margin * 2);
+          var bh = 140;
+          doc.setDrawColor(220, 224, 230);
+          doc.roundedRect(margin, y, bw, bh, 8, 8);
+          doc.addImage(bannerDataUrl, imageFormatFromDataUrl(bannerDataUrl, 'JPEG'), margin, y, bw, bh);
+          y += 152;
+        } catch (e) {
+          // keep generating receipt even when image decode fails
+        }
+      }
+
+      doc.setDrawColor(218, 223, 230);
+      doc.setFillColor(250, 251, 253);
+      doc.roundedRect(margin, y, pageW - (margin * 2), 92, 8, 8, 'FD');
+      doc.setTextColor(20, 24, 31);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('Customer / Event Details', margin + 12, y + 20);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10.5);
+      doc.text('Event: ' + eventName, margin + 12, y + 40);
+      var holderName = String(currentProfileName || detail.holderName || detail.userName || 'BLOCK Customer');
+      doc.text('Holder: ' + holderName, margin + 12, y + 56);
+      doc.text('Method: ' + String(detail.paymentMethod || '—'), margin + 12, y + 72);
+      doc.text('Currency: EGP', pageW - margin - 120, y + 40);
+      doc.text('Paid: ' + money(detail.pricePaid), pageW - margin - 120, y + 56);
+      doc.text('Booking ID: ' + String(detail.id || detail.bookingNo || '—'), pageW - margin - 120, y + 72);
+
+      y += 108;
+      var tableX = margin;
+      var tableW = pageW - (margin * 2);
+      var colW = [0.32, 0.2, 0.12, 0.18, 0.18].map(function (r) { return tableW * r; });
+      var rowH = 24;
+      var headers = ['Ticket', 'Category', 'Qty', 'Unit Price', 'Line Total'];
+      var x = tableX;
+      doc.setFillColor(26, 31, 40);
+      doc.rect(tableX, y, tableW, rowH, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      headers.forEach(function (h, i) {
+        doc.text(h, x + 6, y + 16);
+        x += colW[i];
+      });
+      y += rowH;
+
+      var sels = Array.isArray(detail.ticketSelections) ? detail.ticketSelections : [];
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(20, 24, 31);
+      if (!sels.length) {
+        doc.rect(tableX, y, tableW, rowH);
+        doc.text('No ticket lines available', tableX + 8, y + 16);
+        y += rowH;
+      } else {
+        sels.forEach(function (s, idx) {
+          var qty = Math.max(1, Number((s && s.quantity) || 0) || 1);
+          var unit = Number((s && s.unitPrice) || 0);
+          var total = qty * unit;
+          var vals = [
+            String((s && (s.ticketName || s.ticketId)) || 'Ticket'),
+            String((s && (s.ticketCategory || s.category)) || '—'),
+            String(qty),
+            money(unit),
+            money(total)
+          ];
+          doc.setFillColor(idx % 2 ? 252 : 245, idx % 2 ? 252 : 247, idx % 2 ? 252 : 250);
+          doc.rect(tableX, y, tableW, rowH, 'F');
+          doc.setDrawColor(223, 226, 232);
+          doc.rect(tableX, y, tableW, rowH);
+          var cx = tableX;
+          vals.forEach(function (v, i) {
+            doc.text(v, cx + 6, y + 16);
+            cx += colW[i];
+          });
+          y += rowH;
+        });
+      }
+
+      y += 18;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9);
+      doc.setTextColor(98, 105, 116);
+      doc.text('Thank you for booking with BLOCK. Keep this receipt for your records.', margin, y);
+      return doc.output('blob');
+    }
+
+    function bookingFileName(detail) {
+      var id = (detail && detail.bookingNo ? String(detail.bookingNo) : 'booking').replace(/[^a-z0-9_-]/gi, '-');
+      return 'BLOCK-receipt-' + id + '.pdf';
+    }
+
+    document.getElementById('bdDownloadPdf').addEventListener('click', async function () {
+      try {
+        var blob = await buildReceiptPdfBlob(currentBookingDetail);
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = bookingFileName(currentBookingDetail);
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1200);
+      } catch (e) {
+        alert(e.message || 'Could not generate PDF');
+      }
+    });
+
+    document.getElementById('bdSharePdf').addEventListener('click', async function () {
+      clearBookingShareHint();
+      try {
+        var blob = await buildReceiptPdfBlob(currentBookingDetail);
+        var filename = bookingFileName(currentBookingDetail);
+        var file = new File([blob], filename, { type: 'application/pdf' });
+
+        // 1) Real system share (typical on phones / some tablets).
+        if (navigator.share) {
+          var mayShareFiles = !navigator.canShare || navigator.canShare({ files: [file] });
+          if (mayShareFiles) {
+            try {
+              await navigator.share({
+                files: [file],
+                title: 'BLOCK receipt',
+                text: 'Booking receipt'
+              });
+              return;
+            } catch (err) {
+              if (err && err.name === 'AbortError') return;
+            }
+          }
+        }
+
+        // 2) Desktop-friendly: copy PDF to clipboard so the user can paste into WhatsApp Web, email, etc.
+        if (navigator.clipboard && window.ClipboardItem) {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ 'application/pdf': blob })]);
+            var hint = document.getElementById('bdShareHint');
+            if (hint) {
+              hint.hidden = false;
+              hint.textContent =
+                'Receipt PDF copied to clipboard. Open the app you want (WhatsApp, email, etc.) and paste to share.';
+            }
+            return;
+          } catch (eClip) {
+            try {
+              await navigator.clipboard.write([
+                new ClipboardItem({ 'application/pdf': Promise.resolve(blob) })
+              ]);
+              var hintP = document.getElementById('bdShareHint');
+              if (hintP) {
+                hintP.hidden = false;
+                hintP.textContent =
+                  'Receipt PDF copied to clipboard. Paste into a chat or email to share.';
+              }
+              return;
+            } catch (eClip2) {
+              /* continue */
+            }
+          }
+        }
+
+        var hintLast = document.getElementById('bdShareHint');
+        if (hintLast) {
+          hintLast.hidden = false;
+          hintLast.textContent =
+            'This browser can’t open a share panel for PDF files on this device. Use “Download PDF”, then attach the file from your folder—or open this page on your phone for one-tap sharing.';
+        }
+      } catch (e) {
+        alert(e.message || 'Could not share PDF');
+      }
     });
 
     function renderPayments() {
@@ -816,6 +1367,7 @@
         hint.style.display = 'block';
         wrap.style.display = 'none';
         empty.style.display = 'none';
+        renderPager('payPager', 1, 1, function () {});
         return;
       }
       hint.style.display = 'none';
@@ -823,23 +1375,31 @@
         wrap.style.display = 'none';
         empty.style.display = 'block';
         document.getElementById('paySection').classList.add('collapsed');
+        renderPager('payPager', 1, 1, function () {});
         return;
       }
       empty.style.display = 'none';
       wrap.style.display = 'block';
       document.getElementById('paySection').classList.remove('collapsed');
-      tbody.innerHTML = paymentRows.map(function (p) {
+      var totalPages = Math.max(1, Math.ceil(paymentRows.length / PAYMENTS_PER_PAGE));
+      if (currentPayPage > totalPages) currentPayPage = totalPages;
+      var start = (currentPayPage - 1) * PAYMENTS_PER_PAGE;
+      var rows = paymentRows.slice(start, start + PAYMENTS_PER_PAGE);
+      tbody.innerHTML = rows.map(function (p) {
         return (
           '<tr>' +
             '<td>' + escapeHtml(p.bookingNo) + '</td>' +
             '<td>' + escapeHtml(formatPurchaseDate(p.purchaseDate)) + '</td>' +
             '<td>' + escapeHtml(p.paymentMethod) + '</td>' +
             '<td>' + escapeHtml(String(p.totalAmount)) + ' L.E.</td>' +
-            '<td>' + escapeHtml(p.shipment || '') + '</td>' +
             '<td class="actions"><a class="link" href="#" data-booking="' + escapeHtml(p.id) + '">View Details</a></td>' +
           '</tr>'
         );
       }).join('');
+      renderPager('payPager', currentPayPage, totalPages, function (pg) {
+        currentPayPage = pg;
+        renderPayments();
+      });
 
       tbody.querySelectorAll('[data-booking]').forEach(function (a) {
         a.addEventListener('click', function (ev) {
@@ -849,10 +1409,7 @@
             .then(function (r) { return r.json(); })
             .then(function (d) {
               if (d.error) throw new Error(d.error);
-              document.getElementById('bdTitle').textContent = 'Booking ' + d.bookingNo;
-              document.getElementById('bdMeta').textContent = (d.event && d.event.name ? d.event.name + ' · ' : '') +
-                d.paymentMethod + ' · ' + d.pricePaid + ' EGP · ' + d.status;
-              document.getElementById('bdJson').textContent = JSON.stringify(d.ticketSelections || [], null, 2);
+              renderBookingReceipt(d);
               document.getElementById('bookingModal').classList.add('show');
             })
             .catch(function (e) { alert(e.message || 'Failed'); });
@@ -861,6 +1418,7 @@
     }
 
     function applyTicketFilters() {
+      currentTicketPage = 1;
       renderTicketGroups(filterGroups());
     }
 
@@ -880,9 +1438,11 @@
 
     function ingestGroups(groups) {
       allGroups = Array.isArray(groups) ? groups : [];
+      currentTicketPage = 1;
       buildFilterOptions(allGroups);
       if (!allGroups.length) {
         document.getElementById('ticketsMount').innerHTML = '<p class="empty-msg">No tickets found. Book an event first.</p>';
+        renderPager('ticketsPager', 1, 1, function () {});
       } else {
         applyTicketFilters();
       }
@@ -911,6 +1471,7 @@
     (async function init() {
       var me = await fetch('/api/auth/me', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).catch(function () { return {}; });
       setAuthHeader(me.user || null);
+      currentProfileName = resolveProfileName(me && me.user ? me.user : null);
 
       if (me && me.user) {
         document.getElementById('guestBox').style.display = 'none';
@@ -923,6 +1484,7 @@
           var pr = await fetch(base + '/api/auth/payment-history', { credentials: 'same-origin' });
           var pd = await pr.json();
           paymentRows = pr.ok && Array.isArray(pd.payments) ? pd.payments : [];
+          currentPayPage = 1;
           renderPayments();
         } catch (e) {
           ingestGroups([]);

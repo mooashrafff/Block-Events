@@ -6,7 +6,7 @@
   <title>Contact & Support – BLOCK</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/block-theme.css">
   <link rel="stylesheet" href="/site-chrome.css">
   <script>
@@ -22,13 +22,13 @@
   </script>
   <style>
     :root {
-      --bg-page: #0b0b0b;
-      --card: #1a1a1a;
-      --border: #2a2a2a;
-      --text: #ffffff;
-      --muted: #888888;
-      --accent: #0066ff;
-      --accent-hover: #3385ff;
+      --bg-page: var(--lux-body-stack, linear-gradient(180deg, #000 0%, #141414 100%));
+      --card: #141414;
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #f5f3ef;
+      --muted: #9b968f;
+      --accent: #ebe8e2;
+      --accent-hover: #ffffff;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { overflow-x: hidden; width: 100%; }
@@ -67,7 +67,7 @@
     }
     .contact-card h2 { font-size: 1.2rem; margin-bottom: 0.75rem; color: var(--text); }
     .contact-card p { color: var(--muted); font-size: 0.95rem; margin-bottom: 0.75rem; }
-    .contact-info-email { font-weight: 600; color: var(--text); }
+    .contact-info-email { font-weight: 800; color: #ffffff; }
     .form-group { margin-bottom: 1rem; }
     label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; color: var(--muted); }
     input, textarea {
