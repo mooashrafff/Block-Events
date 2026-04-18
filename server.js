@@ -1831,7 +1831,7 @@ async function enrichAttendeeRowsForAdmin(rawRows) {
   });
 }
 
-async function queryAdminAttendeesRows(eventId, eventName) {
+async function queryAdminAttendeesRows(eventId, eventName, opts = {}) {
   let query = supabase.from('attendees').select('*').order('created_at', { ascending: false });
   if (eventId) {
     const ev = await resolveEventRowByIdOrSlug(eventId);
@@ -1844,6 +1844,19 @@ async function queryAdminAttendeesRows(eventId, eventName) {
     }
   } else if (eventName) {
     query = query.ilike('event_name', eventName);
+  }
+  let limit = null;
+  if (opts.limit != null && String(opts.limit).trim() !== '') {
+    const n = parseInt(String(opts.limit), 10);
+    if (Number.isFinite(n) && n >= 1) limit = Math.min(n, 5000);
+  }
+  let offset = 0;
+  if (opts.offset != null && String(opts.offset).trim() !== '') {
+    const o = parseInt(String(opts.offset), 10);
+    if (Number.isFinite(o) && o >= 0) offset = o;
+  }
+  if (limit != null) {
+    query = query.range(offset, offset + limit - 1);
   }
   return await query;
 }
@@ -1861,6 +1874,7 @@ app.get('/api/events', async (req, res) => {
     const slim = list.map((ev) => {
       const image = ev?.imageCard || ev?.imageHero || ev?.image || '/block-logo.png';
       const desc = String(ev?.description || '');
+      const cap = 220;
       return {
         id: ev?.id,
         name: ev?.name,
@@ -1871,14 +1885,14 @@ app.get('/api/events', async (req, res) => {
         price: Number(ev?.price || 0),
         type: ev?.type || (Number(ev?.price || 0) > 0 ? 'paid' : 'free'),
         image,
-        description: desc.length > 400 ? `${desc.slice(0, 400)}…` : desc,
+        description: desc.length > cap ? `${desc.slice(0, cap)}…` : desc,
       };
     });
-    res.set('Cache-Control', 'public, max-age=60');
+    res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=300');
     return res.json(slim);
   }
 
-  res.set('Cache-Control', 'public, max-age=15');
+  res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
   res.json(list);
 });
 
@@ -1887,14 +1901,14 @@ app.get('/api/event-thumb/:id', async (req, res) => {
   if (!id) return res.status(400).json({ error: 'id is required.' });
   const cached = getCachedThumb(id);
   if (cached) {
-    res.set('Cache-Control', 'public, max-age=300');
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     return res.json({ image: cached });
   }
   const row = await getRawEventRowForImages(id);
   if (!row) return res.status(404).json({ error: 'Event not found.' });
   const img = primaryImageFromRawRow(row);
   setCachedThumb(id, img, 5 * 60 * 1000);
-  res.set('Cache-Control', 'public, max-age=300');
+  res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
   res.json({ image: img });
 });
 
@@ -2148,7 +2162,8 @@ app.get('/api/auth/me', async (req, res) => {
   const { data: bookings } = await supabase
     .from('bookings')
     .select(
-      'id, created_at, payment_method, price_paid, status, event_id, instapay_sender_phone, events(name, date, time, venue, image, image_card, image_detail, description, price)'
+      // Omit description + image_detail on nested events to cut Supabase egress (hot path).
+      'id, created_at, payment_method, price_paid, status, event_id, instapay_sender_phone, events(name, date, time, venue, image, image_card, price)'
     )
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
@@ -2715,7 +2730,9 @@ app.get('/api/auth/google/callback', async (req, res) => {
 async function getCartForUser(userId) {
   let { data, error } = await supabase
     .from('cart_items')
-    .select('event_id, created_at, ticket_selections, events(id, name, date, time, venue, image, image_card, image_detail, description, price)')
+    .select(
+      'event_id, created_at, ticket_selections, events(id, name, date, time, venue, image, image_card, price)'
+    )
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
@@ -2723,7 +2740,7 @@ async function getCartForUser(userId) {
   if (error && String(error.message || '').toLowerCase().includes('ticket_selections')) {
     ({ data, error } = await supabase
       .from('cart_items')
-      .select('event_id, created_at, events(id, name, date, time, venue, image, image_card, image_detail, description, price)')
+      .select('event_id, created_at, events(id, name, date, time, venue, image, image_card, price)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false }));
   }
@@ -2782,7 +2799,6 @@ async function getCartForUser(userId) {
                 image: im.image,
                 imageCard: im.imageCard,
                 imageHero: im.imageHero,
-                description: row.events.description,
                 price: unitEventPrice,
                 type: unitEventPrice > 0 ? 'paid' : 'free',
               };
@@ -4147,6 +4163,7 @@ function pricePaidListForCartWithPromo(cart, promo) {
 app.get('/api/site-config', (req, res) => {
   const c = getSiteConfig();
   const { promoCodes: _omit, ...rest } = c;
+  res.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=600');
   res.json(rest);
 });
 
@@ -4711,7 +4728,10 @@ app.get('/api/admin/attendees', async (req, res) => {
   const eventId = (req.query.eventId || '').toString().trim();
   const eventName = (req.query.eventName || '').toString().trim();
   try {
-    const { data, error } = await queryAdminAttendeesRows(eventId, eventName);
+    const { data, error } = await queryAdminAttendeesRows(eventId, eventName, {
+      limit: req.query.limit,
+      offset: req.query.offset,
+    });
     if (error) {
       console.error('Supabase admin attendees error:', error.message, error.code, error.details);
       return res.status(500).json({
@@ -4720,6 +4740,7 @@ app.get('/api/admin/attendees', async (req, res) => {
         code: error.code || null,
       });
     }
+    res.set('Cache-Control', 'private, no-store');
     res.json(data || []);
   } catch (e) {
     console.error('Admin attendees exception:', e.message);
@@ -4737,7 +4758,10 @@ app.get('/api/admin/payments', async (req, res) => {
   const eventId = (req.query.eventId || '').toString().trim();
   const eventName = (req.query.eventName || '').toString().trim();
   try {
-    const { data, error } = await queryAdminAttendeesRows(eventId, eventName);
+    const { data, error } = await queryAdminAttendeesRows(eventId, eventName, {
+      limit: req.query.limit,
+      offset: req.query.offset,
+    });
     if (error) {
       console.error('Supabase admin payments error:', error.message, error.code, error.details);
       return res.status(500).json({
@@ -4748,6 +4772,7 @@ app.get('/api/admin/payments', async (req, res) => {
     }
     const enriched = await enrichAttendeeRowsForAdmin(data || []);
     try {
+      res.set('Cache-Control', 'private, no-store');
       res.type('application/json').send(
         JSON.stringify(enriched, (_k, v) => (typeof v === 'bigint' ? v.toString() : v))
       );
@@ -4955,6 +4980,8 @@ app.delete('/api/admin/users/:id', async (req, res) => {
 app.get('/api/ticket-status/:ticketId', async (req, res) => {
   const { ticketId } = req.params;
   const attendee = await getAttendeeByTicketId(ticketId);
+  // Tiny JSON; short private cache avoids duplicate Supabase reads if the client polls aggressively.
+  res.set('Cache-Control', 'private, max-age=3, must-revalidate');
   if (!attendee) {
     return res.json({ attended: false });
   }
@@ -6160,7 +6187,7 @@ app.use(
         res.setHeader('Cache-Control', 'no-cache');
         return;
       }
-      if (/\.(js|css|png|jpe?g|webp|svg|ico|woff2?|gif)$/i.test(filePath)) {
+      if (/\.(js|css|png|jpe?g|webp|avif|svg|ico|woff2?|gif)$/i.test(filePath)) {
         res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
       }
     },

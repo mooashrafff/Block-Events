@@ -268,9 +268,9 @@ body:has(.site-chrome-footer):not(.home-landing) > .page-wrap {
 .site-chrome-header__account {
   display: flex;
   align-items: center;
-  gap: 0.42rem;
+  gap: 0.35rem;
   flex-shrink: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
 }
 
@@ -992,6 +992,7 @@ body.chrome-on-light .site-chrome-navlink--header.is-active .site-chrome-navlink
   }
   .site-chrome-header__account {
     justify-content: flex-end;
+    flex-wrap: nowrap;
   }
   .site-chrome-header__nav-inner {
     justify-content: flex-start;
@@ -1609,7 +1610,7 @@ body.block-ticket-loader-open {
   opacity: 1 !important;
 }
 
-/* Icon-only account / sign-in / sign-out (label text cleared in JS; CSS hides any flash/fallback) */
+/* Icon-only account / sign-in / sign-out (empty markup + aria-label; CSS kills any stray text) */
 .site-chrome-header .site-chrome-header__account-link,
 .site-chrome-header .site-chrome-header__signin,
 .site-chrome-header .site-chrome-header__signout {
@@ -1618,6 +1619,8 @@ body.block-ticket-loader-open {
   overflow: hidden;
   text-indent: -9999px;
   letter-spacing: 0;
+  color: transparent !important;
+  text-shadow: none !important;
 }
 
 .site-chrome-header .site-chrome-header__account-link::before,
@@ -1632,12 +1635,14 @@ body.block-ticket-loader-open {
   opacity: 1 !important;
 }
 
-/* Scroll contrast: when header is on light background, icons turn black */
-body.chrome-on-light .site-chrome-header .site-chrome-lang__btn,
+/* Scroll contrast: when header is on light background, mask icons turn black (text stays empty / transparent) */
+body.chrome-on-light .site-chrome-header .site-chrome-lang__btn {
+  color: #0a0a0a !important;
+}
 body.chrome-on-light .site-chrome-header .site-chrome-header__account-link,
 body.chrome-on-light .site-chrome-header .site-chrome-header__signin,
 body.chrome-on-light .site-chrome-header .site-chrome-header__signout {
-  color: #0a0a0a !important;
+  color: transparent !important;
 }
 
 body.chrome-on-light .site-chrome-header .site-chrome-header__account-link::before,
